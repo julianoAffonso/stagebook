@@ -61,6 +61,16 @@ class PdfStore @Inject constructor(@ApplicationContext private val context: Cont
         }
     }
 
+    /**
+     * A smaller copy of the PDF [file] to send over the internet (user, 22/11: "compactar o PDF pra enviar"), in the cache;
+     * null when it doesn't come out much smaller (the file itself goes). The caller deletes the copy.
+     */
+    fun forSending(file: File, inspector: PdfInspector = PdfInspector()): File? {
+        val out = File(context.cacheDir, "send-${java.util.UUID.randomUUID()}.pdf")
+        val small = PdfShrink.shrunk(context, file, minBytes = 0, out = out) ?: return null
+        return small.takeIf { inspector.check(it) is PdfCheck.Ok } ?: run { small.delete(); null }
+    }
+
     private fun shrink(tmp: File, inspector: PdfInspector) {
         val small = PdfShrink.shrunk(context, tmp) ?: return
         if (inspector.check(small) is PdfCheck.Ok && small.renameTo(tmp)) return

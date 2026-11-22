@@ -279,10 +279,10 @@ fun ShareOptions(
     val bandOk = br.app.stagebook.domain.BandContent.bandFits(limits.lists)
     val songsGoing = if (withSongs) limits.songs else 0
     val internetOk = br.app.stagebook.domain.BandContent.internetFits(limits.lists, songsGoing)
-    // the songs' PDFs go over the internet only when they fit the messages left; otherwise the songs go without and the
-    // hint says why, with the numbers
+    // the songs' PDFs go over the internet as attachments when they fit its budget; otherwise the songs go without and the
+    // hint says why, with the numbers. When they go, the hint says they last only a few hours there (user, 22/11)
     val pdfSizes = if (withSongs) limits.pdfSizes else emptyList()
-    val pdfFits = pdfSizes.isNotEmpty() && br.app.stagebook.domain.BandContent.internetFits(limits.lists, songsGoing, pdfSizes)
+    val pdfFits = pdfSizes.isNotEmpty() && br.app.stagebook.domain.BandContent.internetPdfsFit(pdfSizes)
     val pdfLeftOut = pdfSizes.isNotEmpty() && !pdfFits && internetOk
     Column(modifier.fillMaxWidth().padding(horizontal = Spacing.m), verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
         Text(stringResource(R.string.share_title), style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(bottom = Spacing.s))
@@ -295,8 +295,8 @@ fun ShareOptions(
                 else if (pdfSizes.sum() > br.app.stagebook.domain.BandContent.PDF_PACKAGE_BYTES) stringResource(R.string.share_band_hint) + " " + stringResource(
                     R.string.share_band_pdf_budget,
                     ((pdfSizes.sum() + MEGABYTE - 1) / MEGABYTE).toInt(), (br.app.stagebook.domain.BandContent.PDF_PACKAGE_BYTES / MEGABYTE).toInt(),
-                ) + " " + stringResource(R.string.share_band_pdf_note)
-                else if (pdfSizes.isNotEmpty()) stringResource(R.string.share_band_hint) + " " + stringResource(R.string.share_band_pdf_note)
+                ) + " " + stringResource(R.string.share_band_pdf_note, br.app.stagebook.domain.BandContent.INTERNET_PDF_HOURS)
+                else if (pdfSizes.isNotEmpty()) stringResource(R.string.share_band_hint) + " " + stringResource(R.string.share_band_pdf_note, br.app.stagebook.domain.BandContent.INTERNET_PDF_HOURS)
                 else stringResource(R.string.share_band_hint),
                 enabled = bandOk,
             ) { onBand(withSongs, wifiOnly && internetOn) }
@@ -314,8 +314,8 @@ fun ShareOptions(
         else if (online) {
             ShareOption(
                 AppIcons.Public, stringResource(R.string.share_internet),
-                if (pdfLeftOut) pdfLimitText(limits.lists, songsGoing, pdfSizes)
-                else if (internetOk && pdfFits) stringResource(R.string.share_internet_pdf_fits, br.app.stagebook.domain.BandContent.internetMessages(limits.lists, songsGoing, pdfSizes), br.app.stagebook.domain.BandContent.MAX_INTERNET_MESSAGES)
+                if (pdfLeftOut) pdfLimitText(pdfSizes)
+                else if (internetOk && pdfFits) stringResource(R.string.share_internet_pdf_fits, br.app.stagebook.domain.BandContent.INTERNET_PDF_HOURS)
                 else if (internetOk) stringResource(R.string.share_internet_hint)
                 else stringResource(if (limits.setlists && withSongs) R.string.share_internet_limit_titles else R.string.share_internet_limit),
                 enabled = internetOk,
@@ -340,13 +340,13 @@ private const val MEGABYTE = 1024L * 1024
 private const val PREFS = "share"
 private const val KEY_WIFI_ONLY = "wifi_only"
 
-/** Why the PDFs don't go over the internet, in numbers: what they need, what the server takes, what is left after the songs. */
+/** Why the PDFs don't go over the internet, in numbers: what they add up to, what a send takes, what one PDF may be. */
 @Composable
-internal fun pdfLimitText(lists: Int, songs: Int, pdfSizes: List<Long>): String = stringResource(
+internal fun pdfLimitText(pdfSizes: List<Long>): String = stringResource(
     R.string.share_internet_pdf_limit,
-    br.app.stagebook.domain.BandContent.internetPdfMessages(pdfSizes),
-    br.app.stagebook.domain.BandContent.MAX_INTERNET_MESSAGES,
-    br.app.stagebook.domain.BandContent.internetMessagesFree(lists, songs),
+    ((pdfSizes.sum() + MEGABYTE - 1) / MEGABYTE).toInt(),
+    (br.app.stagebook.domain.BandContent.INTERNET_PDF_BYTES / MEGABYTE).toInt(),
+    (br.app.stagebook.domain.BandContent.MAX_PDF_BYTES / MEGABYTE).toInt(),
 )
 
 @Composable

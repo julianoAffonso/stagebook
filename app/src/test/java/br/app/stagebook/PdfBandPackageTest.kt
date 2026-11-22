@@ -82,10 +82,10 @@ class PdfBandPackageTest {
     @Serializable private data class V3Pack(val list: String, val songs: List<JsonElement> = emptyList(), val v: Int = 2)
     private fun v3SaysUpdate(packageJson: String) = json.decodeFromString<V3Pack>(packageJson).v > 3
 
-    @Test fun `the protocol is version 4 and a Hello from this app is newer to an app on version 3`() {
-        assertEquals(4, BandProtocol.VERSION)
+    @Test fun `the protocol is version 5 and a Hello from this app is newer to apps on versions 3 and 4`() {
+        assertEquals(5, BandProtocol.VERSION)
         assertEquals(BandProtocol.VERSION, identity.hello().v)
-        assertTrue(json.decodeFromString<V3Hello>(json.encodeToString(BandProtocol.Hello.serializer(), identity.hello())).v > 3)
+        assertTrue(json.decodeFromString<V3Hello>(json.encodeToString(BandProtocol.Hello.serializer(), identity.hello())).v > 4)
     }
 
     @Test fun `a package with a PDF carries v 4 and an app on version 3 says update`() {
@@ -112,8 +112,9 @@ class PdfBandPackageTest {
         val l = link(repo)
         val v3 = """{"list":"${java.util.Base64.getEncoder().encodeToString(looseList("Old"))}","songs":[{"title":"Old","text":"x"}],"v":3}"""
         assertNotNull(l.openPackage(v3.toByteArray()))
-        val v5 = v3.replace("\"v\":3", "\"v\":5")
-        assertNull(l.openPackage(v5.toByteArray()))
+        assertNotNull(l.openPackage(v3.replace("\"v\":3", "\"v\":5").toByteArray()))
+        val v6 = v3.replace("\"v\":3", "\"v\":6")
+        assertNull(l.openPackage(v6.toByteArray()))
     }
 
     // ---- leaving and arriving ----

@@ -21,9 +21,9 @@ object PdfShrink {
     const val MAX_SIDE = 2000
     const val JPEG_QUALITY = 0.7f
 
-    fun shrunk(context: Context, file: File): File? {
-        if (file.length() < MIN_BYTES) return null
-        val out = File(file.parentFile, file.name + ".small")
+    /** [minBytes]: smaller files are left alone (0 on sending over the internet: every byte counts there); [out]: where the copy goes. */
+    fun shrunk(context: Context, file: File, minBytes: Long = MIN_BYTES, out: File = File(file.parentFile, file.name + ".small")): File? {
+        if (file.length() < minBytes) return null
         return try {
             PDFBoxResourceLoader.init(context.applicationContext)
             val changed = PDDocument.load(file).use { doc ->

@@ -1175,10 +1175,10 @@
         <item quantity="other">%d more setlists came along and are waiting in Received from the band.</item>
     </plurals>
     <string name="share_internet_limit">Too much to send over the internet at once. Send it in more than one go.</string>
-    <string name="share_internet_pdf_limit">The PDFs need %1$d messages of 4 KB, and the internet server takes %2$d per send (%3$d are left after the songs). The songs go without the PDF. To send it, use the band on the same network.</string>
+    <string name="share_internet_pdf_limit">The PDFs add up to %1$d MB, and the internet takes up to %2$d MB per send (%3$d MB each). The songs go without the PDF. To send it, use the band on the same network.</string>
     <string name="share_band_pdf_budget">The PDFs add up to %1$d MB and a send to the band takes up to %2$d MB: the ones that don\'t fit go without the PDF.</string>
-    <string name="share_band_pdf_note">The PDFs go to whoever is on this network; a band member far away gets the small ones (up to 60 KB in all) and the song without the rest.</string>
-    <string name="share_internet_pdf_fits">The PDFs go along: %1$d of the %2$d messages the server takes.</string>
+    <string name="share_band_pdf_note">The PDFs go to whoever is on this network. A band member far away gets them through the internet, where they stay only %1$d hours.</string>
+    <string name="share_internet_pdf_fits">The PDFs go along, compressed. The server keeps them only %1$d hours: whoever opens it later gets the songs without the PDF.</string>
     <string name="share_internet_limit_titles">Too much to send over the internet at once. Turn off “Bring the songs” or send fewer setlists.</string>
     <string name="share_band_limit">Too many setlists at once. Send them in more than one go.</string>
     <string name="settings_lyrics_card">Lyrics</string>
@@ -1319,6 +1319,7 @@
     <string name="pdf_refused_too_big">This PDF is too big. The limit is %1$d MB.</string>
     <string name="pdf_refused_password">This PDF has a password. Save a copy without one and try again.</string>
     <string name="pdf_refused_too_many_pages">This PDF has too many pages. The limit is %1$d.</string>
+    <string name="pdf_refused_expired">The PDF didn\'t arrive. The internet server keeps it only %1$d hours: ask for it to be sent again.</string>
     <string name="pdf_refused_unreadable">This PDF couldn\'t be opened. It may be damaged.</string>
     <string name="set_discard">Discard</string>
     <string name="set_save_question">Save the changes to “%1$s”?</string>

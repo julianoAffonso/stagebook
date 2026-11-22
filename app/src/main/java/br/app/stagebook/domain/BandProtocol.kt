@@ -16,8 +16,9 @@ import java.io.Writer
  */
 object BandProtocol {
     // 2: "Lead the band" (Kind.CONDUCT); 3: setlist breaks, break timer, missing-songs request (user, 14/11); 4: a song's
-    // PDF travels in the band package (SharedSong.pdf, 15/11)
-    const val VERSION = 4
+    // PDF travels in the band package (SharedSong.pdf, 15/11); 5: a PDF over the internet goes as an attachment of the
+    // server, and the song carries where it is (SharedSong.pdfAt, 22/11)
+    const val VERSION = 5
 
     /**
      * The `v` of a package (band package, pair inbox package): the lowest version that reads it without losing anything.
@@ -28,6 +29,8 @@ object BandProtocol {
     const val BREAKS_VERSION = 3
     /** A package with a PDF inside: a version-3 app drops the PDF and the key it doesn't know, so it says "update the app" instead. */
     const val PDF_VERSION = 4
+    /** A send over the internet whose PDFs went as attachments: a version-4 app would get the songs without them, silently. */
+    const val ATTACH_VERSION = 5
 
     /** The `v` to write on a package whose setlist travels as [packed] (see [SharedBreaks]). */
     fun packageVersion(packed: ByteArray, carriesPdf: Boolean = false): Int =

@@ -14,6 +14,7 @@ enum class PdfProblem {
     PASSWORD,         // protected: the app doesn't ask for passwords
     TOO_MANY_PAGES,   // over PdfInspector.MAX_PAGES
     UNREADABLE,       // damaged, or Android can't open it
+    EXPIRED,          // sent over the internet, but gone from the server (it keeps PDFs a few hours) or not reachable
 }
 
 /** The verdict on a PDF file: what it is, or the reason it won't do. */
@@ -90,4 +91,5 @@ fun PdfProblem.text(context: Context): String = when (this) {
     PdfProblem.PASSWORD -> context.getString(R.string.pdf_refused_password)
     PdfProblem.TOO_MANY_PAGES -> context.getString(R.string.pdf_refused_too_many_pages, PdfInspector.MAX_PAGES)
     PdfProblem.UNREADABLE -> context.getString(R.string.pdf_refused_unreadable)
+    PdfProblem.EXPIRED -> context.getString(R.string.pdf_refused_expired, br.app.stagebook.domain.BandContent.INTERNET_PDF_HOURS)
 }

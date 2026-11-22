@@ -58,18 +58,20 @@ class BandVersionWarningTest {
         return r to (me.trusted.isEmpty() && other.trusted.isEmpty())
     }
 
-    @Test fun `the protocol is on version 4`() = assertEquals(4, BandProtocol.VERSION)
+    @Test fun `the protocol is on version 5`() = assertEquals(5, BandProtocol.VERSION)
 
-    @Test fun `another device on 3 (the published app) - this one on 4 says version, and nothing is saved`() {
+    @Test fun `another device on 3 or 4 (published apps) - this one on 5 says version, and nothing is saved`() {
+        assertEquals(BandSession.JoinResult.VERSION to true, join(4))
+        assertEquals(BandSession.JoinResult.VERSION to true, joinOther(4))
         assertEquals(BandSession.JoinResult.VERSION to true, join(2))
         assertEquals(BandSession.JoinResult.VERSION to true, joinOther(2))
         assertEquals(BandSession.JoinResult.VERSION to true, join(3))
         assertEquals(BandSession.JoinResult.VERSION to true, joinOther(3))
     }
 
-    @Test fun `another device on 5 (a newer app) - this one on 4 says version, and nothing is saved`() {
-        assertEquals(BandSession.JoinResult.VERSION to true, join(5))
-        assertEquals(BandSession.JoinResult.VERSION to true, joinOther(5))
+    @Test fun `another device on 6 (a newer app) - this one on 5 says version, and nothing is saved`() {
+        assertEquals(BandSession.JoinResult.VERSION to true, join(6))
+        assertEquals(BandSession.JoinResult.VERSION to true, joinOther(6))
     }
 
     @Test fun `the same version still talks`() {
