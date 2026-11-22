@@ -34,7 +34,7 @@ import org.robolectric.annotation.Config
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [35], application = android.app.Application::class)
 class EssentialModeTest {
-    @get:org.junit.Rule val compose = androidx.compose.ui.test.junit4.createComposeRule()
+    @get:org.junit.Rule val compose = androidx.compose.ui.test.junit4.v2.createComposeRule()
     private val context = ApplicationProvider.getApplicationContext<android.app.Application>()
 
     @Test fun `essential only with all four off`() {

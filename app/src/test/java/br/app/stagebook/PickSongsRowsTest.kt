@@ -2,7 +2,7 @@ package br.app.stagebook
 
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
-import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
@@ -153,8 +153,12 @@ class PickSongsRowsTest {
                     br.app.stagebook.ui.drawer.LocalDrawer provides br.app.stagebook.ui.drawer.DrawerControl({}, { closed++ }),
                 ) { StagebookTheme { br.app.stagebook.ui.setlists.PickSongsRoute({}, vm) } }
             }
+            // the checked song comes through the view model's flow: the screen knows it once the count arrives
+            compose.waitUntil(5_000) { vm.uiState.value.selectedCount == 1 }
             compose.waitForIdle()
-            assertEquals("the menu asks the screen before it closes", true, guard.asks?.invoke())
+            var asked: Boolean? = null
+            compose.runOnUiThread { asked = guard.asks?.invoke() }
+            assertEquals("the menu asks the screen before it closes", true, asked)
             compose.waitForIdle()
             compose.onNodeWithText("Adicionar as 1 músicas marcadas", substring = true).assertIsDisplayed()
             assertEquals("nothing went in yet", 1, repo.library.value.setlist(ids.first)!!.items.size)
@@ -179,8 +183,13 @@ class PickSongsRowsTest {
                     br.app.stagebook.ui.drawer.LocalDrawer provides br.app.stagebook.ui.drawer.DrawerControl({}, { closed++ }),
                 ) { StagebookTheme { br.app.stagebook.ui.setlists.PickSongsRoute({}, vm) } }
             }
+            // the checked song comes through the view model's flow: the screen knows it once the count arrives
+            compose.waitUntil(5_000) { vm.uiState.value.selectedCount == 1 }
             compose.waitForIdle()
-            guard.asks?.invoke(); compose.waitForIdle()
+            var asked: Boolean? = null
+            compose.runOnUiThread { asked = guard.asks?.invoke() }
+            assertEquals("the menu asks the screen before it closes", true, asked)
+            compose.waitForIdle()
             compose.onNodeWithText("Descartar").performClick()
             compose.waitForIdle()
             assertEquals(1, repo.library.value.setlist(ids.first)!!.items.size)

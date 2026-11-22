@@ -1,7 +1,7 @@
 package br.app.stagebook
 
 import androidx.compose.material3.Text
-import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import br.app.stagebook.ui.components.setCountText
 import br.app.stagebook.ui.components.songCountText

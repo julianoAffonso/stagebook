@@ -170,7 +170,7 @@ class PdfSitesTest {
         assertEquals("PDF", PdfDownload.nameOf("https://x.org/", null))
     }
 
-    @get:org.junit.Rule val compose = androidx.compose.ui.test.junit4.createComposeRule()
+    @get:org.junit.Rule val compose = androidx.compose.ui.test.junit4.v2.createComposeRule()
 
     @Test fun `the plus menu offers PDFs from sites beside Import PDFs and taps open the browser`() {
         var sites = 0
