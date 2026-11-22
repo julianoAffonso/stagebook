@@ -132,6 +132,33 @@
         <item quantity="many">+ %d sem duração</item>
         <item quantity="other">+ %d sem duração</item>
     </plurals>
+    <string name="history_title">O que foi tocado</string>
+    <string name="history_empty">Nada tocado ainda. Uma música conta depois de um minuto no palco, uma vez por dia de show.</string>
+    <string name="history_month">Este mês</string>
+    <string name="history_year">12 meses</string>
+    <string name="history_all">Tudo</string>
+    <string name="history_export">Exportar planilha (CSV)</string>
+    <string name="history_failed">Não deu para salvar a planilha.</string>
+    <string name="history_file">tocadas</string>
+    <string name="history_col_date">Data</string>
+    <string name="history_col_song">Música</string>
+    <string name="history_col_artist">Artista</string>
+    <string name="history_col_setlist">Setlist</string>
+    <plurals name="history_summary">
+        <item quantity="one">%d música tocada</item>
+        <item quantity="many">%d músicas tocadas</item>
+        <item quantity="other">%d músicas tocadas</item>
+    </plurals>
+    <plurals name="history_days">
+        <item quantity="one">em %d dia de show.</item>
+        <item quantity="many">em %d dias de show.</item>
+        <item quantity="other">em %d dias de show.</item>
+    </plurals>
+    <plurals name="history_done">
+        <item quantity="one">Planilha salva com %d música.</item>
+        <item quantity="many">Planilha salva com %d músicas.</item>
+        <item quantity="other">Planilha salva com %d músicas.</item>
+    </plurals>
     <plurals name="set_block">
         <item quantity="one">BLOCO %1$d · %2$d música</item>
         <item quantity="many">BLOCO %1$d · %2$d músicas</item>

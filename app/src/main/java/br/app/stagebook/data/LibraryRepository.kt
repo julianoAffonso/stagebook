@@ -177,10 +177,18 @@ class LibraryRepository @Inject constructor(
         mutate { lib -> lib.copy(songs = lib.songs.map { if (it.id == id) change(it) else it }) }
 
     /** The song was played on show day [day]: counted once a day (a second time that day writes nothing). */
-    fun countPlay(id: String, day: String) {
+    fun countPlay(id: String, day: String, setlist: String = "") {
         val song = song(id) ?: return
         if (br.app.stagebook.domain.PlayStats.record(song, day) == null) return
-        updateSong(id) { br.app.stagebook.domain.PlayStats.record(it, day) ?: it }
+        // the count and the history line in one save: the history keeps the name as it is now (user, 22/11)
+        mutate { lib ->
+            val now = lib.song(id) ?: return@mutate lib
+            val counted = br.app.stagebook.domain.PlayStats.record(now, day) ?: return@mutate lib
+            lib.copy(
+                songs = lib.songs.map { if (it.id == id) counted else it },
+                history = br.app.stagebook.domain.PlayHistory.add(lib.history, br.app.stagebook.data.model.PlayEntry(day, now.title, now.author, setlist)),
+            )
+        }
     }
 
     /** Changes several songs in one save (tags on a selection). */
@@ -461,6 +469,13 @@ class LibraryRepository @Inject constructor(
     }
 
     /** Backup restored: its songs and setlists replace the ones here (the look stays). */
+    /** A backup's history of what was played joins this one: each line once, oldest first (user, 22/11). */
+    suspend fun joinHistory(history: List<br.app.stagebook.data.model.PlayEntry>) {
+        if (history.isEmpty()) return
+        ready.await()
+        mutate { lib -> lib.copy(history = (lib.history + history).distinct().sortedBy { it.day }.takeLast(br.app.stagebook.domain.PlayHistory.MAX)) }
+    }
+
     suspend fun restore(songs: List<Song>, sets: List<Setlist>) {
         ready.await()
         mutate { lib -> lib.copy(songs = songs, sets = sets.map { it.withValidBreaks() }) }

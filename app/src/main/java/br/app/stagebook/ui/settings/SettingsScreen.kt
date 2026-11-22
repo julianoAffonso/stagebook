@@ -200,6 +200,14 @@ fun SettingsRoute(
         uri?.let { viewModel.backupTo(it, backupParts) }
     }
     val restorePicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri -> uri?.let(viewModel::inspectBackup) }
+    // the history of what was played, as a spreadsheet (user, 22/11): the period picked, then where to save it
+    var historyPeriod by remember { mutableStateOf(br.app.stagebook.domain.PlayHistory.Period.MONTH) }
+    val historyHeader = listOf(stringResource(R.string.history_col_date), stringResource(R.string.history_col_song), stringResource(R.string.history_col_artist), stringResource(R.string.history_col_setlist))
+    // a spreadsheet where the comma is the decimal mark wants ';' between columns (it opened in one column otherwise)
+    val historySeparator = if (java.text.DecimalFormatSymbols.getInstance(androidx.compose.ui.platform.LocalConfiguration.current.locales[0]).decimalSeparator == ',') ';' else ','
+    val historySaver = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("text/csv")) { uri ->
+        uri?.let { viewModel.historyTo(it, historyPeriod, historyHeader, historySeparator) }
+    }
     val pendingRestore by viewModel.pendingRestore.collectAsStateWithLifecycle()
     // a file tapped outside the app takes the same path as one picked with Open file
     val linkedFile by SettingsLinks.file.collectAsStateWithLifecycle()
@@ -232,6 +240,8 @@ fun SettingsRoute(
                     SettingsMessage.ImportNewer -> r.getString(R.string.scan_newer)
                     SettingsMessage.BackupDone -> r.getString(R.string.backup_done)
                     SettingsMessage.BackupFailed -> r.getString(R.string.backup_failed)
+                    is SettingsMessage.HistoryDone -> r.getQuantityString(R.plurals.history_done, m.lines, m.lines)
+                    SettingsMessage.HistoryFailed -> r.getString(R.string.history_failed)
                     SettingsMessage.NotBackup -> r.getString(R.string.backup_not_backup)
                     SettingsMessage.RestoreFailed -> r.getString(R.string.backup_restore_failed)
                     is SettingsMessage.Restored -> {
@@ -407,6 +417,10 @@ fun SettingsRoute(
                     backupSaver.launch("stagebook-backup-${java.time.LocalDate.now()}.${br.app.stagebook.data.Backup.EXTENSION}")
                 },
                 onRestore = { restorePicker.launch(arrayOf("*/*")) },
+                onExportHistory = { period ->
+                    historyPeriod = period
+                    historySaver.launch("stagebook-${resources.getString(R.string.history_file)}-${java.time.LocalDate.now()}.csv")
+                },
                 onFactoryReset = viewModel::factoryReset,
                 onMetronome = viewModel::setMetronome,
                 onMetronomeVolume = viewModel::setMetronomeVolume,
@@ -510,6 +524,7 @@ data class SettingsActions(
     val onInternetOn: (Boolean) -> Unit = {},
     val onExtrasOn: (Boolean) -> Unit = {},
     val onBackup: (Set<br.app.stagebook.data.Backup.Part>) -> Unit = {},
+    val onExportHistory: (br.app.stagebook.domain.PlayHistory.Period) -> Unit = {},
     val onAutoTags: (national: String, international: String, language: String, preview: Boolean) -> Pair<Int, Int> = { _, _, _, _ -> 0 to 0 },
     val onRestore: () -> Unit = {},
     val onFactoryReset: () -> Unit = {},
@@ -1809,6 +1824,33 @@ private fun AnnounceCard(look: Look, actions: SettingsActions) {
     }
 }
 
+/**
+ * What was played, to export (user, 22/11: "an option in Options, in the library"): how much there is, the period, and a
+ * spreadsheet with date, song, artist and setlist, e.g. to report the songs played for royalties.
+ */
+@Composable
+private fun HistoryCard(uiState: SettingsUiState, actions: SettingsActions) {
+    SettingsCard(stringResource(R.string.history_title)) {
+        var period by rememberSaveable { mutableStateOf(br.app.stagebook.domain.PlayHistory.Period.MONTH) }
+        InfoText(
+            if (uiState.playedSongs == 0) stringResource(R.string.history_empty)
+            else pluralStringResource(R.plurals.history_summary, uiState.playedSongs, uiState.playedSongs) + " " +
+                pluralStringResource(R.plurals.history_days, uiState.playedDays, uiState.playedDays),
+        )
+        if (uiState.playedSongs > 0) {
+            br.app.stagebook.ui.components.SegmentedChoice(
+                listOf(
+                    br.app.stagebook.ui.components.Choice(br.app.stagebook.domain.PlayHistory.Period.MONTH, R.string.history_month),
+                    br.app.stagebook.ui.components.Choice(br.app.stagebook.domain.PlayHistory.Period.YEAR, R.string.history_year),
+                    br.app.stagebook.ui.components.Choice(br.app.stagebook.domain.PlayHistory.Period.ALL, R.string.history_all),
+                ),
+                period, { period = it }, Modifier.fillMaxWidth(),
+            )
+            ActionButton(stringResource(R.string.history_export), { actions.onExportHistory(period) }, Modifier.fillMaxWidth().settingsItem("history"), icon = AppIcons.Download, tone = ButtonTone.Tonal)
+        }
+    }
+}
+
 @Composable
 private fun LibraryDetail(uiState: SettingsUiState, actions: SettingsActions) {
     SettingsCard(stringResource(R.string.library_card)) {
@@ -1819,6 +1861,7 @@ private fun LibraryDetail(uiState: SettingsUiState, actions: SettingsActions) {
             modifier = Modifier.settingsItem("library"),
         )
     }
+    HistoryCard(uiState, actions)
     ImportSitesDetail(uiState.look, actions)
     // song tags: splitting national and international songs, once (moved here from the song list's ⋮, user 01/11);
     // Portuguese only

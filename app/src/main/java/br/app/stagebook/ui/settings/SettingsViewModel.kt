@@ -68,6 +68,9 @@ data class SettingsUiState(
     val update: UpdateState = UpdateState.Idle,
     val midi: MidiState = MidiState(),
     val language: AppLanguage = AppLanguage.SYSTEM,
+    // the history of what was played (user, 22/11): songs played and on how many show days
+    val playedSongs: Int = 0,
+    val playedDays: Int = 0,
 )
 
 /** Settings → Update the app. */
@@ -91,6 +94,8 @@ sealed interface SettingsMessage {
     data object ImportNewer : SettingsMessage   // file from a newer Stagebook: update
     data object BackupDone : SettingsMessage
     data object BackupFailed : SettingsMessage
+    data class HistoryDone(val lines: Int) : SettingsMessage   // the history spreadsheet was saved, with this many songs
+    data object HistoryFailed : SettingsMessage
     data object NotBackup : SettingsMessage
     data object RestoreFailed : SettingsMessage
     data class Restored(val restart: Boolean, val skipped: Int = 0) : SettingsMessage
@@ -159,6 +164,14 @@ class SettingsViewModel @Inject constructor(
 
     private val _pendingRestore = MutableStateFlow<PendingRestore?>(null)
     val pendingRestore: StateFlow<PendingRestore?> = _pendingRestore.asStateFlow()
+
+    /** The history of [period] as a spreadsheet at [uri], with the column names in the app's language (user, 22/11). */
+    fun historyTo(uri: Uri, period: br.app.stagebook.domain.PlayHistory.Period, header: List<String>, separator: Char) = viewModelScope.launch {
+        val lines = br.app.stagebook.domain.PlayHistory.of(repository.library.value.history, period, java.time.LocalDate.now())
+        val csv = br.app.stagebook.domain.PlayHistory.csv(lines, header, separator)
+        val ok = runCatching { withContext(kotlinx.coroutines.Dispatchers.IO) { context.contentResolver.openOutputStream(uri, "wt")!!.use { it.write(csv.toByteArray()) } } }.isSuccess
+        _messages.send(if (ok) SettingsMessage.HistoryDone(lines.size) else SettingsMessage.HistoryFailed)
+    }
 
     fun backupTo(uri: Uri, parts: Set<br.app.stagebook.data.Backup.Part>) = viewModelScope.launch {
         val ok = runCatching { context.contentResolver.openOutputStream(uri, "wt")!!.use { backup.write(it, parts) } }.isSuccess
@@ -238,7 +251,8 @@ class SettingsViewModel @Inject constructor(
         combine(repository.loaded, repository.library, lastKey, devices, update) { loaded, lib, key, connected, up ->
             // the command comes from the current choice: changing the picker updates what the card shows right away
             val shown = key?.copy(action = PedalAction.of(key.keyCode, lib.look.pedalKeys))
-            SettingsUiState(!loaded, lib.look, lib.songs.size, lib.sets.size, shown, version, lib.look.pedalName in connected, up)
+            SettingsUiState(!loaded, lib.look, lib.songs.size, lib.sets.size, lastKey = shown, version = version, pedalConnected = lib.look.pedalName in connected, update = up)
+                .let { st -> br.app.stagebook.domain.PlayHistory.summary(lib.history).let { (n, d) -> st.copy(playedSongs = n, playedDays = d) } }
         },
         midi.state,
         language,

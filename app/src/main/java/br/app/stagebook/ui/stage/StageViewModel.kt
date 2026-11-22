@@ -278,7 +278,7 @@ class StageViewModel @Inject constructor(
         playedJob = viewModelScope.launch {
             kotlinx.coroutines.delay(br.app.stagebook.domain.SetlistShow.PLAYED_AFTER_MS)
             if (setId != null) show.played(setId, songId)
-            if (counts) repository.countPlay(songId, show.today())
+            if (counts) repository.countPlay(songId, show.today(), setId?.let { repository.library.value.setlist(it)?.name }.orEmpty())
         }
     }
 

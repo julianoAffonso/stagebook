@@ -127,6 +127,30 @@
         <item quantity="one">+ %d with no length</item>
         <item quantity="other">+ %d with no length</item>
     </plurals>
+    <string name="history_title">What was played</string>
+    <string name="history_empty">Nothing played yet. A song counts after a minute on stage, once per show day.</string>
+    <string name="history_month">This month</string>
+    <string name="history_year">12 months</string>
+    <string name="history_all">All</string>
+    <string name="history_export">Export spreadsheet (CSV)</string>
+    <string name="history_failed">Couldn\'t save the spreadsheet.</string>
+    <string name="history_file">played</string>
+    <string name="history_col_date">Date</string>
+    <string name="history_col_song">Song</string>
+    <string name="history_col_artist">Artist</string>
+    <string name="history_col_setlist">Setlist</string>
+    <plurals name="history_summary">
+        <item quantity="one">%d song played</item>
+        <item quantity="other">%d songs played</item>
+    </plurals>
+    <plurals name="history_days">
+        <item quantity="one">on %d show day.</item>
+        <item quantity="other">on %d show days.</item>
+    </plurals>
+    <plurals name="history_done">
+        <item quantity="one">Spreadsheet saved with %d song.</item>
+        <item quantity="other">Spreadsheet saved with %d songs.</item>
+    </plurals>
     <plurals name="set_block">
         <item quantity="one">SET %1$d · %2$d song</item>
         <item quantity="other">SET %1$d · %2$d songs</item>

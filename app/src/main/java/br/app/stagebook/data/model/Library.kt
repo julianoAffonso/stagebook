@@ -75,6 +75,14 @@ data class Song(
     fun withoutPdf(): Song = if (pdf.isEmpty() && pdfName.isEmpty() && pdfMarks.isEmpty() && pdfCrops.isEmpty() && pdfInvert == null && pdfScale == 1f && pdfPanX == 0f && pdfPanY == 0f) this else copy(pdf = "", pdfName = "", pdfMarks = emptyList(), pdfCrops = emptyList(), pdfPage = 0, pdfInvert = null, pdfScale = 1f, pdfPanX = 0f, pdfPanY = 0f)
 }
 
+/**
+ * A song played on a show day ([day] yyyy-MM-dd, see ShowDay): its name and artist as they were then (a song deleted
+ * later still reads right) and the setlist it was played from ("" = opened alone).
+ */
+@Immutable
+@Serializable
+data class PlayEntry(val day: String, val title: String, val author: String = "", val setlist: String = "")
+
 /** One point of a highlighter stroke, relative to the page: 0 (left, top) to 1 (right, bottom), valid on any screen size. */
 @Immutable
 @Serializable
@@ -380,6 +388,9 @@ data class Library(
     val songs: List<Song> = emptyList(),
     val sets: List<Setlist> = emptyList(),
     val look: Look = Look(),
+    // what was played, one line per song per show day (user, 22/11: exportable, e.g. for royalties). This device and the
+    // backup only: never the band, the QR or the exported songs file
+    val history: List<PlayEntry> = emptyList(),
 ) {
     // by id in one step (a setlist screen looked up each of its songs in the whole list on every library change); not
     // serialized, built the first time it's needed for this library

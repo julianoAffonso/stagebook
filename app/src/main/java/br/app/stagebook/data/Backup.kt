@@ -56,7 +56,7 @@ class Backup @Inject constructor(
     )
 
     @Serializable
-    private data class Songs(val songs: List<Song> = emptyList(), val sets: List<Setlist> = emptyList())
+    private data class Songs(val songs: List<Song> = emptyList(), val sets: List<Setlist> = emptyList(), val history: List<br.app.stagebook.data.model.PlayEntry> = emptyList())
 
     /** What a backup file has (to check on restore). [newer]: from a newer app version. */
     data class Contents(val parts: Set<Part>, val songs: Int, val newer: Boolean)
@@ -73,7 +73,7 @@ class Backup @Inject constructor(
                 // without the tracks, chosen on purpose, the song carries neither the file nor its name: nothing to
                 // attach again on the other side (user, 10/11)
                 val songs = if (Part.TRACKS in parts) lib.songs else lib.songs.map { it.withoutPdf().copy(track = "", trackName = "") }
-                put(SONGS, json.encodeToString(Songs.serializer(), Songs(songs, lib.sets)).toByteArray())
+                put(SONGS, json.encodeToString(Songs.serializer(), Songs(songs, lib.sets, lib.history)).toByteArray())
                 if (Part.TRACKS in parts) {
                     lib.songs.map { it.track }.filter { it.isNotEmpty() }.distinct().forEach { name ->
                         val f = tracks.file(name)
@@ -188,6 +188,8 @@ class Backup @Inject constructor(
                 }
                 val here = repository.library.value.songs.mapTo(HashSet()) { it.id }
                 if (replace) repository.restore(songs, s.sets) else repository.mergeBackup(songs, s.sets)
+                // what was played joins this device's history, whichever way (nothing played is lost on either side)
+                repository.joinHistory(s.history)
                 // what came in without its audio is named in a window; joining, only the songs that are new here
                 repository.reportLostAudio(repository.library.value.songs.filter { it.audioLost && (replace || it.id !in here) })
                 lost = repository.lostAudio.value
