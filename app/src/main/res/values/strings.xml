@@ -984,6 +984,8 @@
     <string name="editor_pdf_remove">Remove PDF</string>
     <string name="editor_pdf_missing">The PDF isn\'t on this device. Attach it again.</string>
     <string name="editor_pdf_note">This song is a PDF. You can\'t edit the PDF; on stage you can mark it with the highlighter.</string>
+    <string name="editor_pdf_as_text">Show the lyrics on stage</string>
+    <string name="editor_pdf_as_text_detail">This song kept lyrics or chords. On, the stage shows them in place of the PDF.</string>
     <string name="editor_pdf_ask_lyrics">This song already has lyrics. They stay saved and come back if you remove the PDF.</string>
     <string name="editor_pdf_remove_confirm">Remove the PDF from this song? The file is deleted from this device and the lyrics come back.</string>
     <plurals name="editor_pdf_facts">

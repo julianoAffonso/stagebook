@@ -65,7 +65,7 @@ internal fun fileSizeText(bytes: Long): String =
  * device (a backup without the files), and the card says to attach it again.
  */
 @Composable
-fun PdfSongCard(pdf: EditorPdf, onReplace: () -> Unit, onRemove: () -> Unit, modifier: Modifier = Modifier, onInvert: (Boolean) -> Unit = {}, onCrop: () -> Unit = {}, onPages: () -> Unit = {}) {
+fun PdfSongCard(pdf: EditorPdf, onReplace: () -> Unit, onRemove: () -> Unit, modifier: Modifier = Modifier, onInvert: (Boolean) -> Unit = {}, onCrop: () -> Unit = {}, onPages: () -> Unit = {}, onAsText: (Boolean) -> Unit = {}) {
     Surface(modifier.fillMaxWidth(), shape = MaterialTheme.shapes.medium, color = MaterialTheme.colorScheme.surfaceVariant) {
         Column(Modifier.padding(Spacing.m), verticalArrangement = Arrangement.spacedBy(Spacing.m)) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.m)) {
@@ -90,6 +90,8 @@ fun PdfSongCard(pdf: EditorPdf, onReplace: () -> Unit, onRemove: () -> Unit, mod
             Text(stringResource(R.string.editor_pdf_note), style = MaterialTheme.typography.bodyMedium)
             // the colours of this song's PDF: white paper black, for a dark stage. Here, and not on the stage's header
             if (!pdf.lost) SwitchRow(stringResource(R.string.stage_pdf_invert), pdf.invert, onInvert, Modifier.fillMaxWidth())
+            // the lyrics and chords the song kept, on the stage in place of the PDF: offered only when there are some
+            if (pdf.keptLyrics) SwitchRow(stringResource(R.string.editor_pdf_as_text), pdf.asText, onAsText, Modifier.fillMaxWidth(), detail = stringResource(R.string.editor_pdf_as_text_detail))
             // which pages show on the stage (user, 22/11): only with more than one
             if (!pdf.lost && pdf.pages > 1) ActionButton(
                 stringResource(R.string.pdf_pages_title) + " · " + stringResource(R.string.pdf_pages_of, pdf.pages - pdf.hidden.count { it in 0 until pdf.pages }, pdf.pages),

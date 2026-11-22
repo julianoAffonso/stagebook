@@ -333,6 +333,8 @@ class WebEditorServer @Inject constructor(
             "pdfNote" to R.string.editor_pdf_note,
             "pdfPreview" to R.string.editor_pdf_preview,
             "pdfInvert" to R.string.stage_pdf_invert,
+            "pdfAsText" to R.string.editor_pdf_as_text,
+            "pdfAsTextDetail" to R.string.editor_pdf_as_text_detail,
             "pdfCrop" to R.string.editor_pdf_crop,
             "pagesTitle" to R.string.pdf_pages_title,
             "pagesHint" to R.string.pdf_pages_hint,

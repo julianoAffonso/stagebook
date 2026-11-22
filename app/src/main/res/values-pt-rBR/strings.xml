@@ -1019,6 +1019,8 @@
     <string name="editor_pdf_remove">Remover PDF</string>
     <string name="editor_pdf_missing">O PDF não está neste aparelho. Anexe de novo.</string>
     <string name="editor_pdf_note">Esta música é um PDF. Não dá para editar o PDF; no palco você pode marcá-lo com o marca-texto.</string>
+    <string name="editor_pdf_as_text">Mostrar a letra no palco</string>
+    <string name="editor_pdf_as_text_detail">Esta música guardou letra ou cifra. Ligado, o palco mostra isso no lugar do PDF.</string>
     <string name="editor_pdf_ask_lyrics">Esta música já tem letra. Ela fica guardada e volta se você remover o PDF.</string>
     <string name="editor_pdf_remove_confirm">Remover o PDF desta música? O arquivo é apagado deste aparelho e a letra volta.</string>
     <plurals name="editor_pdf_facts">

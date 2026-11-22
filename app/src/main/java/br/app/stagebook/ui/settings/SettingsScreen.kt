@@ -421,7 +421,8 @@ fun SettingsRoute(
                 onAnnounce = viewModel::setAnnounce,
                 onExternalShow = viewModel::setExternalShow,
                 onExternalIdle = { idle ->
-                    if (idle == br.app.stagebook.data.model.ExternalIdle.IMAGE) externalPicker.launch("image/*") else viewModel.setExternalIdle(idle)
+                    if (idle == br.app.stagebook.data.model.ExternalIdle.IMAGE) externalPicker.launch("image/*")
+                    else { externalImages.forget(); viewModel.setExternalIdle(idle) }
                 },
                 onEssential = viewModel::setEssential,
                 onBandOn = viewModel::setBandOn,

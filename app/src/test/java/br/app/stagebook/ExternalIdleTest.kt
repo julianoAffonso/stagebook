@@ -71,6 +71,11 @@ class ExternalIdleTest {
         assertFalse(ExternalImageStore.isImage(text))
         assertFalse(ExternalImageStore.copyAtMost(ByteArray(2048).inputStream(), java.io.ByteArrayOutputStream(), 1024))
         assertTrue(ExternalImageStore.copyAtMost(ByteArray(512).inputStream(), java.io.ByteArrayOutputStream(), 1024))
+        // only the image in use is kept: choosing the logo or black deletes it
+        val store = ExternalImageStore(context)
+        picture().copyTo(store.file, overwrite = true)
+        store.forget()
+        assertFalse(store.file.exists())
     }
 
     @Test fun `Settings chooses what shows with the stage closed`() {

@@ -193,6 +193,7 @@
             <img id="pdf-preview" alt="" hidden>
             <p id="pdf-note"></p>
             <label class="switch"><input type="checkbox" id="pdf-invert"><span data-t="pdfInvert"></span></label>
+            <div id="pdf-text-row" hidden><label class="switch"><input type="checkbox" id="pdf-text"><span data-t="pdfAsText"></span></label><p class="muted" data-t="pdfAsTextDetail"></p></div>
             <button class="outline" type="button" id="pdf-crop"></button>
             <button class="outline" type="button" id="pdf-pages"></button>
           </div>
@@ -584,6 +585,9 @@ function drawPdf() {
   preview.style.filter = current && current.pdfInvert ? "invert(1)" : "";
   $("pdf-invert").checked = !!(current && current.pdfInvert);
   $("pdf-invert").parentElement.hidden = !has;
+  // the lyrics the song kept, on the stage in place of the PDF: offered only when there are some (as in the app)
+  $("pdf-text").checked = !!(current && current.pdfText);
+  $("pdf-text-row").hidden = !(current && current.keptLyrics);
   $("pdf-crop").textContent = t.pdfCrop;
   $("pdf-crop").hidden = !has;
   const hidden = (current && current.pdfHidden) || [];
@@ -763,7 +767,7 @@ async function sendPdfView(body) {
   const r = await api(`/api/songs/${encodeURIComponent(current.id)}/pdf-view`, { method: "PUT", body: JSON.stringify(body) }).catch(() => null);
   if (!r || r.status !== 200) return offline();
   const v = await r.json();
-  current.pdfInvert = v.invert; current.pdfCrops = v.crops; current.pdfHidden = v.hidden || [];
+  current.pdfInvert = v.invert; current.pdfCrops = v.crops; current.pdfHidden = v.hidden || []; current.pdfText = !!v.text;
   drawPdf();
   if ($("pages-dialog").open) drawPages();
 }
@@ -796,6 +800,7 @@ function drawPages() {
 $("pdf-pages").onclick = () => { $("pages-close").textContent = t.close; drawPages(); $("pages-dialog").showModal(); };
 $("pages-close").onclick = () => $("pages-dialog").close();
 $("pdf-invert").onchange = () => sendPdfView({ invert: $("pdf-invert").checked });
+$("pdf-text").onchange = () => sendPdfView({ text: $("pdf-text").checked });
 
 // the crop window: the page with a frame, for every page or for this one
 let cropPage = 0, cropRect = null;

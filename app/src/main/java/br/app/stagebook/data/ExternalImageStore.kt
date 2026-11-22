@@ -33,6 +33,9 @@ class ExternalImageStore @Inject constructor(@ApplicationContext private val con
         }
     }
 
+    /** Another choice than the image (logo or black): the image goes, only what is in use stays on the device. */
+    fun forget() { file.delete() }
+
     companion object {
         const val FILE = "external_idle"
         const val MAX_BYTES = 20L * 1024 * 1024

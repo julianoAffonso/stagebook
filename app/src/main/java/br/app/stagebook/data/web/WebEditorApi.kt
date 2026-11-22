@@ -76,6 +76,9 @@ class WebEditorApi(
         val midi: br.app.stagebook.domain.SongMidi? = null,
         // the PDF's pages left off the stage, by file page (user, 22/11); read only, like the trims
         val pdfHidden: List<Int> = emptyList(),
+        // the stage shows the lyrics the PDF song kept in place of the PDF; offered only when it kept some (user, 22/11)
+        val pdfText: Boolean = false,
+        val keptLyrics: Boolean = false,
     )
 
     @Serializable
@@ -127,7 +130,7 @@ class WebEditorApi(
     /** What the page keeps after sending a PDF: the file, its name, pages and size. */
     /** The PDF's look: null leaves it as it is. [invert] is this song's own choice; [crops] replaces the trims. */
     @Serializable
-    data class PdfView(val invert: Boolean? = null, val crops: List<br.app.stagebook.data.model.PdfCrop>? = null, val hidden: List<Int>? = null)
+    data class PdfView(val invert: Boolean? = null, val crops: List<br.app.stagebook.data.model.PdfCrop>? = null, val hidden: List<Int>? = null, val text: Boolean? = null)
 
     /** The key a step of [semitones] from [key] gives (C when there is none), for a PDF song, which has no chords to move. */
     @Serializable
@@ -236,6 +239,7 @@ class WebEditorApi(
         return SongData(
             s.id, s.title, s.author, s.year, meta.tempoText, meta.durationText, br.app.stagebook.domain.InternalMarks.split(Chords.hideMeta(s.text)).first, s.track, s.trackName,
             s.pdf, s.pdfName, pages, file?.length() ?: 0L, s.pdfInvert ?: repository.library.value.look.pdfInvert, s.pdfCrops, meta.key, meta.capo, s.tags, s.midi ?: br.app.stagebook.domain.SongMidi(), pdfHidden = s.pdfHidden,
+            pdfText = s.pdfText, keptLyrics = br.app.stagebook.domain.KeptLyrics.has(s.text),
         )
     }
 
@@ -436,7 +440,7 @@ class WebEditorApi(
             val shown = req.query["name"].orEmpty().substringAfterLast('/').substringAfterLast('\\').filter { !it.isISOControl() }.trim()
                 .take(br.app.stagebook.domain.BandContent.MAX_PDF_NAME).ifEmpty { "PDF" }
             // a new PDF has other pages: the old one's highlighter marks go
-            repository.updateSong(id) { it.copy(pdf = saved.name, pdfName = shown, pdfMarks = emptyList(), pdfCrops = emptyList(), pdfHidden = emptyList(), pdfPage = 0, pdfScale = 1f, pdfPanX = 0f, pdfPanY = 0f) }
+            repository.updateSong(id) { it.copy(pdf = saved.name, pdfName = shown, pdfMarks = emptyList(), pdfCrops = emptyList(), pdfHidden = emptyList(), pdfPage = 0, pdfScale = 1f, pdfPanX = 0f, pdfPanY = 0f, pdfText = false) }
             if (song.pdf != saved.name) store.remove(song.pdf)
             return ok(json.encodeToString(PdfSet(saved.name, shown, saved.pages, saved.bytes)))
         } finally {
@@ -459,9 +463,9 @@ class WebEditorApi(
         // the hidden pages: real pages of this PDF, and never all of them (one always shows on the stage)
         val pages = pdfs()?.file(song.pdf)?.takeIf { it.isFile }?.let { (inspector.check(it) as? br.app.stagebook.data.PdfCheck.Ok)?.pages } ?: 0
         val hidden = v.hidden?.filter { it in 0 until pages }?.distinct()?.sorted()?.takeIf { it.size < pages }
-        repository.updateSong(id) { it.copy(pdfInvert = v.invert ?: it.pdfInvert, pdfCrops = crops ?: it.pdfCrops, pdfHidden = hidden ?: it.pdfHidden) }
+        repository.updateSong(id) { it.copy(pdfInvert = v.invert ?: it.pdfInvert, pdfCrops = crops ?: it.pdfCrops, pdfHidden = hidden ?: it.pdfHidden, pdfText = v.text ?: it.pdfText) }
         val now = repository.song(id) ?: return HttpResponse.status(404)
-        return ok(json.encodeToString(PdfView(now.pdfInvert ?: repository.library.value.look.pdfInvert, now.pdfCrops, now.pdfHidden)))
+        return ok(json.encodeToString(PdfView(now.pdfInvert ?: repository.library.value.look.pdfInvert, now.pdfCrops, now.pdfHidden, now.pdfText)))
     }
 
     private fun pdfPage(id: String, req: HttpRequest): HttpResponse {
@@ -474,7 +478,7 @@ class WebEditorApi(
     private fun pdfDelete(id: String): HttpResponse {
         val store = pdfs() ?: return HttpResponse.status(404)
         val song = repository.song(id) ?: return HttpResponse.status(404)
-        repository.updateSong(id) { it.copy(pdf = "", pdfName = "", pdfMarks = emptyList(), pdfInvert = null, pdfCrops = emptyList(), pdfHidden = emptyList(), pdfPage = 0, pdfScale = 1f, pdfPanX = 0f, pdfPanY = 0f) }
+        repository.updateSong(id) { it.copy(pdf = "", pdfName = "", pdfMarks = emptyList(), pdfInvert = null, pdfCrops = emptyList(), pdfHidden = emptyList(), pdfPage = 0, pdfScale = 1f, pdfPanX = 0f, pdfPanY = 0f, pdfText = false) }
         store.remove(song.pdf)
         return HttpResponse.status(204)
     }
