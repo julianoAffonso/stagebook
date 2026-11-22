@@ -154,6 +154,7 @@
             <div class="grow"><label for="f-author" data-t="artist"></label><input id="f-author"></div>
             <div><label for="f-year" data-t="year"></label><input id="f-year" inputmode="numeric" maxlength="4"></div>
             <div><label for="f-tempo" data-t="bpm"></label><input id="f-tempo" inputmode="numeric" maxlength="3"></div>
+            <div><label for="f-duration" data-t="duration"></label><input id="f-duration" placeholder="3:45" maxlength="8"></div>
           </div>
           <div class="row">
             <div class="stepper"><span data-t="key"></span><button class="icon" id="key-down">−</button><b id="key"></b><button class="icon" id="key-up">+</button></div>
@@ -504,6 +505,7 @@ function fillForm(song) {
   $("f-author").value = song.author;
   $("f-year").value = song.year;
   $("f-tempo").value = song.tempo;
+  $("f-duration").value = song.duration || "";
   $("f-text").value = song.text;
   $("f-tags").value = (song.tags || []).join(", ");
   current.key = song.key || "";
@@ -651,7 +653,7 @@ async function changeText(path, body) {
 
 async function save() {
   const body = {
-    title: $("f-title").value, author: $("f-author").value, year: $("f-year").value, tempo: $("f-tempo").value, text: $("f-text").value,
+    title: $("f-title").value, author: $("f-author").value, year: $("f-year").value, tempo: $("f-tempo").value, duration: $("f-duration").value, text: $("f-text").value,
     key: current.key || "", capo: current.capo || 0, tags: tagsTyped(), midi: current.midi || { enter: [], exit: [] },
   };
   const id = current && current.id;
@@ -849,7 +851,7 @@ $("track-remove").onclick = async () => {
   current.track = "";
   drawTrack();
 };
-["f-title", "f-author", "f-year", "f-tempo", "f-text", "f-tags"].forEach((id) => ($(id).oninput = () => { dirty = true; if (id === "f-tags") drawTagSuggest(); }));
+["f-title", "f-author", "f-year", "f-tempo", "f-duration", "f-text", "f-tags"].forEach((id) => ($(id).oninput = () => { dirty = true; if (id === "f-tags") drawTagSuggest(); }));
 // Ctrl+S / Cmd+S saves what's open
 document.addEventListener("keydown", (e) => {
   if (!((e.ctrlKey || e.metaKey) && e.key === "s")) return;

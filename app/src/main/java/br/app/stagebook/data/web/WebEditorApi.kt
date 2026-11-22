@@ -53,6 +53,7 @@ class WebEditorApi(
         val author: String = "",
         val year: String = "",
         val tempo: String = "",
+        val duration: String = "",   // the song's length as the app shows it ("3:45"; "" = none): `{duration}`, user 22/11
         val text: String = "",
         val track: String = "",   // the backing track file ("" = none); read only, changed by its own calls
         val trackName: String = "",   // the track's own name, as the app shows it
@@ -231,7 +232,7 @@ class WebEditorApi(
         val file = s.pdf.takeIf { it.isNotEmpty() }?.let { pdfs()?.file(it) }?.takeIf { it.isFile }
         val pages = file?.let { (inspector.check(it) as? br.app.stagebook.data.PdfCheck.Ok)?.pages } ?: 0
         return SongData(
-            s.id, s.title, s.author, s.year, meta.tempoText, br.app.stagebook.domain.InternalMarks.split(Chords.hideMeta(s.text)).first, s.track, s.trackName,
+            s.id, s.title, s.author, s.year, meta.tempoText, meta.durationText, br.app.stagebook.domain.InternalMarks.split(Chords.hideMeta(s.text)).first, s.track, s.trackName,
             s.pdf, s.pdfName, pages, file?.length() ?: 0L, s.pdfInvert ?: repository.library.value.look.pdfInvert, s.pdfCrops, meta.key, meta.capo, s.tags, s.midi ?: br.app.stagebook.domain.SongMidi(),
         )
     }
@@ -251,7 +252,11 @@ class WebEditorApi(
         // what the editor doesn't show stays (stage zoom, backing track)
         val base = id?.let(repository::song) ?: Song()
         // the key the chords imply is saved, as in the app's editor (31/10: one app, the same rules on the computer)
-        val text = Chords.withDetectedKey(Chords.setDirective(Chords.fromChordsOverLyrics(withMeta(br.app.stagebook.domain.InternalMarks.restore(d.text, base.text), d.key, d.capo)), "tempo", d.tempo.filter(Char::isDigit).take(3)))
+        val tempoSet = Chords.setDirective(Chords.fromChordsOverLyrics(withMeta(br.app.stagebook.domain.InternalMarks.restore(d.text, base.text), d.key, d.capo)), "tempo", d.tempo.filter(Char::isDigit).take(3))
+        // the length typed in the page: "3:45", or digits read as m:ss like the app's field ("345" = 3:45); anything
+        // unreadable leaves it empty
+        val length = Chords.parseDuration(if (':' in d.duration) d.duration else Chords.durationFromDigits(d.duration))
+        val text = Chords.withDetectedKey(Chords.setDirective(tempoSet, "duration", if (length > 0) Chords.formatDuration(length) else ""))
         val tags = br.app.stagebook.domain.Tags.apply(emptyList(), d.tags.filter { it.isNotBlank() }, emptyList())
         val saved = repository.saveSong(base.copy(id = id.orEmpty(), title = title, author = d.author.trim(), year = d.year.trim(), text = text, tags = tags,
             // a page from before MIDI sends none: the song keeps its own; the values are held to MIDI's ranges here too

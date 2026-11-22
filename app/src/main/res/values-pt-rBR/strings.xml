@@ -124,6 +124,14 @@
         <item quantity="many">%d intervalos</item>
         <item quantity="other">%d intervalos</item>
     </plurals>
+    <string name="editor_duration">Duração</string>
+    <string name="length_minutes">%1$d min</string>
+    <string name="length_hours_minutes">%1$d h %2$d min</string>
+    <plurals name="set_block_unknown">
+        <item quantity="one">+ %d sem duração</item>
+        <item quantity="many">+ %d sem duração</item>
+        <item quantity="other">+ %d sem duração</item>
+    </plurals>
     <plurals name="set_block">
         <item quantity="one">BLOCO %1$d · %2$d música</item>
         <item quantity="many">BLOCO %1$d · %2$d músicas</item>

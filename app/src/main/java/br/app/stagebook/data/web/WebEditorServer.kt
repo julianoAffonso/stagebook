@@ -252,6 +252,7 @@ class WebEditorServer @Inject constructor(
             "artist" to R.string.editor_author,
             "year" to R.string.editor_year,
             "bpm" to R.string.editor_tempo,
+            "duration" to R.string.editor_duration,
             "key" to R.string.editor_key,
             "capo" to R.string.editor_capo,
             "capoFret" to R.string.editor_capo_fret,

@@ -120,6 +120,13 @@
         <item quantity="one">%d break</item>
         <item quantity="other">%d breaks</item>
     </plurals>
+    <string name="editor_duration">Length</string>
+    <string name="length_minutes">%1$d min</string>
+    <string name="length_hours_minutes">%1$d h %2$d min</string>
+    <plurals name="set_block_unknown">
+        <item quantity="one">+ %d with no length</item>
+        <item quantity="other">+ %d with no length</item>
+    </plurals>
     <plurals name="set_block">
         <item quantity="one">SET %1$d · %2$d song</item>
         <item quantity="other">SET %1$d · %2$d songs</item>

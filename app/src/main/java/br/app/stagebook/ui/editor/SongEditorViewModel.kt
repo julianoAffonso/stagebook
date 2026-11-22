@@ -409,6 +409,9 @@ class SongEditorViewModel @Inject constructor(
     /** BPM in the song details (empty removes it); the metronome starts at it. */
     fun setTempo(bpm: String) = update(text = Chords.setDirective(uiState.text, "tempo", bpm.filter(Char::isDigit).take(3)))
 
+    /** The song's length, typed as digits ("345" → 3:45, user 22/11): kept as `{duration}`, which the setlist adds up. */
+    fun setDuration(typed: String) = update(text = Chords.setDirective(uiState.text, "duration", Chords.durationFromDigits(typed)))
+
     fun save() {
         if (finished) return
         val id = persistSong() ?: return

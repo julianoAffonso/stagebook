@@ -51,6 +51,7 @@ data class SetItemUi(
     val hasTrack: Boolean = false,
     val hasPdf: Boolean = false,
     val state: SetlistShow.State = SetlistShow.State.NONE,   // where the show is (this device only)
+    val seconds: Int = 0,   // the song's length (`{duration}`), 0 = none: the blocks add them up (user, 22/11)
 )
 
 @Immutable
@@ -131,7 +132,7 @@ class SetlistDetailViewModel @Inject constructor(
                 SetItemUi(
                     if (n == 1) id else "$id#$n", id, song?.title.orEmpty(), song?.artistLine().orEmpty(), song == null,
                     songKey = meta.key, bpm = meta.tempo, capo = meta.capo,
-                    hasTrack = song?.track?.isNotEmpty() == true, hasPdf = song?.pdf?.isNotEmpty() == true, state = states[i],
+                    hasTrack = song?.track?.isNotEmpty() == true, hasPdf = song?.pdf?.isNotEmpty() == true, state = states[i], seconds = meta.duration,
                 )
             },
             breaks = set?.breaks.orEmpty(),

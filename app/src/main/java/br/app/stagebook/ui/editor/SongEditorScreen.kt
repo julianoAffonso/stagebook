@@ -1,5 +1,6 @@
 package br.app.stagebook.ui.editor
 
+import androidx.compose.ui.platform.testTag
 import br.app.stagebook.ui.components.ButtonTone
 import br.app.stagebook.ui.components.ActionButton
 import br.app.stagebook.ui.components.LocalAppMessage
@@ -151,6 +152,7 @@ fun SongEditorRoute(
         onTranspose = viewModel::transpose,
         onCapo = viewModel::setCapo,
         onTempo = viewModel::setTempo,
+        onDuration = viewModel::setDuration,
         look = look,
         track = viewModel.track.takeIf { look.playerMode },
         trackName = viewModel.trackName,
@@ -194,6 +196,7 @@ fun SongEditorScreen(
     onCapo: (Int) -> Unit = {},
     look: Look = Look(),
     onTempo: (String) -> Unit = {},
+    onDuration: (String) -> Unit = {},
     track: String? = null,   // the song's backing track file ("" = none); null = can't pick here (new song or player off)
     onPickTrack: () -> Unit = {},
     onRemoveTrack: () -> Unit = {},
@@ -401,7 +404,7 @@ fun SongEditorScreen(
                 Crossfade(tab, Modifier.weight(1f).fillMaxWidth(), label = "editor tab") { current ->
                     when (current) {
                         EditorTab.DATA -> DataPane(
-                            uiState, look, onTitle, onAuthor, onYear, onTempo, onTranspose, onCapo,
+                            uiState, look, onTitle, onAuthor, onYear, onTempo, onDuration, onTranspose, onCapo,
                             track, trackName, onPickTrack, onRemoveTrack, midiOn, { midiOpen = true }, { tagging = true },
                             pdf, attachPdf, { removingPdf = true },
                         )
@@ -541,6 +544,7 @@ private fun DataPane(
     onAuthor: (String) -> Unit,
     onYear: (String) -> Unit,
     onTempo: (String) -> Unit,
+    onDuration: (String) -> Unit,
     onTranspose: (Int) -> Unit,
     onCapo: (Int) -> Unit,
     track: String?,
@@ -561,6 +565,7 @@ private fun DataPane(
             Row(horizontalArrangement = Arrangement.spacedBy(Spacing.s)) {
                 YearField(uiState, onYear, Modifier.weight(1f))
                 TempoField(uiState, onTempo, Modifier.weight(1f))
+                DurationField(uiState, onDuration, Modifier.weight(1f))
             }
             // key and capo (chords profile; keyboard has no capo, as before)
             if (look.chords) {
@@ -756,6 +761,23 @@ private fun TempoField(uiState: SongEditorUiState, onTempo: (String) -> Unit, mo
         modifier = modifier,
     )
 }
+
+/** The song's length (`{duration}`, user 22/11): typed as digits, shown as m:ss; the setlist adds the songs up. */
+@Composable
+private fun DurationField(uiState: SongEditorUiState, onDuration: (String) -> Unit, modifier: Modifier) {
+    OutlinedTextField(
+        value = uiState.meta.durationText,
+        onValueChange = onDuration,
+        label = { Text(stringResource(R.string.editor_duration)) },
+        placeholder = { Text("3:45") },
+        singleLine = true,
+        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+        shape = MaterialTheme.shapes.small,
+        modifier = modifier.testTag(DURATION_FIELD_TAG),
+    )
+}
+
+internal const val DURATION_FIELD_TAG = "durationField"
 
 internal object ToolStripProbe { @Volatile var drawn = 0 }   // tests: how many times the strip was composed
 

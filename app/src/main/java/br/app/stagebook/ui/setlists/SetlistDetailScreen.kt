@@ -362,7 +362,7 @@ fun SetlistDetailScreen(
                                     )
                                     Column {
                                         // with breaks, each block says its number and how many songs it has
-                                        if (mark.block > 0) BlockHeader(mark.block, mark.blockSongs)
+                                        if (mark.block > 0) BlockHeader(mark.block, mark.blockSongs, mark.blockSeconds, mark.blockUnknown)
                                         when (row) {
                                             is SetRow.Break -> SetlistBreakRow(
                                                 handle = if (editing) handle else null,
@@ -516,7 +516,7 @@ private sealed interface SetRow {
 }
 
 /** What a row shows besides itself: how many songs come before it and, on the first song of a block, the block. */
-private class RowMark(val songsBefore: Int, val block: Int, val blockSongs: Int)
+private class RowMark(val songsBefore: Int, val block: Int, val blockSongs: Int, val blockSeconds: Int = 0, val blockUnknown: Int = 0)
 
 private fun setRows(items: List<SetItemUi>, breaks: List<Int>): List<SetRow> {
     var n = 0
@@ -539,16 +539,22 @@ private fun rowMarks(rows: List<SetRow>): List<RowMark> {
         // the first song after a break (or of the setlist) opens a block
         val opens = headers && row is SetRow.Song && (i == 0 || rows[i - 1] is SetRow.Break)
         if (opens) block++
-        val inBlock = if (opens) rows.subList(i, rows.size).takeWhile { it is SetRow.Song }.size else 0
-        RowMark(songs, if (opens) block else 0, inBlock).also { if (row is SetRow.Song) songs++ }
+        val blockRows = if (opens) rows.subList(i, rows.size).takeWhile { it is SetRow.Song }.filterIsInstance<SetRow.Song>() else emptyList()
+        RowMark(songs, if (opens) block else 0, blockRows.size, blockRows.sumOf { it.item.seconds }, blockRows.count { it.item.seconds == 0 })
+            .also { if (row is SetRow.Song) songs++ }
     }
 }
 
-/** "SET 1 · 3 songs", over the first song of each block. */
+/**
+ * "SET 1 · 3 songs · 12 min", over the first song of each block (user, 22/11: the length of each set). Songs with no
+ * length are said apart ("+ 1 with no length"), so the minutes never pass for the whole block.
+ */
 @Composable
-private fun BlockHeader(block: Int, songs: Int, modifier: Modifier = Modifier) {
+private fun BlockHeader(block: Int, songs: Int, seconds: Int = 0, unknown: Int = 0, modifier: Modifier = Modifier) {
+    val length = if (seconds == 0) "" else " · " + br.app.stagebook.ui.components.lengthLabel(seconds) +
+        (if (unknown > 0) " " + pluralStringResource(R.plurals.set_block_unknown, unknown, unknown) else "")
     Text(
-        pluralStringResource(R.plurals.set_block, songs, block, songs),
+        pluralStringResource(R.plurals.set_block, songs, block, songs) + length,
         style = MaterialTheme.typography.labelLarge,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
         modifier = modifier.padding(start = Spacing.m, top = Spacing.s, bottom = Spacing.s),

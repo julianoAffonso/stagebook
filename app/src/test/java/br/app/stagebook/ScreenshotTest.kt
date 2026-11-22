@@ -108,7 +108,8 @@ class ScreenshotTest {
     private val set = SetlistDetailUiState(
         loading = false,
         name = s("Show de sábado"),
-        items = songs.songs.map { SetItemUi(it.id, it.id, it.title, it.subtitle, false, it.songKey, it.bpm, it.capo, it.hasTrack) },
+        // lengths for the sets' minutes (user, 22/11); the last one has none, to show how that reads
+        items = songs.songs.mapIndexed { i, it -> SetItemUi(it.id, it.id, it.title, it.subtitle, false, it.songKey, it.bpm, it.capo, it.hasTrack, seconds = listOf(321, 264, 300, 341, 0)[i]) },
     )
     // mid show: two songs played, the third on stage and the fourth next
     private val setShow = set.copy(
