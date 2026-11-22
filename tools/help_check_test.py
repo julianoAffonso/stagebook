@@ -74,6 +74,9 @@ class Pages(unittest.TestCase):
     def test_the_web_editor_is_computer_only(self):
         page = '<figure><img src="img/editor_web_1_pedido.jpg" alt="">'
         self.assertEqual([], help_check.page_problems(page, {"editor_web_1_pedido.jpg"}))
+        # the external screen is a TV, not a tablet or a phone
+        page = '<figure><img src="img/tela_externa.jpg" alt="">'
+        self.assertEqual([], help_check.page_problems(page, {"tela_externa.jpg"}))
 
 if __name__ == "__main__":
     unittest.main()

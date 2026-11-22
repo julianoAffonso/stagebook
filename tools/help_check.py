@@ -42,9 +42,10 @@ def problems(messages, files):
 
 
 # Every capture has a tablet and a phone version (user's rule, 09/11): the help switches between them per figure. Only
-# screens that exist on one kind of device are exempt: the web editor runs in a computer's browser. Screens the tests
+# screens that exist on one kind of device are exempt: the web editor runs in a computer's browser, the external screen
+# is a TV or projector. Screens the tests
 # can't draw are photographed on a device and kept in tools/device-shots/.
-ONE_DEVICE = re.compile(r"^editor_web_")
+ONE_DEVICE = re.compile(r"^(editor_web_|tela_externa)")
 
 
 def page_problems(page, images):

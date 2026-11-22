@@ -217,6 +217,17 @@ enum class StageMode {
     @SerialName("scroll") SCROLL,
 }
 
+/**
+ * What a second screen shows while the stage is open (user, 22/11). [OFF]: Android mirrors the tablet as usual. The text
+ * modes show a PDF song by its title only; [PDF] shows its pages, and a lyrics song with its chords.
+ */
+enum class ExternalShow {
+    @SerialName("off") OFF,
+    @SerialName("lyrics") LYRICS,
+    @SerialName("chords") CHORDS,
+    @SerialName("pdf") PDF,
+}
+
 /** What the stage clock shows; a tap moves to the next (user, 07/11). */
 enum class StageClockMode {
     @SerialName("clock") CLOCK,
@@ -282,6 +293,7 @@ data class Look(
     val fontSp: Float = 30f,
     // a PDF on the stage with its colours turned over (white paper becomes black)
     val pdfInvert: Boolean = false,
+    val externalShow: ExternalShow = ExternalShow.CHORDS,   // what a second screen (HDMI, wireless display) shows (user, 22/11)
     // the library drawer stays open beside the stage (the pin on its top row; only where the screen is wide enough)
     val drawerPinned: Boolean = false,
     // where the stage's side handle sits on the left edge, as a share of the height (0 top .. 1 bottom); held and dragged by the person

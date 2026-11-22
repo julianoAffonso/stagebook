@@ -370,6 +370,7 @@ class SettingsViewModel @Inject constructor(
     fun setMetronomeOut(o: br.app.stagebook.domain.MetronomeOut) = repository.updateLook { it.copy(metroUsbOut = o.out, metroUsbPair = o.pair) }
     fun autoTags(national: String, international: String, language: String, preview: Boolean) = repository.autoTags(national, international, language, preview)
     fun setAnnounce(on: Boolean) = repository.updateLook { it.copy(announce = on) }
+    fun setExternalShow(show: br.app.stagebook.data.model.ExternalShow) = repository.updateLook { it.copy(externalShow = show) }
     fun setChordPlay(m: br.app.stagebook.data.model.ChordPlayMode) = repository.updateLook { it.copy(chordPlay = m) }
     fun setAutoScroll(level: Int) = repository.updateLook { it.copy(autoScroll = level.coerceIn(1, Look.MAX_AUTO_SCROLL)) }
     fun setStageMode(m: br.app.stagebook.data.model.StageMode) = repository.updateLook { it.copy(stageMode = m) }

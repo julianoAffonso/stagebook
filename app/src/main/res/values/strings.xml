@@ -491,6 +491,15 @@
     <string name="settings_chord_play_both">Both</string>
     <string name="announce_title">Tell what\'s playing</string>
     <string name="announce_switch">Send the current song to OBS and others</string>
+    <string name="external_title">External screen</string>
+    <string name="external_help">With a TV or projector connected, by cable or wireless, the song shows there on the same page as the stage.</string>
+    <string name="external_show">On the external screen</string>
+    <string name="external_off">Nothing (Android mirrors the tablet)</string>
+    <string name="external_lyrics">Lyrics only</string>
+    <string name="external_chords">Lyrics and chords</string>
+    <string name="external_pdf">Lyrics, chords and PDF</string>
+    <string name="external_detail">A PDF song only shows with Lyrics, chords and PDF. With the others, the TV shows its name.</string>
+    <string name="kw_external">tela externa tv projetor hdmi espelhar external screen tv projector hdmi mirror cast</string>
     <string name="announce_help">When the song changes, the stage tells apps like OBS and Resolume what\'s playing, with artist, key and BPM. The lyrics never go out.</string>
     <string name="metro_shown">Show on stage</string>
     <string name="metro_title">Metronome</string>

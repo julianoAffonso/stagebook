@@ -54,7 +54,7 @@ Letra, cifra e backing track num app só, para tocar ao vivo no Android. Sozinho
   em todo lugar (título, artista, tom, BPM, capo, faixa), e a lista de Músicas mostra e ordena pelas **mais e menos tocadas**. O editor de música tem duas telas, **Dados** e **Letra e
   cifra**; apagar uma música pergunta com o nome dela. O app avisa, na banda e pela internet, quando alguém está em
   outra versão.
-- **Metrônomo**, importação de letras e cifras pelos sites, **Now Playing** para OBS e Resolume
+- **Metrônomo**, importação de letras e cifras pelos sites, **Now Playing** para OBS e Resolume, a música numa TV ou projetor (tela externa)
   ([formato](docs/now-playing.pt-BR.md)), backup num arquivo `.stagebook` (toque num deles numa conversa, num download
   ou no gerenciador de arquivos e ele abre no app), um **editor no computador** (no navegador, com setlists e
   intervalos) e um **modo essencial** que desliga o que você não vai usar.

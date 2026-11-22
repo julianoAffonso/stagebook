@@ -40,4 +40,7 @@ object PdfScroll {
         val last = tops.indices.lastOrNull { tops[it] < offset + viewport } ?: first
         return (first - 1).coerceAtLeast(0)..(last + 1).coerceAtMost(tops.lastIndex)
     }
+
+    /** The page at height [y] of the pages one under the other (the external screen shows the one in the middle of the view). */
+    fun pageAt(tops: List<Int>, y: Int): Int = tops.indexOfLast { it <= y }.coerceAtLeast(0)
 }

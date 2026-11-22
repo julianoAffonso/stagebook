@@ -407,6 +407,7 @@ fun SettingsRoute(
                 onAutoScroll = viewModel::setAutoScroll,
                 onChordPlay = viewModel::setChordPlay,
                 onAnnounce = viewModel::setAnnounce,
+                onExternalShow = viewModel::setExternalShow,
                 onEssential = viewModel::setEssential,
                 onBandOn = viewModel::setBandOn,
                 onInternetOn = viewModel::setInternetOn,
@@ -521,6 +522,7 @@ data class SettingsActions(
     val onAutoScroll: (Int) -> Unit = {},
     val onChordPlay: (br.app.stagebook.data.model.ChordPlayMode) -> Unit = {},
     val onAnnounce: (Boolean) -> Unit = {},
+    val onExternalShow: (br.app.stagebook.data.model.ExternalShow) -> Unit = {},
     val onEssential: (Boolean) -> Unit = {},
     val onBandOn: (Boolean) -> Unit = {},
     val onInternetOn: (Boolean) -> Unit = {},
@@ -872,6 +874,7 @@ private fun SectionDetail(section: SettingsSection, uiState: SettingsUiState, ac
             SettingsSection.BAND -> {
                 if (uiState.look.bandOn || uiState.look.internetOn) BandDetail(actions.band, actions.bandActions, lan = uiState.look.bandOn, internet = uiState.look.internetOn)
                 AnnounceCard(uiState.look, actions)
+                ExternalScreenCard(uiState.look, actions)
                 if (!uiState.look.essential) WebEditorDetail(uiState.look.webEditorOn, actions.web, actions.onWebEditorOn, actions.onWebRemove)
             }
             SettingsSection.DEVICE -> {
@@ -1825,6 +1828,28 @@ internal fun MetronomeTestButton(playing: Boolean, onToggle: () -> Unit, onStop:
 private fun AnnounceCard(look: Look, actions: SettingsActions) {
     if (look.extrasOn) SettingsCard(stringResource(R.string.announce_title), help = stringResource(R.string.announce_help)) {
         SwitchRow(stringResource(R.string.announce_switch), look.announce, actions.onAnnounce, Modifier.settingsItem("announce"))
+    }
+}
+
+/**
+ * A second screen (HDMI, wireless display) beside Now Playing (user, 22/11): what it shows while the stage is open. It
+ * follows the stage's page; the stage stays on the tablet. A stage extra (T19).
+ */
+@Composable
+private fun ExternalScreenCard(look: Look, actions: SettingsActions) {
+    if (!look.extrasOn) return
+    val names = mapOf(
+        br.app.stagebook.data.model.ExternalShow.OFF to R.string.external_off,
+        br.app.stagebook.data.model.ExternalShow.LYRICS to R.string.external_lyrics,
+        br.app.stagebook.data.model.ExternalShow.CHORDS to R.string.external_chords,
+        br.app.stagebook.data.model.ExternalShow.PDF to R.string.external_pdf,
+    )
+    SettingsCard(stringResource(R.string.external_title), help = stringResource(R.string.external_help)) {
+        OptionDropdown(
+            stringResource(R.string.external_show), br.app.stagebook.data.model.ExternalShow.entries, look.externalShow, actions.onExternalShow,
+            nameOf = { stringResource(names.getValue(it)) }, modifier = Modifier.settingsItem("external_show"),
+        )
+        InfoText(stringResource(R.string.external_detail))
     }
 }
 

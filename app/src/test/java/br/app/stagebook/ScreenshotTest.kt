@@ -1150,6 +1150,16 @@ class ScreenshotTest {
         }
     }
 
+    // L13: what a TV or projector shows, the part the stage has in view (1080p, on its side)
+    @Test @Config(qualifiers = "pt-rBR-w960dp-h540dp-land-xhdpi")
+    fun externalScreen() = shoot("tela_externa") {
+        br.app.stagebook.ui.stage.ExternalStageContent(
+            // the first verse, as the stage's first page holds it
+            br.app.stagebook.ui.stage.MirrorFrame("c", s("Canção de teste"), s("Banda Fictícia"), chordSong, lines = 5..9),
+            stage.look, { java.io.File(it) },
+        )
+    }
+
     @Test @Config(qualifiers = "pt-rBR-w412dp-h1240dp-port-xxhdpi")   // tall enough for both pedals' buttons
     fun settingsPhonePedal() = shoot("celular_5_ajustes_pedal") {
         SettingsPage { SettingsScreen(twoPedals, SettingsActions(), it, onLeave = {}, onMenu = {}, section = SettingsSection.PAGE) }

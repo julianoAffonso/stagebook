@@ -510,6 +510,15 @@
     <string name="settings_chord_play_both">Os dois</string>
     <string name="announce_title">Avisar a música tocando</string>
     <string name="announce_switch">Enviar a música atual para OBS e outros</string>
+    <string name="external_title">Tela externa</string>
+    <string name="external_help">Com uma TV ou projetor ligado, por cabo ou sem fio, a música aparece lá na mesma página do palco.</string>
+    <string name="external_show">Na tela externa</string>
+    <string name="external_off">Nada (o Android espelha o tablet)</string>
+    <string name="external_lyrics">Só letra</string>
+    <string name="external_chords">Letra e cifra</string>
+    <string name="external_pdf">Letra, cifra e PDF</string>
+    <string name="external_detail">Música em PDF só aparece em Letra, cifra e PDF. Nas outras opções, a TV mostra o nome.</string>
+    <string name="kw_external">tela externa tv projetor hdmi espelhar external screen tv projector hdmi mirror cast</string>
     <string name="announce_help">Quando a música muda, o palco avisa programas como OBS e Resolume o que está tocando, com artista, tom e BPM. A letra nunca vai.</string>
     <string name="metro_shown">Mostrar no palco</string>
     <string name="metro_title">Metrônomo</string>

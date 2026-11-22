@@ -51,7 +51,7 @@ Lyrics, chords and backing tracks in one app, to play live on Android. Solo or w
   metronome, device), each opening full screen like the stage, with a **search** that also finds what is turned off and says why. Songs look the same everywhere
   (title, artist, key, BPM, capo, track), and the Songs list can show and sort them by **most and least played**. The song editor has two screens, **Data** and **Lyrics and chords**; deleting
   a song asks with its name. The app warns, on the band and over the internet, when someone is on another version.
-- **Metronome**, lyrics and chords import from websites, **Now Playing** for OBS and Resolume
+- **Metronome**, lyrics and chords import from websites, **Now Playing** for OBS and Resolume, the song on a TV or projector (external screen)
   ([format](docs/now-playing.md)), backup to a `.stagebook` file (tap one in a chat, a download or the file manager
   and it opens in the app), an **editor on the computer** (in the browser, with setlists and breaks) and an **essential
   mode** that turns off what you won't use.

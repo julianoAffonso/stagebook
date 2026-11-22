@@ -61,6 +61,7 @@ fun PdfScrollView(
     autoPxPerSecond: Float = 0f,
     onAutoEnd: () -> Unit = {},
     onPaused: (step: Int) -> Unit = {},
+    onTopPage: ((page: Int) -> Unit)? = null,   // the page in the middle of the view, for the external screen
     pageKey: Any = Unit,
 ) {
     when (open) {
@@ -126,6 +127,10 @@ fun PdfScrollView(
             }
             val offset = scroll.value.roundToInt()
             val visible = PdfScroll.visible(tops, heights, offset, viewport)
+            if (onTopPage != null) {
+                val middle = PdfScroll.pageAt(tops, offset + viewport / 2)
+                LaunchedEffect(middle, pageKey) { onTopPage(middle) }
+            }
             // the pictures of the pages in view, drawn off the main thread; the others are let go
             val drawn = remember(pages, width, crops) { mutableStateMapOf<Int, ImageBitmap>() }
             LaunchedEffect(visible, pages, width, crops) {

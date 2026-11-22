@@ -287,7 +287,12 @@ fun StageRoute(
         val shown = remember(uiState, screen) { uiState.copy(songs = uiState.songs.map { it.onScreen(screen) }) }
         val open = index.coerceIn(0, uiState.songs.lastIndex)
         LaunchedEffect(uiState.songs[open].id, screen) { viewModel.claimOldZoom(uiState.songs[open].id, screen) }
+        // a second screen (user, 22/11): the stage leaves what it shows in the mirror only while one is showing
+        val external = rememberPresentationDisplay(uiState.look.extrasOn && uiState.look.externalShow != br.app.stagebook.data.model.ExternalShow.OFF)
+        val mirror = remember { StageMirror() }
+        if (external != null) ExternalPresentation(external) { ExternalStageContent(mirror.frame, uiState.look, pdfStore::file) }
         StageScreen(
+            mirror = mirror.takeIf { external != null },
             uiState = shown,
             index = open,
             page = page,
@@ -448,6 +453,7 @@ fun StageScreen(
     note: String = "",
     onBack: (() -> Unit)? = null,
     pdfFile: (name: String) -> java.io.File = { java.io.File(it) },   // where a song's PDF is
+    mirror: StageMirror? = null,   // set while an external screen shows: where the stage leaves what it has on screen
     onDrawerHandle: (Float, Boolean) -> Unit = { _, _ -> },
     onPdfView: (String, br.app.stagebook.domain.PdfView) -> Unit = { _, _ -> },
     onPdfPage: (String, Int) -> Unit = { _, _ -> },
@@ -1148,6 +1154,9 @@ fun StageScreen(
                             crops = shownCrops, marks = shownMarks, markColor = Color(look.highlightColor),
                             autoOn = autoOn, autoPxPerSecond = autoPx, onAutoEnd = { autoOn = false },
                             onPaused = { k -> onPosition(index, k) }, pageKey = index,
+                            onTopPage = if (mirror == null) null else ({ p ->
+                                mirror.frame = MirrorFrame(song.id, song.title, song.meta, pdf = song.pdf, pdfPage = fileOf(p), pdfInvert = song.pdfInvert ?: look.pdfInvert, pdfMarks = song.pdfMarks, pdfCrops = song.pdfCrops)
+                            }),
                         )
                         trackOverlays()
                     }
@@ -1170,6 +1179,9 @@ fun StageScreen(
                         kotlinx.coroutines.delay(PDF_PAGE_REST_MS)
                         onPdfPage(song.id, current)
                     }
+                }
+                if (mirror != null) SideEffect {
+                    mirror.frame = MirrorFrame(song.id, song.title, song.meta, pdf = song.pdf, pdfPage = fileOf(current), pdfInvert = song.pdfInvert ?: look.pdfInvert, pdfMarks = song.pdfMarks, pdfCrops = song.pdfCrops)
                 }
                 Box(Modifier.fillMaxSize()) {
                     PdfStageView(
@@ -1400,6 +1412,18 @@ fun StageScreen(
             // scroll: the lyrics move up to the current step; when the step changes (within the song), the line where
             // you continue lights up
             val scrollY = remember(index) { androidx.compose.animation.core.Animatable(0f) }
+            // the external screen shows the song lines the stage has in view (user, 22/11)
+            if (mirror != null) {
+                val sources = remember(fitted) { fitted.map { it.source } }
+                if (scrollMode) LaunchedEffect(mirror, song.id, shownText, measured, height) {
+                    val heights = measured.map { it.height }
+                    snapshotFlow { br.app.stagebook.domain.MirrorLines.visible(heights, scrollY.value.roundToInt(), height) }.collect { inView ->
+                        mirror.frame = MirrorFrame(song.id, song.title, song.meta, shownText, br.app.stagebook.domain.MirrorLines.sourceRange(sources, listOf(inView)))
+                    }
+                } else SideEffect {
+                    mirror.frame = MirrorFrame(song.id, song.title, song.meta, shownText, br.app.stagebook.domain.MirrorLines.sourceRange(sources, sheets[shownAt]))
+                }
+            }
             // taps on the page find the line under the finger in the scrolled text, not the top of the song (audit 01/11)
             SideEffect { hit.show(shown, columnWidth, gutter, chordPx, if (scrollMode) ({ scrollY.value }) else ({ 0f })) }
             val syncing = remember(index) { BooleanArray(1) }   // an auto-scroll pause sets the step without scrolling

@@ -165,6 +165,7 @@ private val allItems: List<SettingsItem> by lazy {
         item("band_members", N, R.string.band_members, R.string.band_members, kw = R.string.kw_band, hide = noBandOrNet),
         item("band_invite", N, R.string.band_members, R.string.band_invite, R.string.band_invite_detail, R.string.kw_internet, hide = noInternet),
         item("announce", N, R.string.announce_title, R.string.announce_switch, R.string.announce_help, R.string.kw_announce, sw, noExtras),
+        item("external_show", N, R.string.external_title, R.string.external_show, R.string.external_help, R.string.kw_external, hide = noExtras),
         item("web_editor", N, R.string.settings_web_editor_card, R.string.settings_web_editor_switch, R.string.settings_web_editor_switch_detail, R.string.kw_computer, sw) {
             if (it.look.essential) Hide(R.string.hide_essential, "essential") else null
         },
