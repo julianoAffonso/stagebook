@@ -66,6 +66,16 @@ class PdfImporterTest {
         assertEquals("", one.text)
     }
 
+    @Test fun `one PDF names its song to open in the editor, several name none`() = runBlocking {
+        val one = importer.import(listOf(pdf("Sozinha.pdf")))
+        assertEquals(repo.library.value.songs.single { it.title == "Sozinha" }.id, one.single)
+        val two = importer.import(listOf(pdf("A.pdf"), pdf("B.pdf")))
+        assertEquals(2, two.ids.size)
+        assertEquals(null, two.single)
+        val bytes = importer.importBytes("Baixada.pdf", "%PDF-1.7\n".toByteArray() + ByteArray(50))
+        assertEquals(repo.library.value.songs.single { it.title == "Baixada" }.id, bytes.single)
+    }
+
     @Test fun `a file that is no PDF is left out with the reason and the others still come in`() = runBlocking {
         val r = importer.import(listOf(pdf("Boa.pdf"), pdf("Falsa.pdf", "PK zip".toByteArray())))
         assertEquals(listOf("Boa"), r.added)

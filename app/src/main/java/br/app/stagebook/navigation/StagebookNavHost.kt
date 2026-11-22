@@ -104,7 +104,12 @@ fun StagebookNavHost(
     val message = rememberAppMessage()
     // a PDF opened with the app: a song is made of it right away (nothing on screen is disturbed), and the message says so, or why not
     LaunchedEffect(openedPdfs) {
-        openedPdfs.collect { uri -> message.show(start.importPdfs(listOf(uri)).message(pdfContext), long = true) }
+        openedPdfs.collect { uri ->
+            val result = start.importPdfs(listOf(uri))
+            message.show(result.message(pdfContext), long = true)
+            // it opens in the editor, as a lyrics import does (user, 22/11)
+            result.single?.let { nav.navigate(SongEditor(songId = it)) }
+        }
     }
     // a page shared from a browser (user, 22/11): the import browser opens on it, and the person imports from there as
     // from any site (the kind, PDF or lyrics and chords, is told by the address: ImportViewModel)

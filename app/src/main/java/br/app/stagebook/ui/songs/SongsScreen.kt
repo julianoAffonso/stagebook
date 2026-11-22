@@ -91,7 +91,12 @@ fun SongsRoute(
     val context = androidx.compose.ui.platform.LocalContext.current
     val importScope = androidx.compose.runtime.rememberCoroutineScope()
     val pickPdfs = androidx.activity.compose.rememberLauncherForActivityResult(androidx.activity.result.contract.ActivityResultContracts.OpenMultipleDocuments()) { uris ->
-        if (uris.isNotEmpty()) importScope.launch { appMessage.show(viewModel.importPdfs(uris).message(context), long = true) }
+        if (uris.isNotEmpty()) importScope.launch {
+            val result = viewModel.importPdfs(uris)
+            appMessage.show(result.message(context), long = true)
+            // one PDF opens in the editor, as a lyrics import does (user, 22/11); several stay in the list
+            result.single?.let { onEditSong(it) }
+        }
     }
     SongsScreen(
         uiState = uiState,

@@ -88,6 +88,8 @@ fun ImportRoute(
     val pdfNot = stringResource(R.string.pdf_site_not_pdf)
     LaunchedEffect(pdfSite) {
         pdfSite.outcome.collect {
+            // the PDF that came in opens in the editor, as a lyrics import does (user, 22/11)
+            (it as? PdfSiteViewModel.Outcome.Done)?.result?.single?.let { id -> if (viewModel.queueState.value != null) onOpenEditorQueued(id) else onOpenEditor(id) }
             appMessage.show(
                 when (it) {
                     is PdfSiteViewModel.Outcome.Done -> it.result.message(context)
