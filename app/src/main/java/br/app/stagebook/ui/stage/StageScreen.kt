@@ -896,7 +896,10 @@ fun StageScreen(
         val wide = wideLists()
         // key and capo belong to chords: they don't show in the lyrics only profile
         val hasKey = look.chords && remember(shownText) { Chords.key(shownText).isNotEmpty() || Chords.capo(shownText) > 0 }
-        Row(Modifier.fillMaxWidth().onPlaced { edgeBand[0] = (it.positionInParent().y + it.size.height).roundToInt() }.padding(top = Spacing.s, bottom = Spacing.s), horizontalArrangement = Arrangement.spacedBy(Spacing.m), verticalAlignment = Alignment.CenterVertically) {
+        // on a phone the artist line sits right under the title and the room goes under the artist, before the lyrics: the
+        // artist belongs to the song's name, not to the chords (user, 22/11: it was the other way round)
+        val artistBelow = !wide && (song.meta.isNotEmpty() || (hasKey && !song.missing))
+        Row(Modifier.fillMaxWidth().onPlaced { edgeBand[0] = (it.positionInParent().y + it.size.height).roundToInt() }.padding(top = Spacing.s, bottom = if (artistBelow) 0.dp else Spacing.s), horizontalArrangement = Arrangement.spacedBy(Spacing.m), verticalAlignment = Alignment.CenterVertically) {
         // a long title comes first and pushes the artist right, up to the key and capo badges (user, 31/10); the
         // artist keeps a little room so it doesn't vanish
         BoxWithConstraints(Modifier.weight(1f)) {
@@ -954,8 +957,8 @@ fun StageScreen(
                 }
             }
         }
-        if (!wide && (song.meta.isNotEmpty() || (hasKey && !song.missing))) {
-            Row(Modifier.fillMaxWidth().padding(bottom = Spacing.s), verticalAlignment = Alignment.CenterVertically) {
+        if (artistBelow) {
+            Row(Modifier.fillMaxWidth().padding(bottom = Spacing.m), verticalAlignment = Alignment.CenterVertically) {
                 Text(
                     song.meta,
                     style = MaterialTheme.typography.titleSmall,
