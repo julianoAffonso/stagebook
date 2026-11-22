@@ -21,4 +21,32 @@ object TrackEnds {
 
     /** How long the jump back to the start waits after a stop, so it doesn't come in the middle of the fade. */
     fun seekDelay(fadeMs: Int): Long = if (fadeMs > 0) fadeMs + FADE_SLACK_MS else 0
+
+    /**
+     * What a track's measures are kept under (user, 22/11: another audio file means measuring again): its name, size, when
+     * it was written and a checksum of its start ([head]). A file put in place of another, even with the same name, size
+     * and date, gets a new key.
+     */
+    fun cacheKey(name: String, bytes: Long, modified: Long, head: Long): String = "$name|$bytes|$modified|$head"
+
+    /** The checksum of the first [HEAD_BYTES] of a file, for [cacheKey]. */
+    fun headOf(input: java.io.InputStream): Long {
+        val crc = java.util.zip.CRC32()
+        val buf = ByteArray(HEAD_BYTES)
+        var got = 0
+        while (got < HEAD_BYTES) { val n = input.read(buf, got, HEAD_BYTES - got); if (n < 0) break; got += n }
+        crc.update(buf, 0, got)
+        return crc.value
+    }
+
+    const val HEAD_BYTES = 64 * 1024
+
+    /**
+     * The kept keys to drop when writing [current] for the file [name]: those of files no longer in the folder
+     * ([present]) and the older ones of the same name. A key with more after it ("|mask") still belongs to [current].
+     */
+    fun stale(keys: Collection<String>, present: Set<String>, name: String, current: String): List<String> = keys.filter { k ->
+        val file = k.substringBefore('|')
+        file !in present || (file == name && k != current && !k.startsWith("$current|"))
+    }
 }

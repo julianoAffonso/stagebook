@@ -15,6 +15,7 @@ import br.app.stagebook.domain.Mixer
 import br.app.stagebook.domain.NormMode
 import br.app.stagebook.domain.OutputInfo
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
@@ -96,6 +97,20 @@ class StagePlayer @Inject constructor(
                 else if (changed) PlayerService.reconnect()
             }
         }
+        // skipping the silence turned on or off (user, 22/11): counts for the track already loaded, if it's at its start
+        scope.launch {
+            repository.library.map { it.look.trimSilence }.distinctUntilChanged().drop(1).collect { on ->
+                engine.withLock {
+                    val f = loaded ?: return@withLock
+                    if (durationMs < 0) return@withLock
+                    val before = lead
+                    lead = if (on) leadOf(f) else 0
+                    val ui = _ui.value
+                    val atStart = Engine.position() <= before + br.app.stagebook.domain.TrackEnds.LEAD_PAD_MS
+                    if (!ui.playing && !ui.waiting && atStart) Engine.seek(lead)
+                }
+            }
+        }
         // the mixer changed (the general one in Settings, or the loaded song's own over the stage): measure what's
         // missing and apply right away (only with the player on)
         scope.launch {
@@ -108,7 +123,7 @@ class StagePlayer @Inject constructor(
 
     /** Song open on stage (null = no backing track): loads its track, or, with a track playing, after it stops. */
     fun open(track: File?) {
-        if (queue.open(track) && PlayerService.running) scope.launch { load() }
+        if (queue.open(track) && PlayerService.running) loadAfterFade()
         if (track != null) prepareUnread()
     }
 
@@ -213,6 +228,18 @@ class StagePlayer @Inject constructor(
     // the jump back to the start, after the fade (user, 22/11): coming in the middle, the start would sound under it
     private var toStart: Job? = null
 
+    // until when a stop's fade is still sounding: the next song's track waits for it, or loading it cut the fade dry
+    @Volatile private var fadeUntil = 0L
+
+    // the song on screen changed: its track comes in once the fade of the one stopped is over
+    private fun loadAfterFade() {
+        scope.launch {
+            val wait = fadeUntil - android.os.SystemClock.elapsedRealtime()
+            if (wait > 0) delay(wait)
+            load()
+        }
+    }
+
     private fun backToStart() {
         if (!PlayerService.running) return
         toStart?.cancel()
@@ -254,18 +281,21 @@ class StagePlayer @Inject constructor(
     }
 
     fun pause() {
+        val wasPlaying = _ui.value.playing
         endWatch?.cancel()
         dropWait?.cancel()
         PlayerService.playWanted(false)
         // the sign goes with the wait: left on, it blinked on every song with nothing waiting for the interface (audit 10/11)
         _ui.update { it.copy(playing = false, waiting = false, away = false) }
         if (PlayerService.running) {
-            Engine.setFadeOut(repository.library.value.look.stopFadeMs)
+            val fade = repository.library.value.look.stopFadeMs
+            Engine.setFadeOut(fade)
+            if (wasPlaying) fadeUntil = android.os.SystemClock.elapsedRealtime() + br.app.stagebook.domain.TrackEnds.seekDelay(fade)
             Engine.pause()
             PlayerService.playing(false)
         }
         // the song on screen changed while this track played: its track comes in now
-        if (queue.stopped() && PlayerService.running) scope.launch { load() }
+        if (queue.stopped() && PlayerService.running) loadAfterFade()
     }
 
     /**
@@ -333,16 +363,21 @@ class StagePlayer @Inject constructor(
     private fun songMix(lib: br.app.stagebook.data.model.Library): br.app.stagebook.domain.SongMix? =
         loaded?.name?.let { name -> lib.songs.firstOrNull { it.track == name }?.mix }
 
+    // the file's identity for what is measured on it: another file, even under the same name, is measured again
+    private fun fileKey(f: File): String = br.app.stagebook.domain.TrackEnds.cacheKey(
+        f.name, f.length(), f.lastModified(), runCatching { f.inputStream().use(br.app.stagebook.domain.TrackEnds::headOf) }.getOrDefault(0L),
+    )
+
     // where the track's first sound is, read once per file and kept (only the start of the file is read)
     private fun leadOf(f: File): Long {
         val prefs = context.getSharedPreferences("lead", Context.MODE_PRIVATE)
-        val key = "${f.name}|${f.length()}"
+        val key = fileKey(f)
         if (prefs.contains(key)) return prefs.getLong(key, 0)
         val first = Engine.leadingSilence(f.absolutePath, br.app.stagebook.domain.TrackEnds.SOUND, br.app.stagebook.domain.TrackEnds.MAX_SILENCE_MS)
         val at = br.app.stagebook.domain.TrackEnds.startAt(first)
         val present = f.parentFile?.list()?.toSet().orEmpty()
         prefs.edit {
-            prefs.all.keys.filter { it.substringBefore('|') !in present }.forEach { remove(it) }
+            br.app.stagebook.domain.TrackEnds.stale(prefs.all.keys, present, f.name, key).forEach { remove(it) }
             putLong(key, at)
         }
         return at
@@ -350,14 +385,15 @@ class StagePlayer @Inject constructor(
 
     private fun measure(f: File, mask: Int): Measure? {
         val prefs = context.getSharedPreferences("norm", Context.MODE_PRIVATE)
-        val key = "${f.name}|${f.length()}|$mask"
+        val key = fileKey(f) + "|$mask"
         prefs.getString(key, null)?.split(';')?.mapNotNull { it.toFloatOrNull() }?.takeIf { it.size == 2 }
             ?.let { return Measure(it[0], it[1]) }
         val m = Engine.analyzeMask(f.absolutePath, mask) ?: return null
         // measures of tracks no longer in the folder go away (the list only grew and went into every backup; audit 30/10)
         val present = f.parentFile?.list()?.toSet().orEmpty()
+        // another file under the same name (a restored backup) is another sound: what was measured for the old one goes
         prefs.edit {
-            prefs.all.keys.filter { it.substringBefore('|') !in present }.forEach { remove(it) }
+            br.app.stagebook.domain.TrackEnds.stale(prefs.all.keys, present, f.name, fileKey(f)).forEach { remove(it) }
             putString(key, "${m[0]};${m[1]}")
         }
         return Measure(m[0], m[1])

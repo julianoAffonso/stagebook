@@ -42,6 +42,23 @@ class TrackEndsTest {
         assertEquals(2000L + TrackEnds.FADE_SLACK_MS, TrackEnds.seekDelay(2000))
     }
 
+    @Test fun `another audio file under the same name, size and date is measured again`() {
+        val a = ByteArray(100_000) { (it % 7).toByte() }
+        val b = a.copyOf().also { it[10] = 99 }
+        val keyA = TrackEnds.cacheKey("faixa.ogg", 100_000, 5L, TrackEnds.headOf(a.inputStream()))
+        val keyB = TrackEnds.cacheKey("faixa.ogg", 100_000, 5L, TrackEnds.headOf(b.inputStream()))
+        org.junit.Assert.assertNotEquals(keyA, keyB)
+        assertEquals(keyA, TrackEnds.cacheKey("faixa.ogg", 100_000, 5L, TrackEnds.headOf(a.copyOf().inputStream())))
+    }
+
+    @Test fun `the old file's measures go, the current one's stay, and gone files are swept`() {
+        val keys = listOf("faixa.ogg|1|1|1", "faixa.ogg|2|2|2", "faixa.ogg|2|2|2|3", "outra.ogg|1|1|1", "sumiu.ogg|1|1|1")
+        assertEquals(
+            listOf("faixa.ogg|1|1|1", "sumiu.ogg|1|1|1"),
+            TrackEnds.stale(keys, setOf("faixa.ogg", "outra.ogg"), "faixa.ogg", "faixa.ogg|2|2|2"),
+        )
+    }
+
     @Test fun `old settings keep today's stop and start at the first sound`() {
         val old = lenientJson.decodeFromString(Look.serializer(), "{}")
         assertEquals(0, old.stopFadeMs)
