@@ -834,7 +834,7 @@ private fun SectionList(
 /** One result: the group's icon, the name, "Group › Card" in the accent color and a line of explanation. */
 @Composable
 private fun SearchResultRow(hit: SettingsHit, onClick: () -> Unit) {
-    val path = hit.groupName + " › " + hit.card + if (hit.inHelp) " · " + stringResource(R.string.search_in_help) else ""
+    val path = hit.groupName + " › " + (hit.subgroup?.let { "$it › " } ?: "") + hit.card + if (hit.inHelp) " · " + stringResource(R.string.search_in_help) else ""
     // hidden by the mode or the profile: dimmed, with the reason; tapping opens where it is turned on
     Row(
         Modifier.fillMaxWidth().clip(MaterialTheme.shapes.medium).alpha(if (hit.hide != null) 0.6f else 1f).clickable(onClick = onClick)
@@ -886,15 +886,27 @@ private fun SectionDetail(section: SettingsSection, uiState: SettingsUiState, ac
             SettingsSection.PAGE -> PageDetail(uiState, actions)
             SettingsSection.CHORDS -> ChordShapesCard(uiState.look, actions)
             SettingsSection.PLAYER -> {
+                // the metronome card leads (its own name says what it is); the backing track's cards under their subtitle
                 if (uiState.look.extrasOn) MetronomeDetail(uiState.look, actions)
-                if (uiState.look.playerMode) PlayerDetail(uiState.look, actions)
+                if (uiState.look.playerMode) {
+                    if (uiState.look.extrasOn) br.app.stagebook.ui.components.SettingsSubheader(stringResource(R.string.sub_player))
+                    PlayerDetail(uiState.look, actions)
+                }
             }
             SettingsSection.LIBRARY -> LibraryDetail(uiState, actions)
             SettingsSection.BAND -> {
-                if (uiState.look.bandOn || uiState.look.internetOn) BandDetail(actions.band, actions.bandActions, lan = uiState.look.bandOn, internet = uiState.look.internetOn)
+                // subtitles (user, 22/11): playing together, what goes out to other screens and apps, editing on the computer
+                if (uiState.look.bandOn || uiState.look.internetOn) {
+                    br.app.stagebook.ui.components.SettingsSubheader(stringResource(R.string.sub_band))
+                    BandDetail(actions.band, actions.bandActions, lan = uiState.look.bandOn, internet = uiState.look.internetOn)
+                }
+                if (uiState.look.extrasOn) br.app.stagebook.ui.components.SettingsSubheader(stringResource(R.string.sub_broadcast))
                 AnnounceCard(uiState.look, actions)
                 ExternalScreenCard(uiState.look, actions)
-                if (!uiState.look.essential) WebEditorDetail(uiState.look.webEditorOn, actions.web, actions.onWebEditorOn, actions.onWebRemove)
+                if (!uiState.look.essential) {
+                    br.app.stagebook.ui.components.SettingsSubheader(stringResource(R.string.sub_computer))
+                    WebEditorDetail(uiState.look.webEditorOn, actions.web, actions.onWebEditorOn, actions.onWebRemove)
+                }
             }
             SettingsSection.DEVICE -> {
                 EssentialDetail(uiState.look, actions)
@@ -977,6 +989,8 @@ private fun LyricsDetail(look: Look, actions: SettingsActions, draft: StageDraft
 @Composable
 private fun PageDetail(uiState: SettingsUiState, actions: SettingsActions) {
     val look = uiState.look
+    // subtitles (user, 22/11): how the page moves, the pedal, what the device does during the show
+    br.app.stagebook.ui.components.SettingsSubheader(stringResource(R.string.sub_page))
     SettingsCard(stringResource(R.string.settings_page_mode), help = stringResource(R.string.settings_stage_mode_help)) {
         Text(stringResource(R.string.settings_stage_mode), style = MaterialTheme.typography.bodyLarge)
         br.app.stagebook.ui.components.SegmentedChoice(
@@ -1001,7 +1015,9 @@ private fun PageDetail(uiState: SettingsUiState, actions: SettingsActions) {
             InfoText(stringResource(R.string.settings_columns_help))
         }
     }
+    br.app.stagebook.ui.components.SettingsSubheader(stringResource(R.string.sub_pedal))
     PedalDetail(uiState, actions)
+    br.app.stagebook.ui.components.SettingsSubheader(stringResource(R.string.sub_show))
     // the screen stays on with the app open (it was in its own Screen item)
     SettingsCard(stringResource(R.string.settings_during_show), help = stringResource(R.string.settings_keep_screen_on_help)) {
         SwitchRow(stringResource(R.string.settings_keep_screen_on), look.keepScreenOn, actions.onKeepScreenOn, Modifier.settingsItem("keep_screen_on"))
@@ -1964,6 +1980,8 @@ const val ENRICH_STATUS_TAG = "enrich_status"
 
 @Composable
 private fun LibraryDetail(uiState: SettingsUiState, actions: SettingsActions) {
+    // subtitles group the cards (user, 22/11): the songs, importing from sites, copies; erasing everything last, in red
+    br.app.stagebook.ui.components.SettingsSubheader(stringResource(R.string.sub_songs))
     SettingsCard(stringResource(R.string.library_card)) {
         Text(
             br.app.stagebook.ui.components.songCountText(uiState.songCount) + " · " +
@@ -1972,9 +1990,7 @@ private fun LibraryDetail(uiState: SettingsUiState, actions: SettingsActions) {
             modifier = Modifier.settingsItem("library"),
         )
     }
-    HistoryCard(uiState, actions)
     EnrichCard(uiState, actions)
-    ImportSitesDetail(uiState.look, actions)
     // song tags: splitting national and international songs, once (moved here from the song list's ⋮, user 01/11);
     // Portuguese only
     if (br.app.stagebook.ui.components.nationalTagsShown()) SettingsCard(stringResource(R.string.tags_title)) {
@@ -2012,6 +2028,10 @@ private fun LibraryDetail(uiState: SettingsUiState, actions: SettingsActions) {
             )
         }
     }
+    HistoryCard(uiState, actions)
+    br.app.stagebook.ui.components.SettingsSubheader(stringResource(R.string.sub_import))
+    ImportSitesDetail(uiState.look, actions)
+    br.app.stagebook.ui.components.SettingsSubheader(stringResource(R.string.sub_copies))
     // one format only, .stagebook (user's request, 29/10), with the explanation visible (not hidden in "How it works")
     SettingsCard(stringResource(R.string.backup_save_card)) {
         var chosen by rememberSaveable { mutableStateOf(br.app.stagebook.data.Backup.Part.entries.map { it.name }.toSet()) }

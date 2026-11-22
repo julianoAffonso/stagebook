@@ -613,10 +613,10 @@ SECTIONS = [
     {
         "id": "ajustes", "pt": "Ajustes", "en": "Settings", "toc_subs": True,
         "text_pt": [
-            "A aba Ajustes do menu mostra só os grupos e a busca. Cada grupo abre na própria página, em tela cheia como o palco, sem seta: a alça na borda, como no palco, ou o voltar do Android, traz o menu de novo. Os itens abaixo seguem a ordem da tela. Nos cartões, o ⓘ ao lado do título explica o que eles fazem. Com o modo essencial, alguns itens e opções somem até você religar.",
+            "A aba Ajustes do menu mostra só os grupos e a busca. Cada grupo abre na própria página, em tela cheia como o palco, sem seta: a alça na borda, como no palco, ou o voltar do Android, traz o menu de novo. Os itens abaixo seguem a ordem da tela. Nos cartões, o ⓘ ao lado do título explica o que eles fazem. Com o modo essencial, alguns itens e opções somem até você religar. Nas seções maiores, subtítulos juntam os cartões do mesmo assunto, e a busca mostra o subtítulo no caminho (Biblioteca › Cópias › Backup).",
         ],
         "text_en": [
-            "The menu's Settings tab shows only the groups and the search. Each group opens on its own page, full screen like the stage, with no arrow: the handle on the edge, as on the stage, or Android's back, brings the menu again. The items below follow the order on screen. On the cards, the ⓘ next to the title explains what they do. With essential mode, some items and options disappear until you turn them back on.",
+            "The menu's Settings tab shows only the groups and the search. Each group opens on its own page, full screen like the stage, with no arrow: the handle on the edge, as on the stage, or Android's back, brings the menu again. The items below follow the order on screen. On the cards, the ⓘ next to the title explains what they do. With essential mode, some items and options disappear until you turn them back on. In the bigger sections, subtitles group the cards on the same subject, and the search shows the subtitle in the path (Library › Copies › Backup).",
         ],
         "figs": [Fig(("tablet_5_ajustes", "celular_5_ajustes", "Os ajustes", "Settings"))],
         "subs": [

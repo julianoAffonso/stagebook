@@ -1385,6 +1385,16 @@
     <string name="hide_internet">Só aparece com a internet ligada</string>
     <string name="hide_scroll">Só aparece no modo Rolar</string>
     <string name="hide_pages">Só aparece no modo Virar página</string>
+    <string name="sub_songs">Músicas</string>
+    <string name="sub_import">Importar de sites</string>
+    <string name="sub_copies">Cópias</string>
+    <string name="sub_band">Tocar com a banda</string>
+    <string name="sub_broadcast">Transmissão</string>
+    <string name="sub_computer">Computador</string>
+    <string name="sub_player">Backing track</string>
+    <string name="sub_page">Página</string>
+    <string name="sub_pedal">Pedal</string>
+    <string name="sub_show">Show</string>
     <string name="hide_external_off">Só aparece quando a tela externa mostra algo</string>
     <string name="hide_sites_chords">Só aparece com o perfil Letra e cifra</string>
     <string name="hide_sites_lyrics">Só aparece com o perfil Só letra</string>

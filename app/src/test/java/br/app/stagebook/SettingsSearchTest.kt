@@ -69,8 +69,8 @@ class SettingsSearchTest {
     @Test fun `midi finds the pedal and MIDI card and the MIDI output`() {
         screen()
         type("midi")
-        assertTrue(compose.onAllNodesWithText("Virar a página › Pedal e MIDI").fetchSemanticsNodes().isNotEmpty())
-        assertTrue(shown("Virar a página › Saída MIDI"))
+        assertTrue(compose.onAllNodesWithText("Virar a página › Pedal › Pedal e MIDI").fetchSemanticsNodes().isNotEmpty())
+        assertTrue(shown("Virar a página › Pedal › Saída MIDI"))
         compose.onNodeWithText("Enviar para").assertExists()
     }
 
@@ -105,16 +105,16 @@ class SettingsSearchTest {
     @Test fun `what essential mode turns off is found too, dimmed, with the reason`() {
         screen(essentialLook)
         type("ligar o editor")
-        assertTrue(shown("Banda e computador › No navegador"))
+        assertTrue(shown("Banda e computador › Computador › No navegador"))
         assertTrue(shown("Desligado pelo modo essencial"))
     }
 
     @Test fun `the songs MIDI output shows with the reason when the extras are off`() {
         screen(essentialLook)
         type("saida midi")
-        assertTrue(shown("Virar a página › Saída MIDI"))
+        assertTrue(shown("Virar a página › Pedal › Saída MIDI"))
         assertTrue(shown("Só aparece com Metrônomo e extras dos acordes ligado"))
-        assertTrue(shown("Virar a página › Pedal e MIDI"))   // the pedal stays
+        assertTrue(shown("Virar a página › Pedal › Pedal e MIDI"))   // the pedal stays
     }
 
     @Test fun `tapping a hidden item opens the place that turns it on and changes nothing`() {
@@ -130,7 +130,7 @@ class SettingsSearchTest {
             }
         }
         type("ligar o editor")
-        compose.onAllNodesWithText("Banda e computador › No navegador")[0].performClick()
+        compose.onAllNodesWithText("Banda e computador › Computador › No navegador")[0].performClick()
         compose.waitForIdle()
         // Device, where essential mode is turned off
         compose.onNodeWithText("Ligar o modo essencial").assertIsDisplayed()
@@ -180,7 +180,7 @@ class SettingsSearchTest {
     @Test fun `the name ranks before the explanation`() {
         screen()
         type("pedal")
-        val nodes = compose.onAllNodesWithText("Virar a página › Pedal e MIDI", substring = true).fetchSemanticsNodes()
+        val nodes = compose.onAllNodesWithText("Virar a página › Pedal › Pedal e MIDI", substring = true).fetchSemanticsNodes()
         assertTrue(nodes.isNotEmpty())
         assertFalse(compose.onAllNodesWithText("na explicação", substring = true).fetchSemanticsNodes().isNotEmpty() && nodes.first().boundsInRoot.top > 1000f)
     }
@@ -219,7 +219,7 @@ class SettingsSearchTest {
         type("midi")
         tester.emulateSavedInstanceStateRestore()
         compose.waitForIdle()
-        assertTrue(shown("Virar a página › Saída MIDI"))
+        assertTrue(shown("Virar a página › Pedal › Saída MIDI"))
     }
 
     // ---- the guard: the index and the screen say the same thing --------------------------------------------------
@@ -305,7 +305,7 @@ class SettingsSearchNarrowTest {
         compose.setContent { StagebookTheme { SettingsScreen(SettingsUiState(loading = false, midi = MidiState(supported = true)), SettingsActions(advanced = sampleAdvanced)) } }
         compose.onNode(hasSetTextAction()).performTextInput("midi")
         compose.waitForIdle()
-        for (text in listOf("Pedal MIDI pelo USB", "Virar a página › Saída MIDI", "Enviar para")) {
+        for (text in listOf("Pedal MIDI pelo USB", "Virar a página › Pedal › Saída MIDI", "Enviar para")) {
             val node = compose.onAllNodesWithText(text, useUnmergedTree = true).fetchSemanticsNodes().first()
             val out = mutableListOf<TextLayoutResult>()
             node.config.getOrNull(SemanticsActions.GetTextLayoutResult)!!.action!!(out)

@@ -221,10 +221,27 @@ private val tweakItems: List<SettingsItem> by lazy {
 /** The id a tweak's switch carries on the screen and in the index. */
 internal fun tweakId(t: DeviceTweak) = "tweak_${t.name.lowercase()}"
 
+/**
+ * The subtitle over each card inside its section (user, 22/11), as the screen draws them: the search shows
+ * "Section › Subtitle › Card". Cards with no subtitle aren't here.
+ */
+internal val subgroupOf: Map<Int, Int> = mapOf(
+    R.string.library_card to R.string.sub_songs, R.string.enrich_title to R.string.sub_songs, R.string.tags_title to R.string.sub_songs,
+    R.string.settings_normalize_card to R.string.sub_songs, R.string.history_title to R.string.sub_songs,
+    R.string.settings_chord_sites to R.string.sub_import, R.string.settings_lyric_sites to R.string.sub_import, R.string.settings_pdf_sites to R.string.sub_import,
+    R.string.backup_save_card to R.string.sub_copies, R.string.backup_open_card to R.string.sub_copies, R.string.backup_share_card to R.string.sub_copies,
+    R.string.band_this_device to R.string.sub_band, R.string.band_nearby to R.string.sub_band, R.string.band_members to R.string.sub_band,
+    R.string.announce_title to R.string.sub_broadcast, R.string.external_title to R.string.sub_broadcast,
+    R.string.settings_web_editor_card to R.string.sub_computer, R.string.settings_web_editor_devices to R.string.sub_computer,
+    R.string.settings_usb_card to R.string.sub_player, R.string.track_ends_title to R.string.sub_player, R.string.advanced_play to R.string.sub_player,
+    R.string.settings_page_mode to R.string.sub_page, R.string.settings_pedal to R.string.sub_pedal, R.string.settings_midi_out to R.string.sub_pedal,
+    R.string.settings_during_show to R.string.sub_show,
+)
+
 /** An item as the person reads it, in the language the app is showing now. */
 internal class SettingsHit(
     val item: SettingsItem, val title: String, val card: String, val groupName: String, val detail: String?, val score: Int,
-    val hide: Hide? = null, val reason: String? = null,
+    val hide: Hide? = null, val reason: String? = null, val subgroup: String? = null,
 ) {
     /** Only the explanation matched: the result says so. */
     val inHelp get() = score == HELP
@@ -237,7 +254,7 @@ private const val HELP = 3
 private fun Resources.read(item: SettingsItem): SettingsHit {
     val raw = if (item.kind.slider) getString(item.title, SENTINEL) else getString(item.title)
     val title = raw.substringBefore(SENTINEL.toString()).trim().trimEnd(':', ' ').ifEmpty { raw }
-    return SettingsHit(item, title, getString(item.card), getString(item.group.title), item.detail?.let(::getString), 0)
+    return SettingsHit(item, title, getString(item.card), getString(item.group.title), item.detail?.let(::getString), 0, subgroup = subgroupOf[item.card]?.let(::getString))
 }
 
 /** What a search reads of one item, normalized once per language: a keystroke only compares against it. */
@@ -284,7 +301,7 @@ internal class SettingsSearchIndex(private val resources: Resources) {
             val item = e.read.item
             val hide = item.hide(ctx)
             val r = e.read
-            SettingsHit(item, r.title, r.card, r.groupName, r.detail, score, hide, hide?.let { reasons.getOrPut(it.reason) { resources.getString(it.reason) } })
+            SettingsHit(item, r.title, r.card, r.groupName, r.detail, score, hide, hide?.let { reasons.getOrPut(it.reason) { resources.getString(it.reason) } }, r.subgroup)
         }.sortedWith(compareBy({ it.score }, { it.hide != null }))
     }
 }
