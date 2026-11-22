@@ -517,7 +517,7 @@
     <string name="external_lyrics">Só letra</string>
     <string name="external_chords">Letra e cifra</string>
     <string name="external_pdf">Letra, cifra e PDF</string>
-    <string name="external_detail">Música em PDF só aparece em Letra, cifra e PDF. Nas outras opções, a TV mostra o nome.</string>
+    <string name="external_detail">Música em PDF: em Letra, cifra e PDF aparecem as páginas. Nas outras opções aparece a letra guardada na música, ou o nome se ela não tiver.</string>
     <string name="external_idle">Com o palco fechado</string>
     <string name="external_idle_logo">Logo do Stagebook</string>
     <string name="external_idle_black">Tela preta</string>

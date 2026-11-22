@@ -77,6 +77,32 @@ class ExternalScreenTest {
         assertEquals(0, chordsDrawn())
     }
 
+    @Test fun `a PDF song's kept lyrics split over its pages, cut between verses, every line once`() {
+        val lines = listOf("a", "b", "c", "", "d", "e", "f", "", "g", "h")
+        val parts = (0 until 3).map { MirrorLines.pdfPart(lines.size, { lines[it].isEmpty() }, 3, it) }
+        assertEquals((0 until 10).toList(), parts.flatMap { it.toList() })
+        // the cuts fall right after the blank lines: each page starts a verse
+        assertEquals(listOf("a", "d", "g"), parts.filter { !it.isEmpty() }.map { lines[it.first] })
+        // more pages than lines: every line still shows, and the pages past the end keep the last part (never an empty TV)
+        val many = (0 until 20).map { MirrorLines.pdfPart(10, { false }, 20, it) }
+        assertEquals((0 until 10).toList(), many.flatMap { it.toList() }.distinct())
+        assertTrue(many.none { it.isEmpty() })
+        assertEquals(0..9, MirrorLines.pdfPart(10, { false }, 1, 0))
+    }
+
+    @Test fun `a PDF song with kept lyrics shows them in the text modes, the part of its page, and the PDF mode shows the page`() {
+        var frame by mutableStateOf(MirrorFrame("p", "Partitura", pdf = "x.pdf", text = song, pdfAt = 1, pdfCount = 2))
+        var look by mutableStateOf(Look(externalShow = ExternalShow.LYRICS))
+        compose.setContent { StagebookTheme { ExternalStageContent(frame, look, { File(it) }) } }
+        compose.onNodeWithText("Terceira linha", substring = true).assertExists()
+        compose.onNodeWithText("Primeira linha", substring = true).assertDoesNotExist()
+        compose.onNodeWithText("Partitura").assertDoesNotExist()
+        compose.runOnUiThread { frame = frame.copy(pdfAt = 0) }
+        compose.onNodeWithText("Primeira linha", substring = true).assertExists()
+        compose.runOnUiThread { look = look.copy(externalShow = ExternalShow.PDF) }
+        compose.onNodeWithText("Primeira linha", substring = true).assertDoesNotExist()
+    }
+
     @Test fun `a PDF song in a text mode shows its name, a page with no song lines too`() {
         var frame by mutableStateOf(MirrorFrame("p", "Partitura", "Compositor", pdf = "x.pdf"))
         compose.setContent { StagebookTheme { ExternalStageContent(frame, Look(externalShow = ExternalShow.LYRICS), { File(it) }) } }

@@ -68,6 +68,8 @@ data class MirrorFrame(
     val pdfInvert: Boolean = false,
     val pdfMarks: List<PdfMark> = emptyList(),
     val pdfCrops: List<PdfCrop> = emptyList(),
+    val pdfAt: Int = 0,      // the page the stage shows, counting only the pages shown
+    val pdfCount: Int = 1,   // how many pages the stage shows
 )
 
 /**
@@ -145,7 +147,11 @@ fun ExternalStageContent(frame: MirrorFrame?, look: Look, pdfFile: (String) -> F
     val fg = Color(look.fg)
     Box(modifier.fillMaxSize().background(bg).testTag(EXTERNAL_TAG), Alignment.Center) {
         if (frame.pdf.isNotEmpty()) {
-            if (look.externalShow == ExternalShow.PDF) {
+            val lyrics = remember(frame.text) { hasLyrics(frame.text) }
+            if (look.externalShow != ExternalShow.PDF && lyrics) {
+                // the PDF's kept lyrics, the part of the page on stage (a PDF song with no lyrics shows its name)
+                LyricsPart(frame, look, fg) { all -> br.app.stagebook.domain.MirrorLines.pdfPart(all.size, { all[it].text.isEmpty() }, frame.pdfCount, frame.pdfAt) }
+            } else if (look.externalShow == ExternalShow.PDF) {
                 val open by rememberPdfOpen(pdfFile(frame.pdf))
                 PdfStageView(
                     open, frame.pdfPage, frame.pdfInvert, onPageCount = {}, marks = frame.pdfMarks, markColor = Color(look.highlightColor),
@@ -154,30 +160,43 @@ fun ExternalStageContent(frame: MirrorFrame?, look: Look, pdfFile: (String) -> F
             } else TitleCard(frame, fg)
             return@Box
         }
-        val names = rememberSectionNames(look.translateSections)
-        val chords = ChordLook(look.externalShow != ExternalShow.LYRICS, look.chordScale, Color(look.chordColor))
-        val text = remember(frame.text, frame.lines, names, chords, look.sectionColor, look.showSections, look.sectionScale, look.sectionFont, look.highlightColor) {
-            val all = stageLines(frame.text, names, Color(look.sectionColor), look.showSections, chords, look.sectionScale, Color(look.highlightColor), look.sectionFont.family)
-            val shown = frame.lines?.let { r -> all.filter { it.source in r } } ?: all
-            shown.map { it.text }.dropWhile { it.isEmpty() }.dropLastWhile { it.isEmpty() }
+        LyricsPart(frame, look, fg) { all -> frame.lines?.let { r -> all.indices.filter { all[it].source in r }.let { if (it.isEmpty()) IntRange.EMPTY else it.first()..it.last() } } ?: all.indices }
+    }
+}
+
+/** The song has lyrics to show, beyond titles and directives (a PDF song may keep them). */
+private fun hasLyrics(text: String): Boolean =
+    stageLines(text, SectionNames(null), Color.White, false, ChordLook(false, 1f, Color.White)).any { it.text.isNotBlank() }
+
+/**
+ * The lines of [frame]'s text that [part] picks, as large as they fit the screen, with chords unless the person chose
+ * lyrics only. No lines with words (a page with only the chord list) shows the song's name.
+ */
+@Composable
+private fun LyricsPart(frame: MirrorFrame, look: Look, fg: Color, part: (List<StageLine>) -> IntRange) {
+    val names = rememberSectionNames(look.translateSections)
+    val chords = ChordLook(look.externalShow != ExternalShow.LYRICS, look.chordScale, Color(look.chordColor))
+    val text = remember(frame, names, chords, look.sectionColor, look.showSections, look.sectionScale, look.sectionFont, look.highlightColor) {
+        val all = stageLines(frame.text, names, Color(look.sectionColor), look.showSections, chords, look.sectionScale, Color(look.highlightColor), look.sectionFont.family)
+        val r = part(all)
+        (if (r.isEmpty()) emptyList() else all.subList(r.first, r.last + 1)).map { it.text }.dropWhile { it.isEmpty() }.dropLastWhile { it.isEmpty() }
+    }
+    if (text.none { it.isNotBlank() }) { TitleCard(frame, fg); return }
+    BoxWithConstraints(Modifier.fillMaxSize().padding(Spacing.l)) {
+        val measurer = rememberTextMeasurer(cacheSize = 0)
+        val joined = remember(text) { joinLines(text) }
+        val density = LocalDensity.current
+        val w = constraints.maxWidth
+        val h = constraints.maxHeight
+        val size = remember(joined, w, h, look.bold, look.font, chords.scale) {
+            with(density) { fitFontPx(measurer, joined, w, h) { px -> externalStyle(px.toSp(), fg, look) }.toSp() }
         }
-        if (text.isEmpty()) { TitleCard(frame, fg); return@Box }
-        BoxWithConstraints(Modifier.fillMaxSize().padding(Spacing.l)) {
-            val measurer = rememberTextMeasurer(cacheSize = 0)
-            val joined = remember(text) { joinLines(text) }
-            val density = LocalDensity.current
-            val w = constraints.maxWidth
-            val h = constraints.maxHeight
-            val size = remember(joined, w, h, look.bold, look.font, chords.scale) {
-                with(density) { fitFontPx(measurer, joined, w, h) { px -> externalStyle(px.toSp(), fg, look) }.toSp() }
-            }
-            val style = externalStyle(size, fg, look)
-            ChordText(
-                joined, style,
-                style.copy(color = chords.color, fontSize = style.fontSize * chords.scale, fontWeight = FontWeight.Bold, fontFamily = look.chordFont.family, lineHeight = TextUnit.Unspecified),
-                Modifier.align(Alignment.Center),
-            )
-        }
+        val style = externalStyle(size, fg, look)
+        ChordText(
+            joined, style,
+            style.copy(color = chords.color, fontSize = style.fontSize * chords.scale, fontWeight = FontWeight.Bold, fontFamily = look.chordFont.family, lineHeight = TextUnit.Unspecified),
+            Modifier.align(Alignment.Center),
+        )
     }
 }
 

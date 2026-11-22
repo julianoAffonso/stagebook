@@ -1184,7 +1184,10 @@ fun StageScreen(
                     }
                 }
                 if (mirror != null) SideEffect {
-                    mirror.frame = MirrorFrame(song.id, song.title, song.meta, pdf = song.pdf, pdfPage = fileOf(current), pdfInvert = song.pdfInvert ?: look.pdfInvert, pdfMarks = song.pdfMarks, pdfCrops = song.pdfCrops)
+                    mirror.frame = MirrorFrame(
+                        song.id, song.title, song.meta, text = shownText, pdf = song.pdf, pdfPage = fileOf(current), pdfInvert = song.pdfInvert ?: look.pdfInvert,
+                        pdfMarks = song.pdfMarks, pdfCrops = song.pdfCrops, pdfAt = current, pdfCount = if (pageCountFor == index) pageCount else 1,
+                    )
                 }
                 Box(Modifier.fillMaxSize()) {
                     PdfStageView(

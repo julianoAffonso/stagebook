@@ -498,7 +498,7 @@
     <string name="external_lyrics">Lyrics only</string>
     <string name="external_chords">Lyrics and chords</string>
     <string name="external_pdf">Lyrics, chords and PDF</string>
-    <string name="external_detail">A PDF song only shows with Lyrics, chords and PDF. With the others, the TV shows its name.</string>
+    <string name="external_detail">PDF song: with Lyrics, chords and PDF its pages show. With the others, the lyrics kept in the song show, or its name if it has none.</string>
     <string name="external_idle">With the stage closed</string>
     <string name="external_idle_logo">Stagebook logo</string>
     <string name="external_idle_black">Black screen</string>
