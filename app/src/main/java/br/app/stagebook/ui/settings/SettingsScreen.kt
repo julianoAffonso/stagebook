@@ -1971,7 +1971,7 @@ private fun EnrichCard(uiState: SettingsUiState, actions: SettingsActions) {
         // height as the number grows (user, 22/11: the line broke at 10 and everything under it jumped)
         if (e.running) {
             Text(
-                stringResource(R.string.enrich_running, e.done, e.total),
+                stringResource(if (e.again) R.string.enrich_running_again else R.string.enrich_running, e.done, e.total),
                 style = MaterialTheme.typography.bodyMedium.copy(fontFeatureSettings = "tnum"),
                 color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, softWrap = false,
                 modifier = Modifier.testTag(ENRICH_STATUS_TAG),

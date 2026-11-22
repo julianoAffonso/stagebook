@@ -26,6 +26,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
 import org.junit.Assert.assertEquals
@@ -95,6 +96,23 @@ class LibraryEnricherTest {
         assertEquals("Found Artist", repo.song("a")!!.author)
         assertEquals(2, calls)
         assertEquals(0, e.missingCount(repo.library.value.songs))
+    }
+
+    @Test fun `the second round counts on its own - the total never jumps`() = runBlocking {
+        val repo = repo()
+        val full = Chords.setDirective(Chords.setDirective("x", "tempo", "100"), "duration", "3:00")
+        repo.restore(listOf(Song("a", "Uma", text = full), Song("b", "Duas", text = full), Song("c", "Tres", text = full)), emptyList())
+        var asked = 0
+        val e = enricher(repo).apply { artistYear = { t, _ -> asked++; if (t == "Duas" && asked <= 3) null else MusicBrainz.Info(t, "Artista", "1999") } }
+        val seen = java.util.Collections.synchronizedList(mutableListOf<LibraryEnricher.Progress>())
+        val watch = launch(Dispatchers.IO) { e.progress.collect { seen += it } }
+        e.start()
+        withTimeout(5_000) { e.progress.first { !it.running && it.done > 0 } }
+        watch.cancel()
+        val running = seen.filter { it.running }
+        assertTrue(running.filter { !it.again }.all { it.total == 3 })
+        assertTrue("the second round, with its own count", running.any { it.again && it.total == 1 })
+        assertEquals("Artista", repo.song("b")!!.author)
     }
 
     @Test fun `what the services don't have leaves the count until the song changes, and Look again asks for it`() = runBlocking {

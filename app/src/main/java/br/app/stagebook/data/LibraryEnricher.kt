@@ -37,7 +37,8 @@ class LibraryEnricher @Inject constructor(
     @ApplicationContext private val context: Context,
 ) {
     /** [total] songs to look at, [done] already looked at, [filled] got something new; [running] false when idle or finished. */
-    data class Progress(val running: Boolean = false, val done: Int = 0, val total: Int = 0, val filled: Int = 0, val offline: Boolean = false)
+    data class Progress(val running: Boolean = false, val done: Int = 0, val total: Int = 0, val filled: Int = 0, val offline: Boolean = false, val again: Boolean = false)
+    // [again]: the second round, over the songs a service didn't answer for; [done] and [total] count that round alone
 
     private val _progress = MutableStateFlow(Progress())
     val progress: StateFlow<Progress> = _progress.asStateFlow()
@@ -72,8 +73,6 @@ class LibraryEnricher @Inject constructor(
         if (ids.isEmpty()) return
         job = scope.launch {
             var filled = 0
-            var done = 0
-            var total = ids.size
             try {
                 // the first round, then the songs that still lack something once more: a busy service answers later
                 var round = ids
@@ -81,13 +80,13 @@ class LibraryEnricher @Inject constructor(
                     if (r > 0) {
                         round = round.filter { id -> repository.song(id)?.let(::lacks) == true }
                         if (round.isEmpty()) return@repeat
-                        total += round.size
+                        // the second round counts on its own (user, 22/11: "of 59" jumping to "of 107" looked wrong)
+                        _progress.value = Progress(running = true, done = 0, total = round.size, filled = filled, again = true)
                         delay(roundPauseMs)
                     }
-                    round.forEach { id ->
+                    round.forEachIndexed { i, id ->
                         if (enrich(id)) filled++
-                        done++
-                        _progress.value = Progress(running = true, done = done, total = total, filled = filled)
+                        _progress.value = Progress(running = true, done = i + 1, total = round.size, filled = filled, again = r > 0)
                     }
                 }
                 // what still lacks something after both rounds was looked up: it leaves the count until it changes
