@@ -377,6 +377,8 @@ class SettingsViewModel @Inject constructor(
     fun setKeepScreenOn(on: Boolean) = repository.updateLook { it.copy(keepScreenOn = on) }
     fun setStageDnd(on: Boolean) = repository.updateLook { it.copy(stageDnd = on) }
     fun setTrackStops(on: Boolean) = repository.updateLook { it.copy(trackStops = on) }
+    fun setStopFade(ms: Int) = repository.updateLook { it.copy(stopFadeMs = ms) }
+    fun setTrimSilence(on: Boolean) = repository.updateLook { it.copy(trimSilence = on) }
 
     fun checkUpdate() {
         if (updateJob?.isActive == true) return

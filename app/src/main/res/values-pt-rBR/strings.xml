@@ -1142,6 +1142,14 @@
     <string name="metro_out_together">Pela rota do Android, este aparelho manda o clique para a interface USB junto com a música.</string>
     <string name="metro_out_hint">Para escolher uma saída da interface USB, espete-a com o player ligado.</string>
     <string name="usb_via_android">Tocar pela interface através do Android</string>
+    <string name="track_ends_title">Começo e fim</string>
+    <string name="stop_fade">Fade ao parar</string>
+    <string name="stop_fade_none">Sem fade</string>
+    <string name="stop_fade_seconds">%1$s s</string>
+    <string name="stop_fade_detail">Ao parar ou pausar a faixa, o volume desce nesse tempo.</string>
+    <string name="trim_silence">Pular o silêncio do começo</string>
+    <string name="trim_silence_detail">A faixa começa no primeiro som.</string>
+    <string name="kw_fade">fade parar silêncio começo fade stop silence start trim</string>
     <string name="usb_via_android_detail">Use só se a interface conectar e o som não sair ou sair picotado. O som passa pelo áudio do Android, que pode engasgar.</string>
     <string name="usb_route_auto_android">O app ligou esta chave para %1$s, porque o som falhou várias vezes no motor do Stagebook.</string>
     <string name="usb_route_auto_engine">O app desligou esta chave para %1$s, porque o som não saiu pelo Android.</string>

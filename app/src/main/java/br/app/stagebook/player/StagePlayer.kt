@@ -205,7 +205,22 @@ class StagePlayer @Inject constructor(
     fun stop() {
         pause()
         _ui.update { it.copy(away = false) }   // stopped on purpose: back to the start, nothing left to carry on
-        if (PlayerService.running) scope.launch { engine.withLock { Engine.seek(0) } }
+        backToStart()
+    }
+
+    // where the loaded track's first sound is (user, 22/11: skip the silence before it); 0 = its very start
+    @Volatile private var lead = 0L
+    // the jump back to the start, after the fade (user, 22/11): coming in the middle, the start would sound under it
+    private var toStart: Job? = null
+
+    private fun backToStart() {
+        if (!PlayerService.running) return
+        toStart?.cancel()
+        val wait = br.app.stagebook.domain.TrackEnds.seekDelay(repository.library.value.look.stopFadeMs)
+        toStart = scope.launch {
+            if (wait > 0) delay(wait)
+            engine.withLock { Engine.seek(lead) }
+        }
     }
 
     // the wait for an output that dropped mid-song (see serviceChanged)
@@ -222,7 +237,11 @@ class StagePlayer @Inject constructor(
         PlayerService.playWanted(true)
         _ui.update { it.copy(waiting = true) }
         queue.started()
+        // played again while a stop was still fading: from the start now, not from where the fade was
+        val restart = toStart?.isActive == true
+        toStart?.cancel()
         scope.launch {
+            if (restart) engine.withLock { Engine.seek(lead) }
             if (!load()) {
                 PlayerService.playWanted(false)
                 _ui.value = PlayerUi(message = context.getString(R.string.player_no_track))
@@ -241,6 +260,7 @@ class StagePlayer @Inject constructor(
         // the sign goes with the wait: left on, it blinked on every song with nothing waiting for the interface (audit 10/11)
         _ui.update { it.copy(playing = false, waiting = false, away = false) }
         if (PlayerService.running) {
+            Engine.setFadeOut(repository.library.value.look.stopFadeMs)
             Engine.pause()
             PlayerService.playing(false)
         }
@@ -287,6 +307,8 @@ class StagePlayer @Inject constructor(
         val lanes = Engine.lanes()
         if (lanes > mixer.channels) repository.updateLook { it.copy(mixer = it.mixer.copy(channels = lanes)) }
         measureAndApply()
+        lead = if (repository.library.value.look.trimSilence) leadOf(f) else 0
+        if (lead > 0) Engine.seek(lead)
         ready = f
         true
     }
@@ -310,6 +332,21 @@ class StagePlayer @Inject constructor(
     // the loaded backing track's song: each track file belongs to one song
     private fun songMix(lib: br.app.stagebook.data.model.Library): br.app.stagebook.domain.SongMix? =
         loaded?.name?.let { name -> lib.songs.firstOrNull { it.track == name }?.mix }
+
+    // where the track's first sound is, read once per file and kept (only the start of the file is read)
+    private fun leadOf(f: File): Long {
+        val prefs = context.getSharedPreferences("lead", Context.MODE_PRIVATE)
+        val key = "${f.name}|${f.length()}"
+        if (prefs.contains(key)) return prefs.getLong(key, 0)
+        val first = Engine.leadingSilence(f.absolutePath, br.app.stagebook.domain.TrackEnds.SOUND, br.app.stagebook.domain.TrackEnds.MAX_SILENCE_MS)
+        val at = br.app.stagebook.domain.TrackEnds.startAt(first)
+        val present = f.parentFile?.list()?.toSet().orEmpty()
+        prefs.edit {
+            prefs.all.keys.filter { it.substringBefore('|') !in present }.forEach { remove(it) }
+            putLong(key, at)
+        }
+        return at
+    }
 
     private fun measure(f: File, mask: Int): Measure? {
         val prefs = context.getSharedPreferences("norm", Context.MODE_PRIVATE)
@@ -348,7 +385,7 @@ class StagePlayer @Inject constructor(
                             // measured) skipped the seek and the next play stayed at the end (audit 01/11)
                             kotlinx.coroutines.withContext(kotlinx.coroutines.NonCancellable) {
                                 pause()
-                                engine.withLock { Engine.seek(0) }
+                                backToStart()
                             }
                         }
                     }

@@ -295,6 +295,10 @@ static void mb_reset_locked(void) /* with g_mx */ {
 static long g_base_ms = 0;           // position (ms) of the last seek
 static long g_consumed = 0;           // output frames played since the seek
 static float g_fade = 0.0f;           // 0..1, ramp to avoid clicks
+// The ramp down when the person pauses or stops (user, 22/11: a fade on stop, set in Settings); FADE_FRAMES = only the
+// anti-click. Any other way down (end of the file, the output held) keeps the anti-click.
+static volatile int g_fade_out_frames = FADE_FRAMES;
+#define FADE_DOWN_STEP (g_playing ? 1.0f / FADE_FRAMES : 1.0f / g_fade_out_frames)
 
 // resampler (Catmull-Rom): history of 4 source frames
 static float g_hist[4][LANES_MAX];
@@ -498,7 +502,8 @@ static void *dec_main(void *arg) {
     while (!g_dec_stop) {
         pthread_mutex_lock(&g_vmx);
         pthread_mutex_lock(&g_mx);
-        int active = src_ok(&g_src) && g_playing && !g_eof;
+        // a fade on stop longer than the ring (1 s) keeps reading while the volume goes down, or it went silent early
+        int active = src_ok(&g_src) && (g_playing || g_fade > 0.0f) && !g_eof;
         int work = active && ring_space_locked() > 2048;
         pthread_mutex_unlock(&g_mx);
         // while playing, the ring (1 s) only drains 2048 frames in ~43 ms: 5 ms of slack is plenty; stopped, 20 ms
@@ -742,7 +747,7 @@ static void *usb_main(void *arg) {
                 float lane[LANES_MAX] = {0}; \
                 int want_play = g_playing && !tail && !hold; \
                 if (want_play && g_fade < 1.0f) g_fade += 1.0f / FADE_FRAMES; \
-                if (!want_play && g_fade > 0.0f) g_fade -= 1.0f / FADE_FRAMES; \
+                if (!want_play && g_fade > 0.0f) g_fade -= FADE_DOWN_STEP; \
                 if (g_fade < 0) g_fade = 0; if (g_fade > 1) g_fade = 1; \
                 if (g_fade > 0) { if (ring_pop_locked(lane)) g_consumed++; else if (want_play && !g_eof) st_underrun++; } \
                 if (want_play && g_ring_n < st_ring_min) st_ring_min = g_ring_n; \
@@ -1053,7 +1058,7 @@ static aaudio_data_callback_result_t dev_cb(AAudioStream *st, void *ud, void *da
         float lane[LANES_MAX] = {0};
         int want_play = g_playing;
         if (want_play && g_fade < 1.0f) g_fade += 1.0f / FADE_FRAMES;
-        if (!want_play && g_fade > 0.0f) g_fade -= 1.0f / FADE_FRAMES;
+        if (!want_play && g_fade > 0.0f) g_fade -= FADE_DOWN_STEP;
         if (g_fade < 0) g_fade = 0; if (g_fade > 1) g_fade = 1;
         if (g_fade > 0 && ring_pop_locked(lane)) g_consumed++;
         float outv[OUTS_MAX];
@@ -1196,6 +1201,12 @@ JNIEXPORT jlong JNICALL FN(load)(JNIEnv *e, jclass c, jstring jpath) {
     pthread_mutex_unlock(&g_vmx);
     (*e)->ReleaseStringUTFChars(e, jpath, path);
     return dur_ms;
+}
+
+// How long the volume takes to go down when the person pauses or stops; 0 or less = only the 5 ms anti-click.
+JNIEXPORT void JNICALL FN(setFadeOut)(JNIEnv *e, jclass c, jint ms) {
+    long f = ms > 0 ? (long)ms * OUT_RATE / 1000 : 0;
+    g_fade_out_frames = f > FADE_FRAMES ? (int)f : FADE_FRAMES;
 }
 
 JNIEXPORT void JNICALL FN(play)(JNIEnv *e, jclass c) { g_playing = 1; }
@@ -1482,6 +1493,28 @@ static int measure(const char *path, int mask, float *lufs, float *peak, float *
     *peak = (float)pk;
     if (peak_click) *peak_click = (float)pkc;
     return 1;
+}
+
+// Where the first sound of the file is, in ms (user, 22/11: skip the silence before the song): the first frame where any
+// channel goes over [threshold] (linear). Reads only up to that frame, at most [maxMs]; -1 if the file didn't open.
+JNIEXPORT jlong JNICALL FN(leadingSilence)(JNIEnv *e, jclass c, jstring jpath, jfloat threshold, jlong maxMs) {
+    const char *path = (*e)->GetStringUTFChars(e, jpath, NULL);
+    int err = 0, ch = 0, fs = 0;
+    long len = 0;
+    src_t v = src_open(path, &err, &fs, &ch, &len);
+    (*e)->ReleaseStringUTFChars(e, jpath, path);
+    if (!src_ok(&v)) return -1;
+    long limit = (long)(maxMs * fs / 1000), at = 0, found = -1;
+    float buf[4096 * 8];
+    int got;
+    while (found < 0 && at < limit && (got = src_read(&v, ch, buf, 4096)) > 0) {
+        for (int i = 0; i < got && found < 0; i++)
+            for (int k = 0; k < ch; k++) if (fabsf(buf[i * ch + k]) > threshold) { found = at + i; break; }
+        at += got;
+    }
+    src_close(&v);
+    if (found < 0) found = at < limit ? 0 : limit;   // all silent: start at the start
+    return (jlong)(found * 1000L / fs);
 }
 
 // Loudness of a set of channels (bits in mask): {lufs, peak}, or null.

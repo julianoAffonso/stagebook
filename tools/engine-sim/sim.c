@@ -1041,6 +1041,35 @@ only_starve:
     meters g0 = meter(cap, cap_n);
     show("paused", g0);
     check(g0.peak[0] + g0.peak[1] + g0.peak[2] + g0.peak[3] == 0, "pause = silence on all 4 channels (stream stays active)", "");
+#ifdef FADE_DOWN_STEP
+    // 11) the fade on stop (user, 22/11): 2 s, longer than the 1 s ring, so the decoder has to keep reading while the
+    // volume goes down; and where the first sound is, to skip the silence before it
+    printf("[11] fade on stop (2 s) and the silence before the first sound\n");
+    FN(setFadeOut)(env, NULL, 2000);
+    FN(seek)(env, NULL, 60000);
+    FN(play)(env, NULL);
+    sleep_s(0.5);
+    FN(pause)(env, NULL);
+    cap_n = 0; capturing = 1;
+    sleep_s(2.6);
+    capturing = 0;
+    FN(setFadeOut)(env, NULL, 0);
+    {
+        long r = OUT_RATE;
+        long a = r / 10 < cap_n ? r / 10 : cap_n, b0 = r * 3 / 2, b1 = r * 18 / 10, c0 = r * 22 / 10;
+        meters early = meter(cap, a);
+        meters late = meter(cap + b0 * 4, b1 < cap_n ? b1 - b0 : 0);
+        meters after = meter(cap + c0 * 4, cap_n > c0 ? cap_n - c0 : 0);
+        snprintf(buf, sizeof buf, "first 0.1 s peak %.1f dB, 1.5-1.8 s peak %.1f dB, after 2.2 s peak %.1f dB",
+                 db(early.peak[0]), db(late.peak[0]), db(after.peak[0]));
+        check(early.peak[0] > late.peak[0] && late.peak[0] > 0 && after.peak[0] == 0 && cap_n > c0,
+              "the volume goes down over 2 s, still sounding after 1 s, then silence", buf);
+    }
+    jlong lead = FN(leadingSilence)(env, NULL, (jstring)ogg, 0.001f, 30000);
+    snprintf(buf, sizeof buf, "first sound at %lld ms", (long long)lead);
+    check(lead >= 0 && lead < dur, "finds where the first sound is", buf);
+    check(FN(leadingSilence)(env, NULL, (jstring)"/nonexistent.ogg", 0.001f, 30000) == -1, "a file that doesn't open says so", "");
+#endif
     FN(stop)(env, NULL);
     sim_close_conn();
 

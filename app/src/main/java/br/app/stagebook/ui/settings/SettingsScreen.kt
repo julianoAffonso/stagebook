@@ -402,6 +402,8 @@ fun SettingsRoute(
                 },
                 onDndAllow = ::openDndAccess,
                 onTrackStops = viewModel::setTrackStops,
+                onStopFade = viewModel::setStopFade,
+                onTrimSilence = viewModel::setTrimSilence,
                 onColumns = viewModel::setColumns,
                 onStageMode = viewModel::setStageMode,
                 onAutoScroll = viewModel::setAutoScroll,
@@ -517,6 +519,8 @@ data class SettingsActions(
     val onStageDnd: (Boolean) -> Unit = {},
     val onDndAllow: () -> Unit = {},
     val onTrackStops: (Boolean) -> Unit = {},
+    val onStopFade: (Int) -> Unit = {},
+    val onTrimSilence: (Boolean) -> Unit = {},
     val onColumns: (StageColumns) -> Unit = {},
     val onStageMode: (br.app.stagebook.data.model.StageMode) -> Unit = {},
     val onAutoScroll: (Int) -> Unit = {},
@@ -1582,11 +1586,29 @@ private fun PlayerDetail(look: Look, actions: SettingsActions) {
         // the interface charges the device: some behave worse on the engine that way (user, 06/11)
         if (usb.powered) StatusNote(stringResource(R.string.usb_power_warning), StatusTone.PROBLEM)
     }
+    TrackEndsCard(look, actions)
     // the play card of the Android settings (battery, USB routing) is the player's too
     AdvancedPlayCard(actions.advanced, actions.onTweak, actions.onBatteryFree)
     // no mixer here (user, 02/11): nothing plays in Settings (leaving the stage stops the song), so it could never be
     // adjusted by ear; the mixer and EQ are on the stage, over the playing song
     Text(stringResource(R.string.mixer_listen_on_stage), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+}
+
+/** How the backing track starts and stops (user, 22/11): its silence at the start skipped, and a fade when it stops. */
+@Composable
+private fun TrackEndsCard(look: Look, actions: SettingsActions) {
+    SettingsCard(stringResource(R.string.track_ends_title)) {
+        val locale = androidx.compose.ui.platform.LocalConfiguration.current.locales[0]
+        val seconds = remember(locale) { java.text.NumberFormat.getNumberInstance(locale).apply { maximumFractionDigits = 1 } }
+        val choices = br.app.stagebook.domain.TrackEnds.FADES_MS
+        OptionDropdown(
+            stringResource(R.string.stop_fade), choices, look.stopFadeMs.takeIf { it in choices } ?: 0, actions.onStopFade,
+            nameOf = { if (it == 0) stringResource(R.string.stop_fade_none) else stringResource(R.string.stop_fade_seconds, seconds.format(it / 1000.0)) },
+            modifier = Modifier.settingsItem("stop_fade"),
+        )
+        InfoText(stringResource(R.string.stop_fade_detail))
+        SwitchRow(stringResource(R.string.trim_silence), look.trimSilence, actions.onTrimSilence, Modifier.settingsItem("trim_silence"), detail = stringResource(R.string.trim_silence_detail))
+    }
 }
 
 @Composable

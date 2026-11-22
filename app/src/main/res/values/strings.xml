@@ -1098,6 +1098,14 @@
     <string name="metro_out_together">Through Android, this device sends the click to the USB interface with the song.</string>
     <string name="metro_out_hint">To pick a USB interface output, plug it in with the player on.</string>
     <string name="usb_via_android">Play on the interface through Android</string>
+    <string name="track_ends_title">Start and stop</string>
+    <string name="stop_fade">Fade when stopping</string>
+    <string name="stop_fade_none">No fade</string>
+    <string name="stop_fade_seconds">%1$s s</string>
+    <string name="stop_fade_detail">When you stop or pause the track, the volume goes down over this time.</string>
+    <string name="trim_silence">Skip the silence at the start</string>
+    <string name="trim_silence_detail">The track starts at its first sound.</string>
+    <string name="kw_fade">fade parar silêncio começo fade stop silence start trim</string>
     <string name="usb_via_android_detail">Use it only if the interface connects but there\'s no sound or it stutters. Sound goes through Android\'s audio, which can stutter too.</string>
     <string name="usb_route_auto_android">The app turned this on for %1$s, because the sound failed several times on Stagebook\'s engine.</string>
     <string name="usb_route_auto_engine">The app turned this off for %1$s, because no sound came out through Android.</string>

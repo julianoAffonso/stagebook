@@ -134,6 +134,8 @@ private val allItems: List<SettingsItem> by lazy {
             noMetro(it) ?: if (!it.look.metroGlow) Hide(R.string.hide_metro_glow, "metro_glow") else null
         },
         item("usb_via_android", M, R.string.settings_usb_card, R.string.usb_via_android, R.string.usb_via_android_detail, R.string.kw_usb, sw, noPlayer),
+        item("stop_fade", M, R.string.track_ends_title, R.string.stop_fade, R.string.stop_fade_detail, R.string.kw_fade, hide = noPlayer),
+        item("trim_silence", M, R.string.track_ends_title, R.string.trim_silence, R.string.trim_silence_detail, R.string.kw_fade, sw, noPlayer),
         item("battery_allow", M, R.string.advanced_play, R.string.advanced_battery_allow, R.string.advanced_play_help, R.string.kw_battery) {
             noPlayer(it) ?: if (it.advanced.batteryFree) Hide(R.string.hide_battery_free) else null
         },

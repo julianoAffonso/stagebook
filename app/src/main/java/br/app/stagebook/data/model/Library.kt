@@ -313,6 +313,8 @@ data class Look(
     val showMinutes: Int = br.app.stagebook.domain.ShowTimer.DEFAULT_MINUTES,   // the show's length, in half hours
     val showStart: Long = 0L,   // when the show's counter started (epoch ms); 0 = not started
     val trackStops: Boolean = true,   // the stage's track button stops and goes back to the start; off = pauses (user, 31/10)
+    val stopFadeMs: Int = 0,   // the volume goes down over this when the person stops or pauses; 0 = only the anti-click (user, 22/11)
+    val trimSilence: Boolean = true,   // the backing track starts at its first sound (user, 22/11)
     val pedalName: String = "",   // name of the Bluetooth pedal recognized from the last button pressed
     val columns: StageColumns = StageColumns.AUTO,
     val stageMode: StageMode = StageMode.PAGES,
