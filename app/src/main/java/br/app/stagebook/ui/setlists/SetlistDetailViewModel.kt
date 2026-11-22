@@ -114,7 +114,7 @@ class SetlistDetailViewModel @Inject constructor(
     fun bandSearch(on: Boolean) = share.bandSearch(on)
 
     /** Sends the setlist (with the songs, if [withSongs]) to everyone in the band on the network now. */
-    fun sendBand(withSongs: Boolean) = share.sendBand { setlistCloud.setlistPackage(setId, withSongs) }
+    fun sendBand(withSongs: Boolean, wifiOnly: Boolean = false) = share.sendBand(wifiOnly) { setlistCloud.setlistPackage(setId, withSongs) }
 
     val uiState: StateFlow<SetlistDetailUiState> = combine(repository.loaded, repository.library, show.marks, show.breaks, conduct.role) { loaded, lib, marks, breaks, role ->
         val set = lib.setlist(setId)

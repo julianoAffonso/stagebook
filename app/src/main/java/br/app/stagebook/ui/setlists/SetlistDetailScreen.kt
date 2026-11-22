@@ -180,7 +180,7 @@ fun SetlistDetailScreen(
     onShareCode: (br.app.stagebook.ui.share.CloudUi.Sent) -> Unit = {},
     onCopyCode: (code: String) -> Unit = {},
     band: Int = 0,
-    onSendBand: (withSongs: Boolean) -> Unit = {},
+    onSendBand: (withSongs: Boolean, wifiOnly: Boolean) -> Unit = { _, _ -> },
     onBandSearch: (Boolean) -> Unit = {},
     onAddBreak: () -> Unit = {},
     onRemoveBreak: (position: Int) -> Unit = {},   // the break before the song at that position
@@ -471,7 +471,7 @@ fun SetlistDetailScreen(
             onInternet = { withSongs -> sharing = false; onSendInternet(withSongs) },
             onDismiss = { sharing = false; doneSharing() },
             band = band,
-            onBand = { withSongs -> sharing = false; onSendBand(withSongs) },
+            onBand = { withSongs, wifiOnly -> sharing = false; onSendBand(withSongs, wifiOnly) },
             onSearch = onBandSearch,
         )
     }

@@ -233,7 +233,7 @@ fun ShareSheet(
     onInternet: (Boolean) -> Unit,
     onDismiss: () -> Unit,
     band: Int = 0,
-    onBand: (Boolean) -> Unit = {},
+    onBand: (withSongs: Boolean, wifiOnly: Boolean) -> Unit = { _, _ -> },
     onSearch: (Boolean) -> Unit = {},
     internetOn: Boolean = true,
     limits: ShareLimits? = null,   // null: one list with [songs] songs (a setlist when there's a QR, else loose songs)
@@ -267,11 +267,14 @@ fun ShareOptions(
     onInternet: (Boolean) -> Unit,
     modifier: Modifier = Modifier,
     band: Int = 0,
-    onBand: (Boolean) -> Unit = {},
+    onBand: (withSongs: Boolean, wifiOnly: Boolean) -> Unit = { _, _ -> },
     internetOn: Boolean = true,   // essential mode (T19): no sending over the internet and no "no internet" notice
     limits: ShareLimits = ShareLimits(lists = 1, songs = songs, setlists = onQr != null),
 ) {
     var withSongs by rememberSaveable { mutableStateOf(true) }
+    // only who is on this Wi-Fi, nothing over the internet (user, 22/11): a band all in one room, or a setlist kept off the
+    // server
+    var wifiOnly by rememberSaveable { mutableStateOf(false) }
     val bandOk = br.app.stagebook.domain.BandContent.bandFits(limits.lists)
     val songsGoing = if (withSongs) limits.songs else 0
     val internetOk = br.app.stagebook.domain.BandContent.internetFits(limits.lists, songsGoing)
@@ -295,7 +298,14 @@ fun ShareOptions(
                 else if (pdfSizes.isNotEmpty()) stringResource(R.string.share_band_hint) + " " + stringResource(R.string.share_band_pdf_note)
                 else stringResource(R.string.share_band_hint),
                 enabled = bandOk,
-            ) { onBand(withSongs) }
+            ) { onBand(withSongs, wifiOnly && internetOn) }
+            // with the internet off (essential mode) it is Wi-Fi only already
+            if (internetOn) SwitchRow(
+                stringResource(R.string.share_band_wifi_only),
+                wifiOnly,
+                { wifiOnly = it },
+                detail = stringResource(R.string.share_band_wifi_only_hint),
+            )
         }
         // QR on screen: only in a setlist (it carries only the titles; loose songs don't fit in a QR)
         onQr?.let { ShareOption(AppIcons.QrCode, stringResource(R.string.share_qr), stringResource(R.string.share_qr_hint), onClick = it) }

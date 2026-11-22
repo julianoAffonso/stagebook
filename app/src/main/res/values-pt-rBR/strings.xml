@@ -846,6 +846,8 @@
         <item quantity="many">Mandar para a banda (%1$d aparelhos)</item>
         <item quantity="other">Mandar para a banda (%1$d aparelhos)</item>
     </plurals>
+    <string name="share_band_wifi_only">Só deste Wi-Fi</string>
+    <string name="share_band_wifi_only_hint">Nada vai pela internet: quem está neste Wi-Fi recebe agora, os outros não.</string>
     <string name="share_band_hint">Quem está neste Wi-Fi recebe na hora. Os outros recebem pela internet quando abrirem o app, em até 12 horas. Cada um confere antes de entrar.</string>
     <plurals name="share_band_sent">
         <item quantity="one">Enviado para %1$d aparelho da banda</item>

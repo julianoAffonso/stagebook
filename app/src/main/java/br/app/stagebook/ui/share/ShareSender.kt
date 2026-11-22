@@ -94,23 +94,26 @@ class ShareSender(
     /** The Share sheet opened or closed: turns the band search on or off. */
     fun bandSearch(on: Boolean) = bandLink.setScreenOpen(on)
 
-    /** Sends [pkg] to everyone in the band now: nearby ones (Wi-Fi) right away, the others in each pair's inbox. */
-    fun sendBand(pkg: () -> Pair<ByteArray, List<SetlistCloud.SharedSong>>?) {
+    /**
+     * Sends [pkg] to everyone in the band now: nearby ones (Wi-Fi) right away, the others in each pair's inbox. [wifiOnly]:
+     * only who is on this Wi-Fi, nothing over the internet (user, 22/11).
+     */
+    fun sendBand(wifiOnly: Boolean = false, pkg: () -> Pair<ByteArray, List<SetlistCloud.SharedSong>>?) {
         scope.launch {
             val (list, songs) = pkg() ?: return@launch bandSent.send(0)   // nothing to send is also an answer
             val lan = bandLink.send(list, songs)
-            val net = if (connectivity.isOnline()) bandInternet.sendToBand(list, songs, lan) else 0
+            val net = if (!wifiOnly && connectivity.isOnline()) bandInternet.sendToBand(list, songs, lan) else 0
             bandSent.send(lan.size + net)
         }
     }
 
     /** Several setlists to the band in one tap: one package each; the result is how many got them. */
-    fun sendBandMany(packages: () -> List<Pair<ByteArray, List<SetlistCloud.SharedSong>>>) {
+    fun sendBandMany(wifiOnly: Boolean = false, packages: () -> List<Pair<ByteArray, List<SetlistCloud.SharedSong>>>) {
         scope.launch {
             var reached = 0
             for ((list, songs) in packages()) {
                 val lan = bandLink.send(list, songs)
-                val net = if (connectivity.isOnline()) bandInternet.sendToBand(list, songs, lan) else 0
+                val net = if (!wifiOnly && connectivity.isOnline()) bandInternet.sendToBand(list, songs, lan) else 0
                 reached = maxOf(reached, lan.size + net)
             }
             bandSent.send(reached)

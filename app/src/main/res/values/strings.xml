@@ -819,6 +819,8 @@
         <item quantity="one">Send to the band (%1$d device)</item>
         <item quantity="other">Send to the band (%1$d devices)</item>
     </plurals>
+    <string name="share_band_wifi_only">Only this Wi-Fi</string>
+    <string name="share_band_wifi_only_hint">Nothing goes over the internet: band members on this Wi-Fi get it now, the others don\'t.</string>
     <string name="share_band_hint">Whoever is on this Wi-Fi gets it right away. The others get it online when they open the app, within 12 hours. Each one checks it before it comes in.</string>
     <plurals name="share_band_sent">
         <item quantity="one">Sent to %1$d band device</item>

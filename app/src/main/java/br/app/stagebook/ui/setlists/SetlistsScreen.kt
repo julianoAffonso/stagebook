@@ -129,7 +129,7 @@ fun SetlistsScreen(
     onDismissCloud: () -> Unit = {},
     codeActions: br.app.stagebook.ui.share.CodeActions = br.app.stagebook.ui.share.CodeActions({}, {}),
     band: Int = 0,
-    onSendBand: (ids: List<String>, withSongs: Boolean) -> Unit = { _, _ -> },
+    onSendBand: (ids: List<String>, withSongs: Boolean, wifiOnly: Boolean) -> Unit = { _, _, _ -> },
     onBandSearch: (Boolean) -> Unit = {},
     songsIn: (List<String>) -> Int = { 0 },
     pdfSizesIn: (List<String>) -> List<Long> = { emptyList() },   // the PDFs the chosen setlists would carry: the internet says if they fit
@@ -295,7 +295,7 @@ fun SetlistsScreen(
             onInternet = { withSongs -> sharing = false; onShareInternet(selected, withSongs); selected = emptyList() },
             onDismiss = { sharing = false },
             band = band,
-            onBand = { withSongs -> sharing = false; onSendBand(selected, withSongs); selected = emptyList() },
+            onBand = { withSongs, wifiOnly -> sharing = false; onSendBand(selected, withSongs, wifiOnly); selected = emptyList() },
             onSearch = onBandSearch,
             limits = br.app.stagebook.ui.share.ShareLimits(lists = selected.size, songs = songsIn(selected), setlists = true, pdfSizes = pdfSizesIn(selected)),
         )

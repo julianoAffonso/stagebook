@@ -154,7 +154,7 @@ fun SongsScreen(
     onScan: () -> Unit = {},
     onReceiveCode: (String) -> Unit = {},
     band: Int = 0,
-    onSendBand: (List<String>) -> Unit = {},
+    onSendBand: (List<String>, wifiOnly: Boolean) -> Unit = { _, _ -> },
     onBandSearch: (Boolean) -> Unit = {},
     received: Int = 0,
     onReceived: () -> Unit = {},
@@ -330,7 +330,7 @@ fun SongsScreen(
             onInternet = { sharing = false; onShareSongs(selected); selected = emptyList() },
             onDismiss = { sharing = false },
             band = band,
-            onBand = { sharing = false; onSendBand(selected); selected = emptyList() },
+            onBand = { _, wifiOnly -> sharing = false; onSendBand(selected, wifiOnly); selected = emptyList() },
             onSearch = onBandSearch,
         )
     }

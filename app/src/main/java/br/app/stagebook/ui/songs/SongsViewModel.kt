@@ -119,7 +119,7 @@ class SongsViewModel @Inject constructor(
     fun bandSearch(on: Boolean) = share.bandSearch(on)
 
     /** Sends the chosen songs to everyone in the band on the network now. */
-    fun sendBand(ids: List<String>) = share.sendBand { setlistCloud.songsPackage(ids) }
+    fun sendBand(ids: List<String>, wifiOnly: Boolean = false) = share.sendBand(wifiOnly) { setlistCloud.songsPackage(ids) }
 
     /** Import needs internet: the button is disabled without it (only watched while the screen is open). */
     val online: StateFlow<Boolean> = connectivity.online.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), true)
