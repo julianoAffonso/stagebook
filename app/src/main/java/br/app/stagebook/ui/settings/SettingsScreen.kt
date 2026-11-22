@@ -1977,29 +1977,32 @@ private fun EnrichCard(uiState: SettingsUiState, actions: SettingsActions) {
                 modifier = Modifier.testTag(ENRICH_STATUS_TAG),
             )
             InfoText(stringResource(R.string.enrich_leave))
-        } else InfoText(
-            when {
+        } else {
+            // one state, said once (user, 22/11: "all looked up" above "59 looked up" below was confusing)
+            val missing = uiState.missingData
+            val tried = uiState.triedData
+            val status = when {
                 e.offline -> stringResource(R.string.enrich_offline)
-                e.total > 0 -> pluralStringResource(R.plurals.enrich_done, e.filled, e.filled)
-                uiState.missingData == 0 && uiState.triedData == 0 -> stringResource(R.string.enrich_nothing)
-                uiState.missingData == 0 -> stringResource(R.string.enrich_all_looked)
-                else -> pluralStringResource(R.plurals.enrich_missing, uiState.missingData, uiState.missingData)
-            },
-            Modifier.testTag(ENRICH_STATUS_TAG),
-        )
+                missing > 0 -> pluralStringResource(R.plurals.enrich_missing, missing, missing)
+                tried > 0 -> pluralStringResource(R.plurals.enrich_tried, tried, tried)
+                else -> stringResource(R.string.enrich_nothing)
+            }
+            // just after a run, what it found comes first
+            val done = if (e.total > 0) pluralStringResource(R.plurals.enrich_done, e.filled, e.filled) + " " else ""
+            InfoText(done + status, Modifier.testTag(ENRICH_STATUS_TAG))
+            if (missing > 0) ActionButton(stringResource(R.string.enrich_start), actions.onEnrich, Modifier.fillMaxWidth().settingsItem("enrich"), icon = AppIcons.Sync, tone = ButtonTone.Tonal)
+            // the ones looked up with no luck: their own button, asked for again only on purpose
+            if (tried > 0) {
+                if (missing > 0) InfoText(pluralStringResource(R.plurals.enrich_tried_others, tried, tried))
+                ActionButton(stringResource(R.string.enrich_again), actions.onEnrichAgain, Modifier.fillMaxWidth(), icon = AppIcons.Sync, tone = if (missing > 0) ButtonTone.Quiet else ButtonTone.Tonal)
+            }
+        }
         if (e.running) {
             androidx.compose.material3.LinearProgressIndicator(
                 progress = { if (e.total == 0) 0f else e.done.toFloat() / e.total },
                 modifier = Modifier.fillMaxWidth(),
             )
             ActionButton(stringResource(R.string.enrich_stop), actions.onStopEnrich, Modifier.fillMaxWidth(), icon = AppIcons.Stop, tone = ButtonTone.Tonal)
-        } else {
-            if (uiState.missingData > 0) ActionButton(stringResource(R.string.enrich_start), actions.onEnrich, Modifier.fillMaxWidth().settingsItem("enrich"), icon = AppIcons.Sync, tone = ButtonTone.Tonal)
-            // looked up already and the services don't have it: said apart, and asked for again only on purpose
-            if (uiState.triedData > 0) {
-                InfoText(pluralStringResource(R.plurals.enrich_tried, uiState.triedData, uiState.triedData))
-                ActionButton(stringResource(R.string.enrich_again), actions.onEnrichAgain, Modifier.fillMaxWidth(), icon = AppIcons.Sync, tone = ButtonTone.Quiet)
-            }
         }
     }
 }

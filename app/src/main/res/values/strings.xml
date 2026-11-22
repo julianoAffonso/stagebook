@@ -146,15 +146,18 @@
     <string name="enrich_offline">No internet right now. Try again when you are connected.</string>
     <string name="enrich_nothing">Every song has artist, year, BPM and length.</string>
     <plurals name="enrich_missing">
-        <item quantity="one">%d song is missing artist, year, BPM or length. Only empty fields are filled.</item>
-        <item quantity="other">%d songs are missing artist, year, BPM or length. Only empty fields are filled.</item>
+        <item quantity="one">%d song is missing artist, year, BPM or length.</item>
+        <item quantity="other">%d songs are missing artist, year, BPM or length.</item>
     </plurals>
     <plurals name="enrich_tried">
-        <item quantity="one">%d song was looked up and the services don\'t have what it lacks.</item>
-        <item quantity="other">%d songs were looked up and the services don\'t have what they lack.</item>
+        <item quantity="one">%d song still lacks something. The services didn\'t find it.</item>
+        <item quantity="other">%d songs still lack something. The services didn\'t find it.</item>
+    </plurals>
+    <plurals name="enrich_tried_others">
+        <item quantity="one">%d more was looked up, with no luck.</item>
+        <item quantity="other">%d more were looked up, with no luck.</item>
     </plurals>
     <string name="enrich_again">Look again</string>
-    <string name="enrich_all_looked">Every song was looked up.</string>
     <plurals name="enrich_done">
         <item quantity="one">Done. %d song got new details.</item>
         <item quantity="other">Done. %d songs got new details.</item>

@@ -152,17 +152,21 @@
     <string name="enrich_offline">Sem internet agora. Tente de novo quando estiver conectado.</string>
     <string name="enrich_nothing">Todas as músicas têm artista, ano, BPM e duração.</string>
     <plurals name="enrich_missing">
-        <item quantity="one">%d música sem artista, ano, BPM ou duração. Só os campos vazios são preenchidos.</item>
-        <item quantity="many">%d músicas sem artista, ano, BPM ou duração. Só os campos vazios são preenchidos.</item>
-        <item quantity="other">%d músicas sem artista, ano, BPM ou duração. Só os campos vazios são preenchidos.</item>
+        <item quantity="one">%d música sem artista, ano, BPM ou duração.</item>
+        <item quantity="many">%d músicas sem artista, ano, BPM ou duração.</item>
+        <item quantity="other">%d músicas sem artista, ano, BPM ou duração.</item>
     </plurals>
     <plurals name="enrich_tried">
-        <item quantity="one">%d música já foi procurada e os serviços não têm o que falta.</item>
-        <item quantity="many">%d músicas já foram procuradas e os serviços não têm o que falta.</item>
-        <item quantity="other">%d músicas já foram procuradas e os serviços não têm o que falta.</item>
+        <item quantity="one">%d música continua sem algum dado. Os serviços não acharam.</item>
+        <item quantity="many">%d músicas continuam sem algum dado. Os serviços não acharam.</item>
+        <item quantity="other">%d músicas continuam sem algum dado. Os serviços não acharam.</item>
+    </plurals>
+    <plurals name="enrich_tried_others">
+        <item quantity="one">Outra %d já foi procurada, sem resultado.</item>
+        <item quantity="many">Outras %d já foram procuradas, sem resultado.</item>
+        <item quantity="other">Outras %d já foram procuradas, sem resultado.</item>
     </plurals>
     <string name="enrich_again">Procurar de novo</string>
-    <string name="enrich_all_looked">Todas as músicas já foram procuradas.</string>
     <plurals name="enrich_done">
         <item quantity="one">Pronto. %d música ganhou dados novos.</item>
         <item quantity="many">Pronto. %d músicas ganharam dados novos.</item>

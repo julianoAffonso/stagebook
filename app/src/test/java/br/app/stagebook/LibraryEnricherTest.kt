@@ -175,7 +175,7 @@ class LibraryEnricherTest {
                 SettingsScreen(state, SettingsActions(onEnrich = { started = true }, onStopEnrich = { stopped = true }), Modifier.fillMaxSize(), section = SettingsSection.LIBRARY, onLeave = {}, onMenu = {})
             }
         }
-        compose.onNodeWithText("3 músicas sem artista, ano, BPM ou duração. Só os campos vazios são preenchidos.").performScrollTo().assertExists()
+        compose.onNodeWithText("3 músicas sem artista, ano, BPM ou duração.").performScrollTo().assertExists()
         compose.onNodeWithText("Buscar o que falta").performScrollTo().performClick()
         assertTrue(started)
         state = state.copy(enrich = LibraryEnricher.Progress(running = true, done = 1, total = 3))
@@ -183,5 +183,28 @@ class LibraryEnricherTest {
         compose.onNodeWithText("Pode sair desta tela.").assertExists()
         compose.onNodeWithText("Parar").performScrollTo().performClick()
         assertTrue(stopped)
+    }
+
+    @Test fun `the card says one state at a time`() {
+        var state by mutableStateOf(SettingsUiState(loading = false, songCount = 201, missingData = 0, triedData = 59))
+        compose.setContent {
+            StagebookTheme { SettingsScreen(state, SettingsActions(), Modifier.fillMaxSize(), section = SettingsSection.LIBRARY, onLeave = {}, onMenu = {}) }
+        }
+        // all looked up: one sentence and one button
+        compose.onNodeWithText("59 músicas continuam sem algum dado. Os serviços não acharam.").performScrollTo().assertExists()
+        compose.onNodeWithText("Procurar de novo").assertExists()
+        compose.onNodeWithText("Buscar o que falta").assertDoesNotExist()
+        compose.onNodeWithText("já foram procuradas", substring = true).assertDoesNotExist()
+        // new ones missing and some looked up before: the new ones first, the others below with their own button
+        compose.runOnUiThread { state = state.copy(missingData = 3, triedData = 12) }
+        compose.onNodeWithText("3 músicas sem artista, ano, BPM ou duração.").performScrollTo().assertExists()
+        compose.onNodeWithText("Outras 12 já foram procuradas, sem resultado.").assertExists()
+        compose.onNodeWithText("Buscar o que falta").assertExists()
+        // just after a run, what it found comes first
+        compose.runOnUiThread { state = state.copy(missingData = 0, triedData = 11, enrich = LibraryEnricher.Progress(done = 59, total = 59, filled = 48)) }
+        compose.onNodeWithText("Pronto. 48 músicas ganharam dados novos. 11 músicas continuam sem algum dado. Os serviços não acharam.").performScrollTo().assertExists()
+        // nothing missing
+        compose.runOnUiThread { state = SettingsUiState(loading = false, songCount = 201) }
+        compose.onNodeWithText("Todas as músicas têm artista, ano, BPM e duração.").performScrollTo().assertExists()
     }
 }
