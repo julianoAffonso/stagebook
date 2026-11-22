@@ -33,4 +33,12 @@ class ImportAddressTest {
             assertTrue(it, ImportViewModel.urlFor(it).startsWith("https://www.google.com/search?q="))
         }
     }
+
+    // Android's link finder decides, like a browser's bar (user, 22/11): any real site ending, not a short list
+    @Test fun `any real site ending opens and a made-up one is a search`() {
+        assertEquals("https://stagebook.app.br/ajuda", ImportViewModel.urlFor("stagebook.app.br/ajuda"))
+        assertEquals("https://example.music/", ImportViewModel.urlFor("example.music/"))
+        assertEquals("https://example.app", ImportViewModel.urlFor("Example. App"))
+        assertTrue(ImportViewModel.urlFor("ac.dc").startsWith("https://www.google.com/search?q="))
+    }
 }

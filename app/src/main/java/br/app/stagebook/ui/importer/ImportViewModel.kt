@@ -142,24 +142,34 @@ class ImportViewModel @Inject constructor(
             val s = asAddress(q.trim())
             return when {
                 s.matches(Regex("(?i)^https?://\\S*$")) -> lowerSite(s)
-                s.matches(Regex("(?i)^[\\w.-]+\\.[a-z]{2,}(/\\S*)?$")) -> lowerSite("https://$s")
+                isWebAddress(s) -> lowerSite("https://$s")
                 else -> "https://www.google.com/search?q=" + Uri.encode("$word ${q.trim()}")
             }
         }
 
-        // the common endings of a site's name: what a keyboard's "Imslp. Org" must end with to be read as an address
-        private val SITE_END = Regex("(?i)\\.(com|org|net|edu|gov|io|info|br|com\\.br|org\\.br|net\\.br|pt|es|it|uk|de|fr|us)(/\\S*)?$")
+        /**
+         * Whether the whole text is a web address, as Android's own link finder sees it (the list of real site endings:
+         * "imslp.org" and "stagebook.app.br" are, "ac.dc" and "Sr.Brasil" aren't), like a browser's bar (user, 22/11).
+         */
+        fun isWebAddress(s: String): Boolean {
+            if (s.isEmpty() || s.any(Char::isWhitespace)) return false
+            // judged in lower case: the finder knows "org", not the keyboard's "Org" (only for judging; the path keeps its case)
+            val text = android.text.SpannableString(s.lowercase())
+            if (!android.text.util.Linkify.addLinks(text, android.text.util.Linkify.WEB_URLS)) return false
+            val links = text.getSpans(0, text.length, android.text.style.URLSpan::class.java)
+            return links.size == 1 && text.getSpanStart(links[0]) == 0 && text.getSpanEnd(links[0]) == text.length
+        }
 
         /**
          * A phone's keyboard may put a space after each period and capitals at the start ("HTTPS://clara. Imslp. Org/…",
          * user 22/11). The bar is also a search ("Sr. Brasil", "ac. dc" must stay words, user 22/11): the spaces right
-         * after . / : go only when what is left starts with http(s):// or ends like a site's name.
+         * after . / : go only when what is left starts with http(s):// or is a web address.
          */
         private fun asAddress(s: String): String {
             if (!s.contains(' ')) return s
             val joined = s.replace(Regex("(?<=[./:])\\s+"), "")
             if (joined.contains(' ')) return s
-            return if (joined.matches(Regex("(?i)^https?://\\S*$")) || joined.contains(SITE_END)) joined else s
+            return if (joined.matches(Regex("(?i)^https?://\\S*$")) || isWebAddress(joined)) joined else s
         }
 
         private fun lowerSite(url: String): String {
