@@ -40,5 +40,6 @@ fun ExternalScreenHost(mirror: StageMirror, viewModel: ExternalScreenViewModel =
     val look by viewModel.look.collectAsStateWithLifecycle()
     val display = rememberPresentationDisplay(look.extrasOn && look.externalShow != ExternalShow.OFF)
     SideEffect { mirror.active = display != null }
-    if (display != null) ExternalPresentation(display) { ExternalStageContent(mirror.frame, look, viewModel::pdfFile, idleImage = viewModel.image) }
+    // scrolling, the stage lets the screen go: Android mirrors the tablet, faithful to its zoom and its turn (user, 22/11)
+    if (display != null && !mirror.mirrorTablet) ExternalPresentation(display) { ExternalStageContent(mirror.frame, look, viewModel::pdfFile, idleImage = viewModel.image) }
 }

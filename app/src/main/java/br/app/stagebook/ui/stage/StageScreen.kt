@@ -290,9 +290,15 @@ fun StageRoute(
         // a second screen (user, 22/11): the stage leaves what it shows in the app's mirror only while one is showing; the
         // screen itself lives at the app's root (ExternalScreenHost), so it stays on the idle picture with the stage closed
         val mirror = LocalStageMirror.current
-        if (mirror != null) DisposableEffect(mirror) { onDispose { mirror.frame = null } }
+        // scrolling (user, 22/11): the TV mirrors the tablet as it is, its zoom and its turn included; the app lets the
+        // screen go and Android mirrors it
+        val scrolling = uiState.look.stageMode == br.app.stagebook.data.model.StageMode.SCROLL
+        if (mirror != null) {
+            SideEffect { mirror.mirrorTablet = scrolling }
+            DisposableEffect(mirror) { onDispose { mirror.frame = null; mirror.mirrorTablet = false } }
+        }
         StageScreen(
-            mirror = mirror?.takeIf { it.active },
+            mirror = mirror?.takeIf { it.active && !scrolling },
             uiState = shown,
             index = open,
             page = page,
@@ -1154,9 +1160,6 @@ fun StageScreen(
                             crops = shownCrops, marks = shownMarks, markColor = Color(look.highlightColor),
                             autoOn = autoOn, autoPxPerSecond = autoPx, onAutoEnd = { autoOn = false },
                             onPaused = { k -> onPosition(index, k) }, pageKey = index,
-                            onTopPage = if (mirror == null) null else ({ p ->
-                                mirror.frame = MirrorFrame(song.id, song.title, song.meta, pdf = song.pdf, pdfPage = fileOf(p), pdfInvert = song.pdfInvert ?: look.pdfInvert, pdfMarks = song.pdfMarks, pdfCrops = song.pdfCrops)
-                            }),
                         )
                         trackOverlays()
                     }
@@ -1412,18 +1415,10 @@ fun StageScreen(
             // scroll: the lyrics move up to the current step; when the step changes (within the song), the line where
             // you continue lights up
             val scrollY = remember(index) { androidx.compose.animation.core.Animatable(0f) }
-            // the external screen shows the song lines the stage has in view (user, 22/11)
+            // the external screen shows the song lines of the page on stage (user, 22/11)
             if (mirror != null) {
                 val sources = remember(fitted) { fitted.map { it.source } }
-                // scrolling: the TV doesn't scroll, it shows whole steps, each as the stage reaches it (user, 22/11)
-                if (scrollMode) LaunchedEffect(mirror, song.id, shownText, measured, height, steps) {
-                    val heights = measured.map { it.height }
-                    val offsets = steps.map { it.offset }
-                    snapshotFlow { br.app.stagebook.domain.MirrorLines.stepAt(offsets, scrollY.value.roundToInt()) }.collect { k ->
-                        val inView = br.app.stagebook.domain.MirrorLines.visible(heights, offsets.getOrElse(k) { 0 }, height)
-                        mirror.frame = MirrorFrame(song.id, song.title, song.meta, shownText, br.app.stagebook.domain.MirrorLines.sourceRange(sources, listOf(inView)))
-                    }
-                } else SideEffect {
+                SideEffect {
                     mirror.frame = MirrorFrame(song.id, song.title, song.meta, shownText, br.app.stagebook.domain.MirrorLines.sourceRange(sources, sheets[shownAt]))
                 }
             }

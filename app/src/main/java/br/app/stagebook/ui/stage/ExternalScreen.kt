@@ -77,6 +77,7 @@ data class MirrorFrame(
 class StageMirror {
     var frame by mutableStateOf<MirrorFrame?>(null)
     var active by mutableStateOf(false)
+    var mirrorTablet by mutableStateOf(false)   // the stage scrolls: the screen is let go and Android mirrors the tablet
 }
 
 /** The app's one mirror, from the root: the stage writes it, the external screen reads it. */
