@@ -68,13 +68,7 @@ class StageBreakPhoneTest {
         compose.waitForIdle()
     }
 
-    private fun forward() {
-        compose.runOnUiThread {
-            pedal.dispatch(KeyEvent(0, 0, KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_PAGE_DOWN, 0))
-            pedal.dispatch(KeyEvent(0, 0, KeyEvent.ACTION_UP, KeyEvent.KEYCODE_PAGE_DOWN, 0))
-        }
-        compose.waitForIdle()
-    }
+    private fun forward() = pressPedal(compose, pedal)
 
     private fun text(text: String, substring: Boolean = false) = compose.onNodeWithText(text, substring = substring, useUnmergedTree = true).assertIsDisplayed()
     private fun SemanticsNodeInteraction.bounds(): Rect = fetchSemanticsNode().boundsInRoot

@@ -36,7 +36,7 @@ import org.robolectric.annotation.Config
 @Config(sdk = [35], application = android.app.Application::class)
 class LastStageTest {
     private val context = ApplicationProvider.getApplicationContext<android.app.Application>()
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private val scope = testScope()
 
     @Before fun main() = Dispatchers.setMain(UnconfinedTestDispatcher())
     @After fun reset() { Dispatchers.resetMain(); scope.cancel() }

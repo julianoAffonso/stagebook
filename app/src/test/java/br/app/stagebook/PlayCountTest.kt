@@ -42,7 +42,7 @@ class PlayCountTest {
     @Before fun main() = Dispatchers.setMain(main)
     @After fun reset() = Dispatchers.resetMain()
 
-    private fun scope() = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private fun scope() = testScope()
     private fun repo() = testRepo(scope = scope(), empty = true)
     private var day = "2026-11-19"
     private fun store(repo: LibraryRepository) = SetlistShowStore(context, repo, scope()).also { it.today = { day } }

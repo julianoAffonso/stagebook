@@ -199,7 +199,7 @@ class PickSongsRowsTest {
     @Test fun `with nothing checked the menu closes without a question`() {
         Dispatchers.setMain(UnconfinedTestDispatcher())
         try {
-            val repo = runBlocking { LibraryRepository(context, CoroutineScope(SupervisorJob() + Dispatchers.IO)).also { withTimeout(5_000) { it.loaded.first { l -> l } } } }
+            val repo = runBlocking { LibraryRepository(context, testScope()).also { withTimeout(5_000) { it.loaded.first { l -> l } } } }
             val set = repo.createSetlist("Show")
             val vm = PickSongsViewModel(repo, SavedStateHandle(mapOf("setId" to set)))
             val guard = br.app.stagebook.ui.drawer.DrawerGuard()

@@ -23,7 +23,7 @@ import org.robolectric.annotation.Config
 @Config(sdk = [35], application = android.app.Application::class)
 class SetlistRestoreTest {
     private val context = ApplicationProvider.getApplicationContext<android.app.Application>()
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private val scope = testScope()
     @After fun stop() { scope.cancel() }
     private val repo = testRepo(scope = scope, empty = true)
 

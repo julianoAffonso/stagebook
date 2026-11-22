@@ -130,3 +130,6 @@ internal fun testStage(
     repo, saved, StageGate(), TrackStore(context), StagePlayer(context, repo), conduct, MetronomeSound(context), br.app.stagebook.data.ChordPlayer(),
     br.app.stagebook.data.StageAnnouncer(link), MidiOut(context, repo, testScope()), show, bandTrust, lastStage,
 )
+
+/** The band member the conduct tests hear from. */
+internal val VOICE = br.app.stagebook.domain.BandProtocol.Hello("voz", "Voz", "key")

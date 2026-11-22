@@ -38,7 +38,7 @@ class BreakCountersTest {
     @After fun reset() = Dispatchers.resetMain()
 
     private val context = ApplicationProvider.getApplicationContext<android.app.Application>()
-    private fun scope() = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private fun scope() = testScope()
     private fun repo() = testRepo(scope = scope(), empty = true)
 
     private fun LibraryRepository.songs(vararg titles: String) = titles.map { saveSong(Song(title = it, author = "x", text = "{key: G}\n$it")) }

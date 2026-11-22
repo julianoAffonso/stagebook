@@ -17,10 +17,6 @@ class ConductNoAnswerNowTest {
     private fun noAnswer(answered: Set<String>?, online: Set<String>): Int =
         (conductUi(Role.Conducting("s1", msg, answered), emptyList(), 0L, true, online = online) as ConductUi.Conducting).noAnswer
 
-    @Test fun `who is online and didn't answer is counted`() {
-        assertEquals(1, noAnswer(setOf("a"), setOf("a", "b")))
-    }
-
     @Test fun `the person answers later - the strip stops saying it`() {
         assertEquals(1, noAnswer(setOf("a"), setOf("a", "b")))
         assertEquals(0, noAnswer(setOf("a", "b"), setOf("a", "b")))

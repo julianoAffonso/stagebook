@@ -84,7 +84,7 @@ class AppUpdaterTest {
         apkUrl = "http://127.0.0.1:${server.address.port}/apk"
     }
 
-    private fun vm(u: AppUpdater) = LibraryRepository(context, CoroutineScope(Dispatchers.IO)).let { repo ->
+    private fun vm(u: AppUpdater) = LibraryRepository(context, testScope()).let { repo ->
         testSettingsVm(repo, updater = u)
     }
 

@@ -63,8 +63,8 @@ class FollowerBreakShownTest {
     @After fun reset() = Dispatchers.resetMain()
 
     private val context = ApplicationProvider.getApplicationContext<android.app.Application>()
-    private val voice = BandProtocol.Hello("voz", "Voz", "key")
-    private fun scope() = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private val voice = VOICE
+    private fun scope() = testScope()
 
     private inner class Tablet {
         val repo = testRepo(scope = scope(), empty = true, bandOn = true)

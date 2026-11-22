@@ -59,7 +59,7 @@ class PdfEditorInfoTest {
     private fun picked(name: String, size: Int = 2_000) = android.net.Uri.fromFile(File(context.cacheDir, name).apply { writeBytes(bytes(size)) })
 
     private fun open(song: Song? = null): Pair<SongEditorViewModel, LibraryRepository> {
-        val scope = CoroutineScope(Dispatchers.IO)
+        val scope = testScope()
         val repo = LibraryRepository(context, scope)
         runBlocking { withTimeout(5_000) { repo.loaded.first { it } }; repo.restore(emptyList(), emptyList()) }
         val args = mutableMapOf<String, Any?>("fromImport" to false)

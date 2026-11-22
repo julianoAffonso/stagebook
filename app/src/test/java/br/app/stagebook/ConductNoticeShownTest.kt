@@ -48,11 +48,11 @@ import org.robolectric.annotation.Config
 class ConductNoticeShownTest {
     @get:Rule val compose = createComposeRule()
     private val context = ApplicationProvider.getApplicationContext<android.app.Application>()
-    private val voice = BandProtocol.Hello("voz", "Voz", "key")
+    private val voice = VOICE
     private val songs = listOf(Conduct.Item("Primeira"), Conduct.Item("Segunda", "Banda"))
 
     private val repo = runBlocking {
-        LibraryRepository(context, CoroutineScope(Dispatchers.IO)).also { r ->
+        LibraryRepository(context, testScope()).also { r ->
             withTimeout(15_000) { r.loaded.first { it } }
             r.updateLook { it.copy(bandOn = true, chords = true) }
             withTimeout(15_000) { r.library.first { it.look.bandOn } }

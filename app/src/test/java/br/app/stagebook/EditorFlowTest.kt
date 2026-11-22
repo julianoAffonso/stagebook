@@ -70,7 +70,7 @@ class EditorFlowTest {
         Dispatchers.setMain(UnconfinedTestDispatcher())
         try {
             val context = ApplicationProvider.getApplicationContext<android.app.Application>()
-            val scope = CoroutineScope(Dispatchers.IO)
+            val scope = testScope()
             val repo = testRepo(scope = scope)
             val id = repo.saveSong(Song(title = "Hazard", author = "Richard Marx", text = "letra antiga"))
             val meta = SongMetadata(repo, MusicBrainz(), scope)
@@ -95,7 +95,7 @@ class EditorFlowTest {
         Dispatchers.setMain(UnconfinedTestDispatcher())
         try {
             val context = ApplicationProvider.getApplicationContext<android.app.Application>()
-            val scope = CoroutineScope(Dispatchers.IO)
+            val scope = testScope()
             val repo = testRepo(scope = scope)
             val meta = SongMetadata(repo, MusicBrainz(), scope)
             val draft = ImportDraft().apply { put(ImportDraft.Draft("Importada", "Banda", "1999", "[G]letra importada")) }
@@ -152,7 +152,7 @@ class EditorFlowTest {
         Dispatchers.setMain(UnconfinedTestDispatcher())
         try {
             val context = ApplicationProvider.getApplicationContext<android.app.Application>()
-            val scope = CoroutineScope(Dispatchers.IO)
+            val scope = testScope()
             val repo = testRepo(scope = scope)
             val tracks = br.app.stagebook.data.TrackStore(context)
             val vm = SongEditorViewModel(repo, SongMetadata(repo, MusicBrainz(), scope), ImportDraft(), SavedStateHandle(mapOf("fromImport" to false)), br.app.stagebook.data.ImportQueue(repo), tracks, br.app.stagebook.data.EditorQueue())
@@ -176,7 +176,7 @@ class EditorFlowTest {
         Dispatchers.setMain(UnconfinedTestDispatcher())
         try {
             val context = ApplicationProvider.getApplicationContext<android.app.Application>()
-            val scope = CoroutineScope(Dispatchers.IO)
+            val scope = testScope()
             val repo = testRepo(scope = scope)
             val tracks = br.app.stagebook.data.TrackStore(context).apply { lengthOf = { 263 } }
             fun editor() = SongEditorViewModel(repo, SongMetadata(repo, MusicBrainz(), scope), ImportDraft(), SavedStateHandle(mapOf("fromImport" to false)), br.app.stagebook.data.ImportQueue(repo), tracks, br.app.stagebook.data.EditorQueue())

@@ -49,7 +49,7 @@ class PdfBandPackageTest {
     private val identity = DeviceIdentity(context)
     private val pdfs = PdfStore(context)
     private val head = "%PDF-1.7\n".toByteArray()
-    private val json = Json { ignoreUnknownKeys = true }
+    private val json = lenientJson
 
     private class FakeCounter(var pages: Int = 5, var fail: Exception? = null) : PdfPageCounter {
         override fun pageCount(file: File): Int = fail?.let { throw it } ?: pages

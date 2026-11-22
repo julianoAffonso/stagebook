@@ -82,7 +82,7 @@ class SongRowsArtistOnlyTest {
         val cloud = SetlistCloud(repo, identity)
         val connectivity = Connectivity(context)
         val internet = BandInternet(context, cloud, trust, identity, inbox, connectivity, link)
-        val show = SetlistShowStore(context, repo, CoroutineScope(SupervisorJob() + Dispatchers.IO))
+        val show = SetlistShowStore(context, repo, testScope())
         return Parts(
             repo, ids, set,
             SongsViewModel(repo, connectivity, cloud, link, trust, internet, br.app.stagebook.data.PdfImporter(repo, br.app.stagebook.data.PdfStore(context), br.app.stagebook.data.PdfInspector())),

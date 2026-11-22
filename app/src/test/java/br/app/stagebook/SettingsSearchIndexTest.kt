@@ -24,39 +24,27 @@ import org.robolectric.annotation.Config
 class SettingsSearchIndexTest {
     private val context get() = ApplicationProvider.getApplicationContext<Context>()
 
-    /** The search as it was before the index: every item read and normalized on every call. */
-    private fun oldSearch(query: String, ctx: IndexCtx, r: Resources): List<String> {
-        val words = TextKey.of(query).split(' ').filter { it.isNotEmpty() }
-        if (words.isEmpty()) return emptyList()
-        val scored = allSettingsItems().mapNotNull { item ->
-            val raw = if (item.kind == br.app.stagebook.ui.settings.ItemKind.SLIDER) r.getString(item.title, -7777) else r.getString(item.title)
-            val title = raw.substringBefore("-7777").trim().trimEnd(':', ' ').ifEmpty { raw }
-            val name = TextKey.of(title)
-            val kw = TextKey.of(item.keywords?.let(r::getString).orEmpty())
-            val where = TextKey.of(r.getString(item.card) + " " + r.getString(item.group.title))
-            val help = TextKey.of(item.detail?.let(r::getString).orEmpty())
-            val nameWords = name.split(' ')
-            var score = 0
-            for (w in words) {
-                val rank = when {
-                    nameWords.any { it.startsWith(w) } -> 0
-                    w in name -> 0
-                    w in kw -> 1
-                    w in where -> 2
-                    w in help -> 3
-                    else -> return@mapNotNull null
-                }
-                score = maxOf(score, rank)
-            }
-            Triple(item.id, score, item.hide(ctx) != null)
-        }
-        return scored.sortedWith(compareBy({ it.second }, { it.third })).map { it.first + ":" + it.second + ":" + it.third }
-    }
-
-    private val queries = listOf(
-        "midi", "tela", "pedal", "METRONOMO", "rolag", "screen", "ligar o editor", "saida midi", "fonte tamanho", "banda",
-        "zz nada", "  ", "cor tema escuro", "acorde", "backup", "android bateria", "a",
+    /**
+     * What the person finds, written down (audit 22/11: the oracle was a copy of the ranking itself, so a wrong ranking
+     * passed as long as both copies agreed). Each query with its first hits, as "id:rank:hidden": rank 0 = in the name,
+     * 1 = keyword, 2 = card or group, 3 = only in the explanation.
+     */
+    private val expected = mapOf(
+        "midi" to listOf("pedal_connect:0:false", "pedal_midi:0:false", "midi_usb:0:false", "midi_out:1:false"),
+        "pedal" to listOf("pedal_connect:0:false", "pedal_common:0:false", "midi_usb:0:false", "pedal_midi:1:false"),
+        "METRONOMO" to listOf("metro_test:0:false", "essential_extras:0:false", "metro_shown:1:false", "metro_count:1:false"),
+        "rolag" to listOf("auto_scroll:0:true", "stage_mode:1:false"),   // hidden in Turn pages mode, and still found
+        "ligar o editor" to listOf("web_editor:0:false"),
+        "saida midi" to listOf("midi_out:2:false", "pedal_common:3:false", "pedal_midi:3:false"),
+        "banda" to listOf("band_members:0:false", "essential_band:0:false", "band_rename:1:false", "band_nearby:1:false"),
+        "backup" to listOf("backup_library:1:false", "backup_tracks:1:false", "backup_settings:1:false", "backup_make:1:false"),
+        "fade" to listOf("stop_fade:0:false", "trim_silence:1:false"),
+        "tela externa" to listOf("external_show:0:false", "external_idle:1:false", "essential_extras:3:false"),
+        "zz nada" to emptyList(),
+        "  " to emptyList(),
     )
+
+    private val queries = expected.keys.toList() + listOf("tela", "screen", "fonte tamanho", "cor tema escuro", "acorde", "android bateria", "a")
 
     private val ctxs = listOf(
         IndexCtx(),
@@ -64,14 +52,21 @@ class SettingsSearchIndexTest {
         IndexCtx(look = Look(stageMode = StageMode.SCROLL), midiSupported = true, advanced = AdvancedUi(), nationalTags = true),
     )
 
-    @Test fun `the index returns the same hits in the same order as the old search`() {
+    private fun hits(found: List<br.app.stagebook.ui.settings.SettingsHit>) = found.map { it.item.id + ":" + it.score + ":" + (it.hide != null) }
+
+    @Test fun `each query finds what the person expects, best first`() {
+        val index = SettingsSearchIndex(context.resources)
+        val ctx = IndexCtx(midiSupported = true)
+        for ((q, want) in expected) {
+            val got = hits(index.search(q, ctx))
+            assertEquals("query '$q'", want, if (want.isEmpty()) got else got.take(want.size))
+        }
+    }
+
+    @Test fun `the index kept between keystrokes answers as a search made from scratch`() {
         val r = context.resources
         val index = SettingsSearchIndex(r)
-        for (ctx in ctxs) for (q in queries) {
-            val now = index.search(q, ctx).map { it.item.id + ":" + it.score + ":" + (it.hide != null) }
-            assertEquals("query '$q'", oldSearch(q, ctx, r), now)
-            assertEquals("one-off '$q'", now, searchSettings(q, ctx, r).map { it.item.id + ":" + it.score + ":" + (it.hide != null) })
-        }
+        for (ctx in ctxs) for (q in queries) assertEquals("'$q'", hits(searchSettings(q, ctx, r)), hits(index.search(q, ctx)))
         assertTrue(queries.any { q -> index.search(q, ctxs[1]).any { it.inHelp } })
         assertTrue(ctxs.any { ctx -> queries.any { q -> index.search(q, ctx).any { it.hide != null } } })
     }

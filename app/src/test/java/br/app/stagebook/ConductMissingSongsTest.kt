@@ -49,7 +49,7 @@ import java.util.concurrent.CopyOnWriteArrayList
 class ConductMissingSongsTest {
     private val context = ApplicationProvider.getApplicationContext<android.app.Application>()
     private val songs = listOf(Conduct.Item("Primeira"), Conduct.Item("Segunda", "Banda"), Conduct.Item("Terceira"))
-    private val voice = BandProtocol.Hello("voz", "Voz", "key")
+    private val voice = VOICE
     private val chords = "{key: G}\n[G]La la [D]la\n[C]La la la"
     private val lyrics = "La la la\nLa la la\nLa la la"
 
@@ -59,7 +59,7 @@ class ConductMissingSongsTest {
         override fun getApplicationContext() = this
     }
 
-    private fun await(what: () -> Boolean) = runBlocking { withTimeout(10_000) { while (!what()) delay(10) } }
+    private fun await(what: () -> Boolean) = awaitTrue(10_000, what)
 
     private fun repo(on: android.content.Context, vararg have: Pair<String, String>): LibraryRepository = runBlocking {
         val repo = testRepo(on)
@@ -302,8 +302,7 @@ class ConductMissingSongsTest {
 
     @Test fun `the messages are the ones the published app reads`() {
         val b = Band()
-        val json = Json { ignoreUnknownKeys = true }
-        org.junit.Assert.assertTrue("the version was raised for these fields", BandProtocol.VERSION >= BandProtocol.BREAKS_VERSION)
+        val json = lenientJson
         // what the leader sends: a band package as before, with a list that has no name (loose songs)
         val (packed, shared) = SetlistCloud.looseSongs(b.leaderRepo.library.value.songs)!!
         val wire = json.parseToJsonElement(b.leaderLink.packageBytes(packed, shared).decodeToString()).jsonObject

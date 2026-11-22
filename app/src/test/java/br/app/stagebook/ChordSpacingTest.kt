@@ -15,6 +15,7 @@ class ChordSpacingTest {
     private fun room(raw: String, scale: Float) {
         val line = chordLine(raw, ChordLook(true, scale, Color.Yellow))
         val marks = line.getStringAnnotations(CHORD_TAG, 0, line.length)
+        assertTrue("the line's chords are marked: ${marks.size}", marks.size >= 2)   // with none, nothing below would be checked
         marks.zipWithNext().forEach { (a, b) ->
             val between = line.text.substring(a.start, b.start)
             assertTrue("${a.item} has no room before ${b.item}", emWidth(between) >= emWidth(a.item) * scale * 1.1f)

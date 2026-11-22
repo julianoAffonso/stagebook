@@ -70,13 +70,7 @@ class StageBreakTest {
         compose.waitForIdle()
     }
 
-    private fun press(key: Int) {
-        compose.runOnUiThread {
-            pedal.dispatch(KeyEvent(0, 0, KeyEvent.ACTION_DOWN, key, 0))
-            pedal.dispatch(KeyEvent(0, 0, KeyEvent.ACTION_UP, key, 0))
-        }
-        compose.waitForIdle()
-    }
+    private fun press(key: Int) = pressPedal(compose, pedal, key)
     private fun forward() = press(KeyEvent.KEYCODE_PAGE_DOWN)
     private fun back() = press(KeyEvent.KEYCODE_PAGE_UP)
 

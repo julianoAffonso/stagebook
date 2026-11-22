@@ -40,8 +40,7 @@ class WebEditorRowFactsTest {
     private val repo = testRepo(empty = true)
     private val device = WebEditorAuth.Device("d", "Chrome · Windows", "h", 0)
 
-    private fun call(api: WebEditorApi, method: String, path: String, body: String = "") =
-        api.handle(HttpRequest(method, path, emptyMap(), body = body.toByteArray()), device)!!.text()
+    private fun call(api: WebEditorApi, method: String, path: String, body: String = "") = api.send(method, path, body, device = device).text()
 
     private fun obj(text: String) = Json.parseToJsonElement(text).jsonObject
     private fun JsonObject.facts() = Triple(getValue("bpm").jsonPrimitive.int, getValue("capo").jsonPrimitive.int, getValue("hasTrack").jsonPrimitive.boolean)

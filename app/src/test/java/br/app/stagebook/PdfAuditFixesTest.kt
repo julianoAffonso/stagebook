@@ -48,7 +48,7 @@ import java.util.concurrent.TimeUnit
 class PdfAuditFixesTest {
     @get:Rule val compose = createComposeRule()
     private val context = ApplicationProvider.getApplicationContext<android.app.Application>()
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private val scope = testScope()
     @After fun stop() { scope.cancel() }
 
     private fun repo() = testRepo(scope = scope, empty = true)

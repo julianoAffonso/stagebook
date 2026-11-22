@@ -38,7 +38,7 @@ import org.robolectric.annotation.Config
 class InviteSingleUseTest {
     @get:Rule val compose = androidx.compose.ui.test.junit4.v2.createComposeRule()
     private val context = ApplicationProvider.getApplicationContext<android.app.Application>()
-    private val repo = LibraryRepository(context, CoroutineScope(SupervisorJob() + Dispatchers.IO))
+    private val repo = LibraryRepository(context, testScope())
     private val identity = DeviceIdentity(context)
     private val cloud = SetlistCloud(repo, identity)
     private val trust = BandTrust(context)

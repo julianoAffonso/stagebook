@@ -49,7 +49,6 @@ class NarrowLabelsTest {
 
     private fun whole(text: String) {
         val l = layoutOf(text)
-        val node = compose.onAllNodesWithText(text, useUnmergedTree = true).fetchSemanticsNodes().first()
         assertEquals("\"$text\" on one line", 1, l.lineCount)
         assertFalse("\"$text\" isn't cut", l.didOverflowWidth || l.didOverflowHeight)
     }

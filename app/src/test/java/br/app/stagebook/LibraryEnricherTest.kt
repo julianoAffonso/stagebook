@@ -44,7 +44,7 @@ import org.robolectric.annotation.Config
 class LibraryEnricherTest {
     @get:Rule val compose = createComposeRule()
     private val context = ApplicationProvider.getApplicationContext<android.content.Context>()
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private val scope = testScope()
 
     private fun repo() = testRepo(scope = scope)
 

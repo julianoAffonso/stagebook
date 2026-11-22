@@ -67,13 +67,7 @@ class StageMidShowTest {
         compose.waitForIdle()
     }
 
-    private fun press(key: Int) {
-        compose.runOnUiThread {
-            pedal.dispatch(KeyEvent(0, 0, KeyEvent.ACTION_DOWN, key, 0))
-            pedal.dispatch(KeyEvent(0, 0, KeyEvent.ACTION_UP, key, 0))
-        }
-        compose.waitForIdle()
-    }
+    private fun press(key: Int) = pressPedal(compose, pedal, key)
 
     @Test fun `going to the break turns the metronome off`() {
         show()

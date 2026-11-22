@@ -55,7 +55,7 @@ class ShowDayTest {
 
     @Test fun `marks and a break counter survive the stage opening after midnight`() {
         val context = ApplicationProvider.getApplicationContext<android.app.Application>()
-        val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+        val scope = testScope()
         val repo = testRepo(scope = scope, empty = true)
         val ids = listOf("A", "B").map { repo.saveSong(Song(title = it, author = "x", text = it)) }
         val set = repo.createSetlist("Show").also { repo.addToSetlist(it, ids); repo.addBreak(it) }

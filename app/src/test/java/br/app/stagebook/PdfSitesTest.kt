@@ -38,7 +38,7 @@ import java.io.File
 @Config(sdk = [35], qualifiers = "pt-rBR", application = android.app.Application::class)
 class PdfSitesTest {
     private val context = ApplicationProvider.getApplicationContext<android.app.Application>()
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private val scope = testScope()
     @After fun stop() { scope.cancel() }
     private val repo = testRepo(scope = scope, empty = true)
     private val importer = PdfImporter(repo, PdfStore(context), PdfInspector(object : PdfPageCounter { override fun pageCount(file: File) = 2 }))

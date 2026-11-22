@@ -53,7 +53,7 @@ class EssentialModeTest {
     }
 
     @Test fun `turning on turns everything off - turning a part back on leaves the mode - turning off brings back band internet extras and the player`() = runBlocking {
-        val repo = LibraryRepository(context, CoroutineScope(Dispatchers.IO))
+        val repo = LibraryRepository(context, testScope())
         val vm = testSettingsVm(repo)
         suspend fun until(ok: (Look) -> Boolean) = withTimeout(15_000) { repo.library.first { ok(it.look) } }.look
 

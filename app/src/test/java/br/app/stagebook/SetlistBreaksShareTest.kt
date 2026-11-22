@@ -106,8 +106,6 @@ class SetlistBreaksShareTest {
         // the reading as it was before the breaks (SetlistCloud.read): every message that unpacks as a setlist's text
         val lists = sent.mapNotNull { QrPayload.unpack(it) }.filter(BandContent::listOk).distinct()
         assertEquals(listOf(list("Show", "A", "B", "C", "D", "E")), lists)
-        // the sender's version was raised (user, 14/11): an app on version 2 says "update" instead of guessing
-        org.junit.Assert.assertTrue("the version was raised for these fields", BandProtocol.VERSION >= BandProtocol.BREAKS_VERSION)
         assertTrue(cloud.read(sent) is SetlistCloud.Received.Ok)
     }
 

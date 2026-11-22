@@ -40,7 +40,7 @@ class SetlistDateTest {
     @After fun stop() { scopes.forEach { it.cancel() }; scopes.clear() }
 
     private fun repo(): LibraryRepository {
-        val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO).also { scopes += it }
+        val scope = testScope().also { scopes += it }
         return testRepo(ApplicationProvider.getApplicationContext<android.app.Application>(), scope = scope, empty = true)
     }
 

@@ -61,7 +61,7 @@ class ConductArmedTest {
     private val context = ApplicationProvider.getApplicationContext<android.app.Application>()
     private val identity = DeviceIdentity(context)
     private val trust = BandTrust(context)
-    private val voice = BandProtocol.Hello("voz", "Voz", "key")
+    private val voice = VOICE
     private val member = BandProtocol.Hello("armed-member", "Baixo", "key")
     private val played = mutableListOf<String>()
     private val opened = mutableListOf<String>()
@@ -89,7 +89,7 @@ class ConductArmedTest {
         val cloud = br.app.stagebook.data.SetlistCloud(repo, identity)
         val connectivity = br.app.stagebook.data.Connectivity(context)
         val internet = br.app.stagebook.data.BandInternet(context, cloud, trust, identity, BandInbox(context), connectivity, link)
-        val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+        val scope = testScope()
         return SetlistsViewModel(repo, connectivity, cloud, link, trust, internet, br.app.stagebook.data.SetlistShowStore(context, repo, scope), conduct)
     }
 

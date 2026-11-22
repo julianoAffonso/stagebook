@@ -45,7 +45,7 @@ class BandInternetLockTest {
     }
 
     @Test fun `only codes from the last day are asked over the internet`() {
-        val repo = LibraryRepository(context, CoroutineScope(SupervisorJob() + Dispatchers.IO))
+        val repo = LibraryRepository(context, testScope())
         val identity = br.app.stagebook.data.DeviceIdentity(context)
         val link = testLink(repo = repo, identity = identity)
         val band = BandInternet(

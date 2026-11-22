@@ -47,7 +47,7 @@ class ScanSetlistTest {
 
     // opening what the band sent asked for the camera, with nothing to read
     @Test fun `only reading a QR needs the camera`() {
-        val repo = LibraryRepository(context, CoroutineScope(SupervisorJob() + Dispatchers.IO))
+        val repo = LibraryRepository(context, testScope())
         fun vm(code: String, inbox: String) = ScanSetlistViewModel(
             repo, br.app.stagebook.data.ImportQueue(repo), br.app.stagebook.data.SetlistCloud(repo, br.app.stagebook.data.DeviceIdentity(context)), androidx.lifecycle.SavedStateHandle(mapOf("code" to code, "inbox" to inbox)),
             br.app.stagebook.data.BandInbox(context), bandLink(repo), bandInternet(repo),
@@ -250,8 +250,7 @@ class ScanSetlistTest {
 
     // each way of sending has its own limit (user, 01/11)
     @Test fun `internet takes about 60 messages, the band 30 setlists`() {
-        assertTrue(br.app.stagebook.domain.BandContent.internetFits(lists = 3, songs = 56))   // 1 + 3 + 56 = 60
-        org.junit.Assert.assertFalse(br.app.stagebook.domain.BandContent.internetFits(lists = 3, songs = 57))
+        // the 60-message edge itself (3 lists + 56 songs fit, 57 don't) is PdfInternetTest's
         assertTrue(br.app.stagebook.domain.BandContent.internetFits(lists = 20, songs = 0))   // titles only
         assertTrue(br.app.stagebook.domain.BandContent.bandFits(30))
         org.junit.Assert.assertFalse(br.app.stagebook.domain.BandContent.bandFits(31))

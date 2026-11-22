@@ -39,7 +39,7 @@ class BreakTimerKeptTest {
     @After fun reset() = Dispatchers.resetMain()
 
     private val context = ApplicationProvider.getApplicationContext<android.app.Application>()
-    private fun scope() = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private fun scope() = testScope()
 
     private fun repo() = testRepo(scope = scope(), empty = true)
 

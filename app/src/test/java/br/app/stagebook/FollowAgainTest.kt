@@ -40,45 +40,11 @@ import java.util.concurrent.CopyOnWriteArrayList
 class FollowAgainTest {
     private val context = ApplicationProvider.getApplicationContext<android.app.Application>()
     private val songs = listOf(Conduct.Item("Primeira"), Conduct.Item("Segunda", "Banda"), Conduct.Item("Terceira"))
-    private val voice = BandProtocol.Hello("voz", "Voz", "key")
+    private val voice = VOICE
 
-    private inner class Band(val repo: LibraryRepository) {
-        var leaderClock = 1_000_000L
-        var followerClock = 987_654_321_000L
-        val sent = CopyOnWriteArrayList<Conduct.Msg>()
-        val arrived = java.util.concurrent.atomic.AtomicInteger()
-        private val followerLink = link()
-        val leader = testConduct(repo = repo, link = link()).also { it.clock = { leaderClock } }
-        val follower = testConduct(repo = repo, link = followerLink).also { it.clock = { followerClock } }
-        val opened = CopyOnWriteArrayList<String>()
+    private inner class Band(repo: LibraryRepository) : TestBand(repo, songs, watchOpened = true)
 
-        init {
-            leader.deliver = { msg -> sent += msg; say(msg); arrived.incrementAndGet(); emptyMap() }
-            CoroutineScope(Dispatchers.Unconfined).launch { follower.openSong.collect { opened += it } }
-        }
-
-        fun link() = testLink(repo = repo)
-
-        /** What reaches the follower from the leader's device, as it travels: text. */
-        fun say(msg: Conduct.Msg, from: BandProtocol.Hello = voice) = followerLink.conductHandler?.invoke(from, Conduct.decode(Conduct.encode(msg))!!)
-
-        fun told(messages: Int = 1, act: () -> Unit) {
-            val before = arrived.get()
-            act()
-            await { arrived.get() >= before + messages }
-        }
-
-        fun started(): Band {
-            told { leader.start("s1", "Show", songs, 0) }
-            told { leader.open("s1", 0) }
-            return this
-        }
-
-        fun left() = follower.role.value as Role.Left
-        fun strip(now: Long = System.currentTimeMillis(), bandOn: Boolean = true) = conductUi(follower.role.value, repo.library.value.songs, now, bandOn)
-    }
-
-    private fun await(what: () -> Boolean) = runBlocking { withTimeout(10_000) { while (!what()) delay(10) } }
+    private fun await(what: () -> Boolean) = awaitTrue(10_000, what)
 
     private fun band(vararg have: String): Pair<Band, Map<String, String>> = runBlocking {
         val repo = testRepo()

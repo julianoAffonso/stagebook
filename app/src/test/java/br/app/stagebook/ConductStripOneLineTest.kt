@@ -286,7 +286,6 @@ class ConductStripOneLineTest {
             ui = state
             show()
             val height = stripHeight()
-            println("STRIP_HEIGHT $name = ${height.value}")
             assertTrue("$name: $height is at least ${Sizes.strip}", height >= Sizes.strip)
             assertTrue("$name: $height is at most 64dp", height <= 64.dp)
         }

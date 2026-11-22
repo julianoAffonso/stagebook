@@ -60,13 +60,7 @@ class StageFollowBreakTest {
         compose.waitForIdle()
     }
 
-    private fun press(key: Int) {
-        compose.runOnUiThread {
-            pedal.dispatch(KeyEvent(0, 0, KeyEvent.ACTION_DOWN, key, 0))
-            pedal.dispatch(KeyEvent(0, 0, KeyEvent.ACTION_UP, key, 0))
-        }
-        compose.waitForIdle()
-    }
+    private fun press(key: Int) = pressPedal(compose, pedal, key)
 
     @Test fun `the leader's break shows with its time and the next song, and goes away with the leader`() {
         rest = FollowBreak(System.currentTimeMillis() - 125_000, "Segunda", "G")

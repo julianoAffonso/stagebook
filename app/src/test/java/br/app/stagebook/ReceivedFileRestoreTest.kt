@@ -45,7 +45,7 @@ import java.io.File
 @Config(sdk = [35], application = android.app.Application::class)
 class ReceivedFileRestoreTest {
     private val context = ApplicationProvider.getApplicationContext<android.app.Application>()
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private val scope = testScope()
     private lateinit var repo: LibraryRepository
     private lateinit var backup: Backup
     private lateinit var incoming: IncomingFiles

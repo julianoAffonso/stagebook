@@ -19,11 +19,11 @@ import kotlinx.coroutines.withTimeout
 
 /** An editor view model over a real (Robolectric) library with one saved song, opened with [cursor] from the route. */
 internal fun openEditorVm(title: String = "Hazard", author: String = "Richard Marx", text: String, cursor: Int = -1, queue: EditorQueue = EditorQueue()): SongEditorViewModel {
-    val context = ApplicationProvider.getApplicationContext<android.app.Application>()
-    val scope = CoroutineScope(Dispatchers.IO)
-    val repo = testRepo(scope = scope)
+    val context = appContext()
+    val scope = testScope()
+    val repo = testRepo(context, scope)
     val id = repo.saveSong(Song(title = title, author = author, text = text))
     val vm = SongEditorViewModel(repo, SongMetadata(repo, MusicBrainz(), scope), ImportDraft(), SavedStateHandle(mapOf("songId" to id, "fromImport" to false, "cursor" to cursor)), ImportQueue(repo), TrackStore(context), queue)
-    runBlocking { withTimeout(5_000) { while (vm.uiState.loading) kotlinx.coroutines.delay(10) } }
+    awaitTrue { !vm.uiState.loading }
     return vm
 }

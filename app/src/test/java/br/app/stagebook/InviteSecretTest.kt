@@ -31,7 +31,7 @@ class InviteSecretTest {
     @get:Rule val compose = androidx.compose.ui.test.junit4.v2.createComposeRule()
     private val context = ApplicationProvider.getApplicationContext<android.app.Application>()
     private val identity = DeviceIdentity(context)
-    private val cloud = SetlistCloud(LibraryRepository(context, CoroutineScope(SupervisorJob() + Dispatchers.IO)), identity)
+    private val cloud = SetlistCloud(LibraryRepository(context, testScope()), identity)
 
     private val words = "47-violao-lua"
     private val secretA = "AAAAAAAAAAAAAAAAAAAAAA"

@@ -27,7 +27,7 @@ import java.net.InetSocketAddress
 @Config(sdk = [35], application = android.app.Application::class)
 class AppUpdateOfferTest {
     private val context = ApplicationProvider.getApplicationContext<android.app.Application>()
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private val scope = testScope()
     private lateinit var server: HttpServer
     private var version = ""
     private val gate = StageGate()

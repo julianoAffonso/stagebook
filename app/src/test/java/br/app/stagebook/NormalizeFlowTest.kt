@@ -64,7 +64,9 @@ class NormalizeFlowTest {
         // existing titles stay as they are (the stage shows them in the app's language)
         assertEquals("Chorus:\nlinha\n\nVerse 2\noutra", repo.findSong("A", "")!!.text)
         assertEquals("{start_of_chorus}\num\n{end_of_chorus}\n\num\n\ndois\n\num", repo.findSong("E", "")!!.text)
-        Dispatchers.resetMain()
         assertEquals("[Verso 1]\num\ndois\n\n[Refrão]\nrefrão aqui\nde novo\n\n[Verso 2]\ntrês\nquatro\n\n[Refrão]\nrefrão aqui\nde novo", repo.findSong("C", "")!!.text)
     }
+
+    // always, also when an assertion fails: left swapped, Main stayed so for every test after it in the same JVM (audit 22/11)
+    @org.junit.After fun restoreMain() = Dispatchers.resetMain()
 }

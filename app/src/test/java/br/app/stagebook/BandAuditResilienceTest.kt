@@ -40,7 +40,7 @@ class BandAuditResilienceTest {
     private val context = ApplicationProvider.getApplicationContext<android.app.Application>()
     private val identity = DeviceIdentity(context)
     private val trust = BandTrust(context)
-    private val voice = BandProtocol.Hello("voz", "Voz", "key")
+    private val voice = VOICE
     private val sent = CopyOnWriteArrayList<Conduct.Msg>()
     private val songs = listOf(Conduct.Item("Primeira"), Conduct.Item("Segunda"), Conduct.Item("Terceira"))
 

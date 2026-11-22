@@ -46,8 +46,7 @@ class WebEditorPdfTest {
 
     private fun api() = WebEditorApi(repo, pdfs = { pdfs }, inspector = PdfInspector(counter), workDir = { context.cacheDir })
 
-    private fun call(api: WebEditorApi, method: String, path: String, body: String = "", file: File? = null) =
-        api.handle(HttpRequest(method, path.substringBefore('?'), path.substringAfter('?', "").split('&').filter { it.isNotEmpty() }.associate { it.substringBefore('=') to it.substringAfter('=') }, body = body.toByteArray(), file = file), device)!!
+    private fun call(api: WebEditorApi, method: String, path: String, body: String = "", file: File? = null) = api.send(method, path, body, file, device)
 
     private fun upload(bytes: ByteArray = "%PDF-1.4\n".toByteArray() + ByteArray(3_000)) = File(context.cacheDir, "up-${System.nanoTime()}.part").apply { writeBytes(bytes) }
 

@@ -52,7 +52,7 @@ class EditorRouteStepsTest {
 
     private fun rig(at: Int): Rig {
         val context = ApplicationProvider.getApplicationContext<android.app.Application>()
-        val scope = CoroutineScope(Dispatchers.IO)
+        val scope = testScope()
         val repo = testRepo(scope = scope)
         val ids = listOf("EdA", "EdB", "EdC").map { repo.saveSong(Song(title = it, author = "Band", text = "[G]letra $it")) }
         val queue = EditorQueue()

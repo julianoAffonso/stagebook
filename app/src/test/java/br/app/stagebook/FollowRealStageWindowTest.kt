@@ -57,7 +57,7 @@ class FollowRealStageWindowTest {
     @get:Rule val compose = createComposeRule()
 
     private val context = ApplicationProvider.getApplicationContext<android.app.Application>()
-    private val voice = BandProtocol.Hello("voz", "Voz", "key")
+    private val voice = VOICE
     private val gate = FollowGate()
     private lateinit var nav: NavHostController
 

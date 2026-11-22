@@ -87,9 +87,5 @@ class MidiDialogTest {
         assertTrue("the type's name fits its field", layoutOf(kind).size.width <= fieldWidth)
     }
 
-    private fun layoutOf(node: androidx.compose.ui.test.SemanticsNodeInteraction): androidx.compose.ui.text.TextLayoutResult {
-        val layouts = ArrayList<androidx.compose.ui.text.TextLayoutResult>()
-        node.fetchSemanticsNode().config[androidx.compose.ui.semantics.SemanticsActions.GetTextLayoutResult].action!!(layouts)
-        return layouts.single()
-    }
+    private fun layoutOf(node: androidx.compose.ui.test.SemanticsNodeInteraction) = node.textLayout()
 }
