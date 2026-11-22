@@ -32,6 +32,8 @@ class PdfStore @Inject constructor(@ApplicationContext private val context: Cont
         try {
             val input = context.contentResolver.openInputStream(uri) ?: return@withContext PdfAttach.Refused(PdfProblem.UNREADABLE)
             input.use { copyReason(it, tmp) }?.let { tmp.delete(); return@withContext PdfAttach.Refused(it) }
+            // a big PDF is made smaller first, and the smaller copy is kept only if it passes the same check (user, 22/11)
+            shrink(tmp, inspector)
             finish(tmp, inspector)
         } catch (e: Exception) {
             // a revoked permission or a provider that throws is "this file won't do", never a crash
@@ -57,6 +59,12 @@ class PdfStore @Inject constructor(@ApplicationContext private val context: Cont
             tmp.delete()
             PdfAttach.Refused(PdfProblem.UNREADABLE)
         }
+    }
+
+    private fun shrink(tmp: File, inspector: PdfInspector) {
+        val small = PdfShrink.shrunk(context, tmp) ?: return
+        if (inspector.check(small) is PdfCheck.Ok && small.renameTo(tmp)) return
+        small.delete()
     }
 
     // checks the half copy; only a good one gets its final name

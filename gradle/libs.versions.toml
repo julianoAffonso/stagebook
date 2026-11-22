@@ -1,4 +1,5 @@
 [versions]
+pdfboxAndroid = "2.0.27.0"
 agp = "9.5.0"
 kotlin = "2.4.21"
 ksp = "2.3.12"
@@ -19,6 +20,7 @@ robolectric = "4.17"
 roborazzi = "1.77.0"
 
 [libraries]
+pdfbox-android = { group = "com.tom-roush", name = "pdfbox-android", version.ref = "pdfboxAndroid" }
 androidx-core-ktx = { module = "androidx.core:core-ktx", version.ref = "coreKtx" }
 androidx-activity-compose = { module = "androidx.activity:activity-compose", version.ref = "activityCompose" }
 androidx-lifecycle-runtime-compose = { module = "androidx.lifecycle:lifecycle-runtime-compose", version.ref = "lifecycle" }

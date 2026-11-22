@@ -6,3 +6,7 @@
     kotlinx.serialization.KSerializer serializer(...);
 }
 -keepclassmembers enum br.app.stagebook.** { *; }
+
+# PdfBox-Android without BouncyCastle (left out on purpose: password PDFs are refused before PdfBox opens them)
+-dontwarn org.bouncycastle.**
+-dontwarn com.gemalto.jp2.**
