@@ -66,6 +66,8 @@ class MainActivity : ComponentActivity() {
     // receive links (user, 07/11): tapped in a message or left in the clipboard by the site; the screens open the
     // receive screen with the code. Buffered: a link that opened the app arrives before the screens are drawn.
     private val receiveCodes = kotlinx.coroutines.channels.Channel<String>(kotlinx.coroutines.channels.Channel.BUFFERED)
+    // web pages shared to the app from a browser: each opens the import browser on it (user, 22/11)
+    private val sharedPages = kotlinx.coroutines.channels.Channel<String>(kotlinx.coroutines.channels.Channel.BUFFERED)
     private var clipboardPending = false
     // a .stagebook file tapped outside the app (file manager, download, chat): checked, then Open file in Settings
     private val openedFiles = kotlinx.coroutines.channels.Channel<br.app.stagebook.data.IncomingFiles.Result>(kotlinx.coroutines.channels.Channel.BUFFERED)
@@ -126,6 +128,7 @@ class MainActivity : ComponentActivity() {
         val codes = receiveCodes.receiveAsFlow()
         val files = openedFiles.receiveAsFlow()
         val pdfs = openedPdfs.receiveAsFlow()
+        val pages = sharedPages.receiveAsFlow()
         // pedal keys go through a root that sees them before Android drops the first one after a touch (PedalKeyRoot)
         setContentView(PedalKeyRoot(this, pedal).apply { addView(ComposeView(context).apply { setContent {
             StagebookTheme {
@@ -158,7 +161,7 @@ class MainActivity : ComponentActivity() {
                 val quiet = StageGate.quiet(onStage, stageInView, menuOpen || attend)
                 // answered (or gone): the next one waits again
                 androidx.compose.runtime.LaunchedEffect(requests.size + webRequests.size) { if (requests.isEmpty() && webRequests.isEmpty()) stageGate.setAttend(false) }
-                CompositionLocalProvider(LocalPedalInput provides pedal, br.app.stagebook.data.LocalEditorQueue provides editorQueue, br.app.stagebook.ui.drawer.LocalWaitingRequests provides (requests.size + webRequests.size), br.app.stagebook.ui.drawer.LocalAttendRequest provides { stageGate.setAttend(true) }) { StagebookNavHost(offer, updateActions, conduct.openSong, conduct.followingSong, codes, stageGate.playing, br.app.stagebook.data.InstallResults.notices, files, resume, pdfs) }
+                CompositionLocalProvider(LocalPedalInput provides pedal, br.app.stagebook.data.LocalEditorQueue provides editorQueue, br.app.stagebook.ui.drawer.LocalWaitingRequests provides (requests.size + webRequests.size), br.app.stagebook.ui.drawer.LocalAttendRequest provides { stageGate.setAttend(true) }) { StagebookNavHost(offer, updateActions, conduct.openSong, conduct.followingSong, codes, stageGate.playing, br.app.stagebook.data.InstallResults.notices, files, resume, pdfs, pages) }
                 if (askRecord.value) {
                     br.app.stagebook.ui.components.ConfirmDialog(
                         androidx.compose.ui.res.stringResource(R.string.usb_record_why),
@@ -234,6 +237,10 @@ class MainActivity : ComponentActivity() {
     private fun openLink(intent: Intent?) {
         br.app.stagebook.data.IncomingFiles.pdfUri(intent)?.let { uri ->
             openedPdfs.trySend(uri)
+            return
+        }
+        br.app.stagebook.data.SharedPages.pageUrl(intent)?.let { url ->
+            sharedPages.trySend(url)
             return
         }
         br.app.stagebook.data.IncomingFiles.fileUri(intent)?.let { uri ->

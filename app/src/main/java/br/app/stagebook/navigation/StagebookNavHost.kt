@@ -73,6 +73,7 @@ fun StagebookNavHost(
     openedFiles: Flow<br.app.stagebook.data.IncomingFiles.Result> = emptyFlow(),
     resume: String? = null,
     openedPdfs: Flow<android.net.Uri> = emptyFlow(),   // PDFs opened with the app or shared to it: each comes in as a song
+    sharedPages: Flow<String> = emptyFlow(),   // web pages shared to the app: each opens the import browser on it
 ) {
     val nav = rememberNavController()
     // at launch the app opens on the stage that was open last, in place of the empty screen (the stage is the root: back
@@ -104,6 +105,11 @@ fun StagebookNavHost(
     // a PDF opened with the app: a song is made of it right away (nothing on screen is disturbed), and the message says so, or why not
     LaunchedEffect(openedPdfs) {
         openedPdfs.collect { uri -> message.show(start.importPdfs(listOf(uri)).message(pdfContext), long = true) }
+    }
+    // a page shared from a browser (user, 22/11): the import browser opens on it, and the person imports from there as
+    // from any site (the kind, PDF or lyrics and chords, is told by the address: ImportViewModel)
+    LaunchedEffect(sharedPages) {
+        sharedPages.collect { url -> nav.navigate(Importer(url)) { launchSingleTop = true } }
     }
     // the update going in: the system takes over, so the person is told what is happening, and only what is true
     val installStartedText = androidx.compose.runtime.rememberUpdatedState(androidx.compose.ui.res.stringResource(br.app.stagebook.R.string.update_installing))
