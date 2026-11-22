@@ -26,4 +26,11 @@ class ImportAddressTest {
         assertTrue(ImportViewModel.urlFor("sweet child o mine").startsWith("https://www.google.com/search?q="))
         assertTrue(ImportViewModel.urlFor("satie gymnopedies", "partitura pdf").contains("partitura"))
     }
+
+    // the bar is a search too (user, 22/11): a period with a space in a song's or artist's name stays words
+    @Test fun `names with a period and a space stay a search`() {
+        listOf("Sr. Brasil", "ac. dc back in black", "Dr. Feelgood", "St. Elmo's Fire", "Mr. Jones").forEach {
+            assertTrue(it, ImportViewModel.urlFor(it).startsWith("https://www.google.com/search?q="))
+        }
+    }
 }

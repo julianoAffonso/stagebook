@@ -139,15 +139,27 @@ class ImportViewModel @Inject constructor(
     companion object {
         /** Address, domain or a Google search for "<word> <text>" (lyrics or chords, depending on the profile). */
         fun urlFor(q: String, word: String = "letra"): String {
-            // a phone's keyboard may put a space after each period and capitals at the start ("HTTPS://clara. Imslp.
-            // Org/…", user 22/11): spaces right after . / : go, and the scheme and the site are lower case (the path keeps
-            // its case: some sites tell them apart)
-            val s = q.trim().replace(Regex("(?<=[./:])\\s+"), "")
+            val s = asAddress(q.trim())
             return when {
                 s.matches(Regex("(?i)^https?://\\S*$")) -> lowerSite(s)
                 s.matches(Regex("(?i)^[\\w.-]+\\.[a-z]{2,}(/\\S*)?$")) -> lowerSite("https://$s")
                 else -> "https://www.google.com/search?q=" + Uri.encode("$word ${q.trim()}")
             }
+        }
+
+        // the common endings of a site's name: what a keyboard's "Imslp. Org" must end with to be read as an address
+        private val SITE_END = Regex("(?i)\\.(com|org|net|edu|gov|io|info|br|com\\.br|org\\.br|net\\.br|pt|es|it|uk|de|fr|us)(/\\S*)?$")
+
+        /**
+         * A phone's keyboard may put a space after each period and capitals at the start ("HTTPS://clara. Imslp. Org/…",
+         * user 22/11). The bar is also a search ("Sr. Brasil", "ac. dc" must stay words, user 22/11): the spaces right
+         * after . / : go only when what is left starts with http(s):// or ends like a site's name.
+         */
+        private fun asAddress(s: String): String {
+            if (!s.contains(' ')) return s
+            val joined = s.replace(Regex("(?<=[./:])\\s+"), "")
+            if (joined.contains(' ')) return s
+            return if (joined.matches(Regex("(?i)^https?://\\S*$")) || joined.contains(SITE_END)) joined else s
         }
 
         private fun lowerSite(url: String): String {
