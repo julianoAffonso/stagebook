@@ -58,6 +58,23 @@ class TrackStore @Inject constructor(@ApplicationContext private val context: Co
     }
 
     /** The chosen file's name without the extension ("Under Pressure"), to show; empty when Android doesn't say. */
+    /**
+     * The track's length in seconds, read by Android from the file's own header (not the audio engine); 0 when it can't
+     * tell. A song with no length takes it when the track is attached (user, 22/11).
+     */
+    suspend fun seconds(name: String): Int = withContext(Dispatchers.IO) { if (name.isEmpty()) 0 else lengthOf(file(name)) }
+
+    // tests swap the reader (Robolectric has no media decoder)
+    internal var lengthOf: (File) -> Int = { f ->
+        runCatching {
+            val r = android.media.MediaMetadataRetriever()
+            try {
+                r.setDataSource(f.path)
+                ((r.extractMetadata(android.media.MediaMetadataRetriever.METADATA_KEY_DURATION)?.toLongOrNull() ?: 0L) / 1000).toInt()
+            } finally { r.release() }
+        }.getOrDefault(0).takeIf { it in 1..br.app.stagebook.domain.Chords.MAX_DURATION_S } ?: 0
+    }
+
     fun displayName(uri: Uri): String = runCatching { queryName(uri) }.getOrNull().orEmpty().let(::shownName)
 
     private fun queryName(uri: Uri): String? =

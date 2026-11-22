@@ -162,9 +162,9 @@ SECTIONS = [
         "figs": [],
         "subs": [
             sub("editor-dados", "Dados da música", "Song details",
-                ["Nome, artista, ano, BPM, duração, tom, capotraste, tags, backing track e MIDI ficam na tela Dados. A duração se digita só com números (345 vira 3:45) e o setlist soma as músicas de cada bloco. No tablet a coluna não estica: fica centralizada, com no máximo 560 dp. Deixou artista ou ano em branco? Ao salvar, o app completa pela internet.",
+                ["Nome, artista, ano, BPM, duração, tom, capotraste, tags, backing track e MIDI ficam na tela Dados. A duração se digita só com números (345 vira 3:45), vem sozinha ao anexar uma backing track (se a música ainda não tem) e o setlist soma as músicas de cada bloco. No tablet a coluna não estica: fica centralizada, com no máximo 560 dp. Deixou artista ou ano em branco? Ao salvar, o app completa pela internet.",
                  "Em Tags você marca as da música ou cria uma Nova tag."],
-                ["Name, artist, year, BPM, length, key, capo, tags, backing track and MIDI are on the Data screen. The length is typed with digits only (345 becomes 3:45) and the setlist adds up the songs of each set. On a tablet the column doesn't stretch: it sits in the middle, 560 dp wide at most. Left artist or year blank? When you save, the app fills them in over the internet.",
+                ["Name, artist, year, BPM, length, key, capo, tags, backing track and MIDI are on the Data screen. The length is typed with digits only (345 becomes 3:45), comes on its own when you attach a backing track (if the song has none yet) and the setlist adds up the songs of each set. On a tablet the column doesn't stretch: it sits in the middle, 560 dp wide at most. Left artist or year blank? When you save, the app fills them in over the internet.",
                  "In Tags you check the song's tags or create a New tag."],
                 [Fig(("tablet_4_editor_dados", "celular_4_editor_dados", "Tela Dados", "Data screen"))]),
             sub("editor-pdf", "Música em PDF", "Song as a PDF",

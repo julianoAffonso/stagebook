@@ -240,6 +240,10 @@ class SongEditorViewModel @Inject constructor(
         if (route.songId != null) repository.updateSong(songId) { it.copy(track = name, trackName = shown) }
         if (old != name) tracks.remove(old)
         keepTrack(name, shown)
+        // a song with no length takes the track's (user, 22/11): one that has a length keeps it
+        if (Chords.duration(uiState.text) == 0) tracks.seconds(name).takeIf { it > 0 }?.let { s ->
+            update(text = Chords.setDirective(uiState.text, "duration", Chords.formatDuration(s)))
+        }
         return true
     }
 
