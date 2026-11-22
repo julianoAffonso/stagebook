@@ -228,6 +228,13 @@ enum class ExternalShow {
     @SerialName("pdf") PDF,
 }
 
+/** What a second screen shows while the stage isn't open (user, 22/11): the app's logo, black, or the person's own image. */
+enum class ExternalIdle {
+    @SerialName("logo") LOGO,
+    @SerialName("black") BLACK,
+    @SerialName("image") IMAGE,
+}
+
 /** What the stage clock shows; a tap moves to the next (user, 07/11). */
 enum class StageClockMode {
     @SerialName("clock") CLOCK,
@@ -294,6 +301,7 @@ data class Look(
     // a PDF on the stage with its colours turned over (white paper becomes black)
     val pdfInvert: Boolean = false,
     val externalShow: ExternalShow = ExternalShow.CHORDS,   // what a second screen (HDMI, wireless display) shows (user, 22/11)
+    val externalIdle: ExternalIdle = ExternalIdle.LOGO,   // what the second screen shows with the stage closed (user, 22/11)
     // the library drawer stays open beside the stage (the pin on its top row; only where the screen is wide enough)
     val drawerPinned: Boolean = false,
     // where the stage's side handle sits on the left edge, as a share of the height (0 top .. 1 bottom); held and dragged by the person

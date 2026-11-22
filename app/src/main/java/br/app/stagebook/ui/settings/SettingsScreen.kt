@@ -200,6 +200,16 @@ fun SettingsRoute(
         uri?.let { viewModel.backupTo(it, backupParts) }
     }
     val restorePicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri -> uri?.let(viewModel::inspectBackup) }
+    // the external screen's own image (user, 22/11): copied to this device; a file that isn't an image is refused
+    val appContext = androidx.compose.ui.platform.LocalContext.current.applicationContext
+    val externalImages = remember { br.app.stagebook.data.ExternalImageStore(appContext) }
+    val externalRefused = stringResource(R.string.external_image_refused)
+    val appMessage = br.app.stagebook.ui.components.LocalAppMessage.current
+    val externalPicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
+        if (uri != null) scope.launch {
+            if (externalImages.save(uri)) viewModel.setExternalIdle(br.app.stagebook.data.model.ExternalIdle.IMAGE) else appMessage.show(externalRefused)
+        }
+    }
     // the history of what was played, as a spreadsheet (user, 22/11): the period picked, then where to save it
     var historyPeriod by remember { mutableStateOf(br.app.stagebook.domain.PlayHistory.Period.MONTH) }
     val historyHeader = listOf(stringResource(R.string.history_col_date), stringResource(R.string.history_col_song), stringResource(R.string.history_col_artist), stringResource(R.string.history_col_setlist))
@@ -410,6 +420,9 @@ fun SettingsRoute(
                 onChordPlay = viewModel::setChordPlay,
                 onAnnounce = viewModel::setAnnounce,
                 onExternalShow = viewModel::setExternalShow,
+                onExternalIdle = { idle ->
+                    if (idle == br.app.stagebook.data.model.ExternalIdle.IMAGE) externalPicker.launch("image/*") else viewModel.setExternalIdle(idle)
+                },
                 onEssential = viewModel::setEssential,
                 onBandOn = viewModel::setBandOn,
                 onInternetOn = viewModel::setInternetOn,
@@ -527,6 +540,7 @@ data class SettingsActions(
     val onChordPlay: (br.app.stagebook.data.model.ChordPlayMode) -> Unit = {},
     val onAnnounce: (Boolean) -> Unit = {},
     val onExternalShow: (br.app.stagebook.data.model.ExternalShow) -> Unit = {},
+    val onExternalIdle: (br.app.stagebook.data.model.ExternalIdle) -> Unit = {},   // IMAGE: picks the image first
     val onEssential: (Boolean) -> Unit = {},
     val onBandOn: (Boolean) -> Unit = {},
     val onInternetOn: (Boolean) -> Unit = {},
@@ -1872,6 +1886,18 @@ private fun ExternalScreenCard(look: Look, actions: SettingsActions) {
             nameOf = { stringResource(names.getValue(it)) }, modifier = Modifier.settingsItem("external_show"),
         )
         InfoText(stringResource(R.string.external_detail))
+        val idleNames = mapOf(
+            br.app.stagebook.data.model.ExternalIdle.LOGO to R.string.external_idle_logo,
+            br.app.stagebook.data.model.ExternalIdle.BLACK to R.string.external_idle_black,
+            br.app.stagebook.data.model.ExternalIdle.IMAGE to R.string.external_idle_image,
+        )
+        OptionDropdown(
+            stringResource(R.string.external_idle), br.app.stagebook.data.model.ExternalIdle.entries, look.externalIdle, actions.onExternalIdle,
+            nameOf = { stringResource(idleNames.getValue(it)) }, modifier = Modifier.settingsItem("external_idle"),
+        )
+        if (look.externalIdle == br.app.stagebook.data.model.ExternalIdle.IMAGE) {
+            ActionButton(stringResource(R.string.external_image_change), { actions.onExternalIdle(br.app.stagebook.data.model.ExternalIdle.IMAGE) }, icon = AppIcons.Image, tone = ButtonTone.Tonal)
+        }
     }
 }
 

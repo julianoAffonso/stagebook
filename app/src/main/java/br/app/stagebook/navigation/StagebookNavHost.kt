@@ -219,7 +219,10 @@ fun StagebookNavHost(
         }
     }
     var drawerShown by remember { androidx.compose.runtime.mutableStateOf(false) }
-    CompositionLocalProvider(LocalAppMessage provides message, br.app.stagebook.ui.components.LocalOpenSettings provides openSettings, br.app.stagebook.ui.components.LocalOpenImporter provides { nav.navigate(Importer(queued = true)) { launchSingleTop = true } }, br.app.stagebook.ui.components.LocalFollowGate provides followGate) {
+    // the external screen (user, 22/11): one for the whole app, idle picture with the stage closed
+    val stageMirror = remember { br.app.stagebook.ui.stage.StageMirror() }
+    br.app.stagebook.ui.stage.ExternalScreenHost(stageMirror)
+    CompositionLocalProvider(br.app.stagebook.ui.stage.LocalStageMirror provides stageMirror, LocalAppMessage provides message, br.app.stagebook.ui.components.LocalOpenSettings provides openSettings, br.app.stagebook.ui.components.LocalOpenImporter provides { nav.navigate(Importer(queued = true)) { launchSingleTop = true } }, br.app.stagebook.ui.components.LocalFollowGate provides followGate) {
     BandStripLayout(liftIme = !drawerShown, screens = {
     LibraryDrawerHost(nav, onShown = { drawerShown = it; start.menuShown(it) }, openNow = menuAtStart, onOpenedNow = { menuAtStart = false }) {
     NavHost(

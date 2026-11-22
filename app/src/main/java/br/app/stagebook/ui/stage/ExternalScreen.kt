@@ -43,7 +43,9 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.setViewTreeLifecycleOwner
 import androidx.lifecycle.setViewTreeViewModelStoreOwner
 import androidx.savedstate.setViewTreeSavedStateRegistryOwner
+import br.app.stagebook.data.model.ExternalIdle
 import br.app.stagebook.data.model.ExternalShow
+import androidx.compose.ui.graphics.asImageBitmap
 import br.app.stagebook.data.model.Look
 import br.app.stagebook.data.model.PdfCrop
 import br.app.stagebook.data.model.PdfMark
@@ -68,10 +70,17 @@ data class MirrorFrame(
     val pdfCrops: List<PdfCrop> = emptyList(),
 )
 
-/** Where the stage leaves what it shows; read by the external screen. Only written while an external screen is showing. */
+/**
+ * Where the stage leaves what it shows; read by the external screen. [active] while an external screen shows: only then
+ * the stage writes [frame], and with the stage closed it is null (the screen shows its idle picture).
+ */
 class StageMirror {
     var frame by mutableStateOf<MirrorFrame?>(null)
+    var active by mutableStateOf(false)
 }
+
+/** The app's one mirror, from the root: the stage writes it, the external screen reads it. */
+val LocalStageMirror = androidx.compose.runtime.staticCompositionLocalOf<StageMirror?> { null }
 
 private tailrec fun Context.activity(): ComponentActivity? = when (this) {
     is ComponentActivity -> this
@@ -129,11 +138,11 @@ fun ExternalPresentation(display: Display, content: @Composable () -> Unit) {
  * PDF's page. A PDF song in a text mode, or a page with no song lines (the chord list), shows the song's name.
  */
 @Composable
-fun ExternalStageContent(frame: MirrorFrame?, look: Look, pdfFile: (String) -> File, modifier: Modifier = Modifier) {
+fun ExternalStageContent(frame: MirrorFrame?, look: Look, pdfFile: (String) -> File, modifier: Modifier = Modifier, idleImage: File? = null) {
+    if (frame == null) { ExternalIdleContent(look.externalIdle, idleImage, modifier); return }
     val bg = Color(look.bg)
     val fg = Color(look.fg)
     Box(modifier.fillMaxSize().background(bg).testTag(EXTERNAL_TAG), Alignment.Center) {
-        if (frame == null) return@Box
         if (frame.pdf.isNotEmpty()) {
             if (look.externalShow == ExternalShow.PDF) {
                 val open by rememberPdfOpen(pdfFile(frame.pdf))
@@ -170,6 +179,39 @@ fun ExternalStageContent(frame: MirrorFrame?, look: Look, pdfFile: (String) -> F
         }
     }
 }
+
+/**
+ * The external screen with the stage closed (user, 22/11): the app's logo on black (the default), black, or the person's
+ * image, whole and centred. An image that is gone or can't be read leaves the screen black.
+ */
+@Composable
+fun ExternalIdleContent(idle: ExternalIdle, image: File?, modifier: Modifier = Modifier) {
+    Box(modifier.fillMaxSize().background(Color.Black).testTag(EXTERNAL_IDLE_TAG), Alignment.Center) {
+        when (idle) {
+            ExternalIdle.LOGO -> br.app.stagebook.ui.components.AppLogo(size = androidx.compose.ui.unit.Dp(LOGO_DP))
+            ExternalIdle.BLACK -> Unit
+            ExternalIdle.IMAGE -> BoxWithConstraints(Modifier.fillMaxSize()) {
+                val w = constraints.maxWidth
+                val h = constraints.maxHeight
+                val picture by androidx.compose.runtime.produceState<androidx.compose.ui.graphics.ImageBitmap?>(null, image, image?.lastModified(), w, h) {
+                    value = image?.takeIf { it.exists() }?.let { f -> kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { sampled(f, w, h) } }
+                }
+                picture?.let {
+                    androidx.compose.foundation.Image(it, null, Modifier.fillMaxSize().testTag(EXTERNAL_IMAGE_TAG), contentScale = androidx.compose.ui.layout.ContentScale.Fit)
+                }
+            }
+        }
+    }
+}
+
+// read at about the screen's size: a phone photo at full size would take tens of MB for a TV that shows 2
+private fun sampled(f: File, w: Int, h: Int): androidx.compose.ui.graphics.ImageBitmap? = runCatching {
+    val bounds = android.graphics.BitmapFactory.Options().apply { inJustDecodeBounds = true }
+    android.graphics.BitmapFactory.decodeFile(f.path, bounds)
+    var sample = 1
+    while (bounds.outWidth / (sample * 2) >= w.coerceAtLeast(1) && bounds.outHeight / (sample * 2) >= h.coerceAtLeast(1)) sample *= 2
+    android.graphics.BitmapFactory.decodeFile(f.path, android.graphics.BitmapFactory.Options().apply { inSampleSize = sample })?.asImageBitmap()
+}.getOrNull()
 
 @Composable
 private fun TitleCard(frame: MirrorFrame, fg: Color) {
@@ -211,6 +253,9 @@ internal fun fitFontPx(measurer: TextMeasurer, text: AnnotatedString, width: Int
 }
 
 const val EXTERNAL_TAG = "external_screen"
+const val EXTERNAL_IDLE_TAG = "external_idle"
+const val EXTERNAL_IMAGE_TAG = "external_image"
+private const val LOGO_DP = 240f
 private const val MIN_EXTERNAL_PX = 12f
 private const val MAX_EXTERNAL_PX = 400f
 private const val FIT_STEPS = 9

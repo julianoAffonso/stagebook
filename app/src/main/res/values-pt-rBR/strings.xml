@@ -518,6 +518,12 @@
     <string name="external_chords">Letra e cifra</string>
     <string name="external_pdf">Letra, cifra e PDF</string>
     <string name="external_detail">Música em PDF só aparece em Letra, cifra e PDF. Nas outras opções, a TV mostra o nome.</string>
+    <string name="external_idle">Com o palco fechado</string>
+    <string name="external_idle_logo">Logo do Stagebook</string>
+    <string name="external_idle_black">Tela preta</string>
+    <string name="external_idle_image">Minha imagem</string>
+    <string name="external_image_change">Trocar a imagem</string>
+    <string name="external_image_refused">Esse arquivo não é uma imagem, ou passa de 20 MB.</string>
     <string name="kw_external">tela externa tv projetor hdmi espelhar external screen tv projector hdmi mirror cast</string>
     <string name="announce_help">Quando a música muda, o palco avisa programas como OBS e Resolume o que está tocando, com artista, tom e BPM. A letra nunca vai.</string>
     <string name="metro_shown">Mostrar no palco</string>

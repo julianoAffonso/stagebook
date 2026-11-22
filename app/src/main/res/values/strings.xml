@@ -499,6 +499,12 @@
     <string name="external_chords">Lyrics and chords</string>
     <string name="external_pdf">Lyrics, chords and PDF</string>
     <string name="external_detail">A PDF song only shows with Lyrics, chords and PDF. With the others, the TV shows its name.</string>
+    <string name="external_idle">With the stage closed</string>
+    <string name="external_idle_logo">Stagebook logo</string>
+    <string name="external_idle_black">Black screen</string>
+    <string name="external_idle_image">My image</string>
+    <string name="external_image_change">Change image</string>
+    <string name="external_image_refused">This file isn\'t an image, or it\'s over 20 MB.</string>
     <string name="kw_external">tela externa tv projetor hdmi espelhar external screen tv projector hdmi mirror cast</string>
     <string name="announce_help">When the song changes, the stage tells apps like OBS and Resolume what\'s playing, with artist, key and BPM. The lyrics never go out.</string>
     <string name="metro_shown">Show on stage</string>

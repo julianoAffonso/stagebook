@@ -287,12 +287,12 @@ fun StageRoute(
         val shown = remember(uiState, screen) { uiState.copy(songs = uiState.songs.map { it.onScreen(screen) }) }
         val open = index.coerceIn(0, uiState.songs.lastIndex)
         LaunchedEffect(uiState.songs[open].id, screen) { viewModel.claimOldZoom(uiState.songs[open].id, screen) }
-        // a second screen (user, 22/11): the stage leaves what it shows in the mirror only while one is showing
-        val external = rememberPresentationDisplay(uiState.look.extrasOn && uiState.look.externalShow != br.app.stagebook.data.model.ExternalShow.OFF)
-        val mirror = remember { StageMirror() }
-        if (external != null) ExternalPresentation(external) { ExternalStageContent(mirror.frame, uiState.look, pdfStore::file) }
+        // a second screen (user, 22/11): the stage leaves what it shows in the app's mirror only while one is showing; the
+        // screen itself lives at the app's root (ExternalScreenHost), so it stays on the idle picture with the stage closed
+        val mirror = LocalStageMirror.current
+        if (mirror != null) DisposableEffect(mirror) { onDispose { mirror.frame = null } }
         StageScreen(
-            mirror = mirror.takeIf { external != null },
+            mirror = mirror?.takeIf { it.active },
             uiState = shown,
             index = open,
             page = page,
