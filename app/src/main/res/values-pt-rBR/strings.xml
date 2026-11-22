@@ -132,6 +132,22 @@
         <item quantity="many">+ %d sem duração</item>
         <item quantity="other">+ %d sem duração</item>
     </plurals>
+    <string name="enrich_title">Completar dados das músicas</string>
+    <string name="enrich_start">Buscar o que falta</string>
+    <string name="enrich_stop">Parar</string>
+    <string name="enrich_running">Buscando a música %1$d de %2$d. Pode sair desta tela.</string>
+    <string name="enrich_offline">Sem internet agora. Tente de novo quando estiver conectado.</string>
+    <string name="enrich_nothing">Todas as músicas têm artista, ano, BPM e duração.</string>
+    <plurals name="enrich_missing">
+        <item quantity="one">%d música sem artista, ano, BPM ou duração. Só os campos vazios são preenchidos.</item>
+        <item quantity="many">%d músicas sem artista, ano, BPM ou duração. Só os campos vazios são preenchidos.</item>
+        <item quantity="other">%d músicas sem artista, ano, BPM ou duração. Só os campos vazios são preenchidos.</item>
+    </plurals>
+    <plurals name="enrich_done">
+        <item quantity="one">Pronto. %d música ganhou dados novos.</item>
+        <item quantity="many">Pronto. %d músicas ganharam dados novos.</item>
+        <item quantity="other">Pronto. %d músicas ganharam dados novos.</item>
+    </plurals>
     <string name="history_title">O que foi tocado</string>
     <string name="history_empty">Nada tocado ainda. Uma música conta depois de um minuto no palco, uma vez por dia de show.</string>
     <string name="history_month">Este mês</string>

@@ -52,7 +52,7 @@ class EssentialModeTest {
             br.app.stagebook.data.MidiPedal(context, repo, CoroutineScope(Dispatchers.IO)),
             br.app.stagebook.data.Backup(context, repo, br.app.stagebook.data.TrackStore(context)),
             br.app.stagebook.data.MetronomeSound(context), br.app.stagebook.data.MidiOut(context, repo, CoroutineScope(Dispatchers.IO)),
-            br.app.stagebook.player.StagePlayer(context, repo),
+            br.app.stagebook.player.StagePlayer(context, repo), br.app.stagebook.data.LibraryEnricher(repo, br.app.stagebook.data.MusicBrainz(), br.app.stagebook.data.DeezerBpm(), br.app.stagebook.data.Connectivity(context), kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO)),
         )
         suspend fun until(ok: (Look) -> Boolean) = withTimeout(15_000) { repo.library.first { ok(it.look) } }.look
 
@@ -168,7 +168,7 @@ class EssentialModeTest {
             br.app.stagebook.data.MidiPedal(context, repo, CoroutineScope(Dispatchers.IO)),
             br.app.stagebook.data.Backup(context, repo, br.app.stagebook.data.TrackStore(context)),
             br.app.stagebook.data.MetronomeSound(context), br.app.stagebook.data.MidiOut(context, repo, CoroutineScope(Dispatchers.IO)),
-            br.app.stagebook.player.StagePlayer(context, repo),
+            br.app.stagebook.player.StagePlayer(context, repo), br.app.stagebook.data.LibraryEnricher(repo, br.app.stagebook.data.MusicBrainz(), br.app.stagebook.data.DeezerBpm(), br.app.stagebook.data.Connectivity(context), kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO)),
         )
         suspend fun until(ok: (Look) -> Boolean) = withTimeout(15_000) { repo.library.first { ok(it.look) } }.look
         vm.setEssential(true)

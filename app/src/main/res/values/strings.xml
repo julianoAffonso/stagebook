@@ -127,6 +127,20 @@
         <item quantity="one">+ %d with no length</item>
         <item quantity="other">+ %d with no length</item>
     </plurals>
+    <string name="enrich_title">Complete song details</string>
+    <string name="enrich_start">Look up what is missing</string>
+    <string name="enrich_stop">Stop</string>
+    <string name="enrich_running">Looking up song %1$d of %2$d. You can leave this screen.</string>
+    <string name="enrich_offline">No internet right now. Try again when you are connected.</string>
+    <string name="enrich_nothing">Every song has artist, year, BPM and length.</string>
+    <plurals name="enrich_missing">
+        <item quantity="one">%d song is missing artist, year, BPM or length. Only empty fields are filled.</item>
+        <item quantity="other">%d songs are missing artist, year, BPM or length. Only empty fields are filled.</item>
+    </plurals>
+    <plurals name="enrich_done">
+        <item quantity="one">Done. %d song got new details.</item>
+        <item quantity="other">Done. %d songs got new details.</item>
+    </plurals>
     <string name="history_title">What was played</string>
     <string name="history_empty">Nothing played yet. A song counts after a minute on stage, once per show day.</string>
     <string name="history_month">This month</string>

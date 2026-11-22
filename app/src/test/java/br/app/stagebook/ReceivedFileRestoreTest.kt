@@ -55,7 +55,7 @@ class ReceivedFileRestoreTest {
         runBlocking { withTimeout(5_000) { repo.loaded.first { it } } }
         backup = Backup(context, repo, TrackStore(context))
         incoming = IncomingFiles(context, backup)
-        vm = SettingsViewModel(repo, context, AppUpdater(context), MidiPedal(context, repo, scope), backup, MetronomeSound(context), MidiOut(context, repo, scope), br.app.stagebook.player.StagePlayer(context, repo))
+        vm = SettingsViewModel(repo, context, AppUpdater(context), MidiPedal(context, repo, scope), backup, MetronomeSound(context), MidiOut(context, repo, scope), br.app.stagebook.player.StagePlayer(context, repo), br.app.stagebook.data.LibraryEnricher(repo, br.app.stagebook.data.MusicBrainz(), br.app.stagebook.data.DeezerBpm(), br.app.stagebook.data.Connectivity(context), kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO)))
     }
 
     @After fun stop() = Dispatchers.resetMain()

@@ -71,6 +71,9 @@ data class SettingsUiState(
     // the history of what was played (user, 22/11): songs played and on how many show days
     val playedSongs: Int = 0,
     val playedDays: Int = 0,
+    // completing the library's missing data (user, 22/11): how many songs lack something, and the run going on
+    val missingData: Int = 0,
+    val enrich: br.app.stagebook.data.LibraryEnricher.Progress = br.app.stagebook.data.LibraryEnricher.Progress(),
 )
 
 /** Settings → Update the app. */
@@ -111,6 +114,7 @@ class SettingsViewModel @Inject constructor(
     private val metronome: br.app.stagebook.data.MetronomeSound,
     private val midiOut: br.app.stagebook.data.MidiOut,
     private val player: br.app.stagebook.player.StagePlayer,
+    private val enricher: br.app.stagebook.data.LibraryEnricher,
 ) : ViewModel() {
     private val _midiOutputs = MutableStateFlow<List<br.app.stagebook.data.MidiOutput>>(emptyList())
     /** The MIDI outputs there are right now (read when the list opens). */
@@ -164,6 +168,10 @@ class SettingsViewModel @Inject constructor(
 
     private val _pendingRestore = MutableStateFlow<PendingRestore?>(null)
     val pendingRestore: StateFlow<PendingRestore?> = _pendingRestore.asStateFlow()
+
+    /** Looks up what the whole library lacks, at each service's pace; [stopEnrich] stops it. */
+    fun enrich() = enricher.start()
+    fun stopEnrich() = enricher.stop()
 
     /** The history of [period] as a spreadsheet at [uri], with the column names in the app's language (user, 22/11). */
     fun historyTo(uri: Uri, period: br.app.stagebook.domain.PlayHistory.Period, header: List<String>, separator: Char) = viewModelScope.launch {
@@ -253,10 +261,12 @@ class SettingsViewModel @Inject constructor(
             val shown = key?.copy(action = PedalAction.of(key.keyCode, lib.look.pedalKeys))
             SettingsUiState(!loaded, lib.look, lib.songs.size, lib.sets.size, lastKey = shown, version = version, pedalConnected = lib.look.pedalName in connected, update = up)
                 .let { st -> br.app.stagebook.domain.PlayHistory.summary(lib.history).let { (n, d) -> st.copy(playedSongs = n, playedDays = d) } }
+                .copy(missingData = enricher.missingCount(lib.songs))
         },
         midi.state,
         language,
-    ) { s, m, lang -> s.copy(midi = m, language = lang) }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), SettingsUiState())
+        enricher.progress,
+    ) { s, m, lang, e -> s.copy(midi = m, language = lang, enrich = e) }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), SettingsUiState())
 
     /** Saves the language and updates the picker at once; the screen then recreates to apply it. */
     fun setLanguage(lang: AppLanguage) {

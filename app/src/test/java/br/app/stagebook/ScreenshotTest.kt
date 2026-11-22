@@ -1080,6 +1080,7 @@ class ScreenshotTest {
     private val settings = SettingsUiState(
         false, Look(pedalName = "PageFlip Firefly", pedalKeys = mapOf(android.view.KeyEvent.KEYCODE_PAGE_UP to PedalAction.PREVIOUS_SONG, br.app.stagebook.domain.MidiCode.of(0xB0, 64) to PedalAction.NEXT)), 42, 3, PedalKeyUi("PAGE_DOWN", PedalAction.NEXT, "PageFlip Firefly", android.view.KeyEvent.KEYCODE_PAGE_DOWN), "0.1.1200", pedalConnected = true,
         playedSongs = 128, playedDays = 14,   // the history of what was played (user, 22/11)
+        missingData = 7,   // songs lacking artist, year, BPM or length (user, 22/11)
     )
 
     @Test @Config(qualifiers = PHONE)

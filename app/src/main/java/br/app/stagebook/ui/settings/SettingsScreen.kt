@@ -421,6 +421,8 @@ fun SettingsRoute(
                     historyPeriod = period
                     historySaver.launch("stagebook-${resources.getString(R.string.history_file)}-${java.time.LocalDate.now()}.csv")
                 },
+                onEnrich = viewModel::enrich,
+                onStopEnrich = viewModel::stopEnrich,
                 onFactoryReset = viewModel::factoryReset,
                 onMetronome = viewModel::setMetronome,
                 onMetronomeVolume = viewModel::setMetronomeVolume,
@@ -525,6 +527,8 @@ data class SettingsActions(
     val onExtrasOn: (Boolean) -> Unit = {},
     val onBackup: (Set<br.app.stagebook.data.Backup.Part>) -> Unit = {},
     val onExportHistory: (br.app.stagebook.domain.PlayHistory.Period) -> Unit = {},
+    val onEnrich: () -> Unit = {},
+    val onStopEnrich: () -> Unit = {},
     val onAutoTags: (national: String, international: String, language: String, preview: Boolean) -> Pair<Int, Int> = { _, _, _, _ -> 0 to 0 },
     val onRestore: () -> Unit = {},
     val onFactoryReset: () -> Unit = {},
@@ -1851,6 +1855,36 @@ private fun HistoryCard(uiState: SettingsUiState, actions: SettingsActions) {
     }
 }
 
+/** Completes artist, year, BPM and length in the whole library, at each service's pace (user, 22/11). */
+@Composable
+private fun EnrichCard(uiState: SettingsUiState, actions: SettingsActions) {
+    if (!uiState.look.internetOn) return   // essential mode (T19): no lookups, no card
+    val e = uiState.enrich
+    SettingsCard(stringResource(R.string.enrich_title)) {
+        InfoText(
+            when {
+                e.running -> stringResource(R.string.enrich_running, e.done, e.total)
+                e.offline -> stringResource(R.string.enrich_offline)
+                e.total > 0 -> pluralStringResource(R.plurals.enrich_done, e.filled, e.filled)
+                uiState.missingData == 0 -> stringResource(R.string.enrich_nothing)
+                else -> pluralStringResource(R.plurals.enrich_missing, uiState.missingData, uiState.missingData)
+            },
+            Modifier.testTag(ENRICH_STATUS_TAG),
+        )
+        if (e.running) {
+            androidx.compose.material3.LinearProgressIndicator(
+                progress = { if (e.total == 0) 0f else e.done.toFloat() / e.total },
+                modifier = Modifier.fillMaxWidth(),
+            )
+            ActionButton(stringResource(R.string.enrich_stop), actions.onStopEnrich, Modifier.fillMaxWidth(), icon = AppIcons.Stop, tone = ButtonTone.Tonal)
+        } else if (uiState.missingData > 0) {
+            ActionButton(stringResource(R.string.enrich_start), actions.onEnrich, Modifier.fillMaxWidth().settingsItem("enrich"), icon = AppIcons.Sync, tone = ButtonTone.Tonal)
+        }
+    }
+}
+
+const val ENRICH_STATUS_TAG = "enrich_status"
+
 @Composable
 private fun LibraryDetail(uiState: SettingsUiState, actions: SettingsActions) {
     SettingsCard(stringResource(R.string.library_card)) {
@@ -1862,6 +1896,7 @@ private fun LibraryDetail(uiState: SettingsUiState, actions: SettingsActions) {
         )
     }
     HistoryCard(uiState, actions)
+    EnrichCard(uiState, actions)
     ImportSitesDetail(uiState.look, actions)
     // song tags: splitting national and international songs, once (moved here from the song list's ⋮, user 01/11);
     // Portuguese only
