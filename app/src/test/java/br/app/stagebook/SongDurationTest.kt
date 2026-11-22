@@ -82,4 +82,11 @@ class SongDurationTest {
         assertEquals(225, Chords.duration(repo.findSong("Tempo", "")!!.text))
         assertTrue(String(api.handle(HttpRequest("GET", "/api/songs/${song.id}"), device)!!.body).contains("\"duration\":\"3:45\""))
     }
+
+    // audit 22/11: a song from outside with this line made every list that reads the song throw
+    @Test fun `a duration with too many digits is no duration, never a crash`() {
+        org.junit.Assert.assertEquals(0, Chords.parseDuration("99999999999"))
+        org.junit.Assert.assertEquals(0, Chords.parseDuration("99999999999:00"))
+        org.junit.Assert.assertEquals(0, Chords.meta("{duration: 99999999999}\n[G]La").duration)
+    }
 }

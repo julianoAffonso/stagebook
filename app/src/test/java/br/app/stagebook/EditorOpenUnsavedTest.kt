@@ -65,4 +65,14 @@ class EditorOpenUnsavedTest {
     @Test fun `from the stage with the cursor`() = check("{key: G}\n[Refrão]\n[G]primeira linha\n[D]segunda linha", 20)
     @Test fun `directives out of order and windows lines`() = check("[Verso]\r\n[G]linha\r\n{capo: 2}\r\n{key: G}\r\n", 12)
     @Test fun `trailing blank lines and tempo`() = check("{tempo: 90}\n{capo: 2}\n{key: G}\n\n[Refrão]\n[G]linha\n\n\n", 15)
+
+    // audit 22/11: the saved song was compared with an empty one, so any edit undone still asked "leave without saving?"
+    @Test fun `typing and undoing it in a saved song leaves nothing to save`() {
+        val vm = open("[G]Uma linha", -1)
+        val title = vm.uiState.title
+        vm.onTitle(title + "x")
+        org.junit.Assert.assertTrue(vm.uiState.unsaved)
+        vm.onTitle(title)
+        org.junit.Assert.assertFalse("back to what is saved: nothing to save", vm.uiState.unsaved)
+    }
 }

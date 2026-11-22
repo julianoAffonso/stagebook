@@ -175,7 +175,8 @@ object Chords {
         if (v.isEmpty()) return 0
         val parts = v.split(':')
         if (parts.size > 3 || parts.any { p -> p.isEmpty() || !p.all(Char::isDigit) }) return 0
-        val n = parts.map { it.toInt() }
+        // too many digits for a number is no duration: toInt threw, and every list reading the song fell with it (audit 22/11)
+        val n = parts.map { it.toIntOrNull() ?: return 0 }
         if (n.drop(1).any { it >= 60 }) return 0
         val s = n.fold(0) { acc, x -> acc * 60 + x }
         return s.takeIf { it in 1..MAX_DURATION_S } ?: 0

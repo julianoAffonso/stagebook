@@ -352,6 +352,11 @@ class SongEditorViewModel @Inject constructor(
     private var finished = false   // double tap on Save/Delete: only the first counts
     val onDone = done.receiveAsFlow()
 
+    // declared before the init below: with the library already read the loading runs inside the constructor, and fields
+    // initialised after it were written over ("leave without saving?" with nothing changed) or still null (audit 22/11)
+    private var original = SongEditorUiState()
+    private val midiJson = kotlinx.serialization.json.Json { ignoreUnknownKeys = true }
+
     init {
         viewModelScope.launch {
             repository.loaded.first { it }
@@ -390,7 +395,6 @@ class SongEditorViewModel @Inject constructor(
         }
     }
 
-    private var original = SongEditorUiState()
 
     private fun SongEditorUiState.edited(title: String, author: String, year: String, text: String, tags: List<String> = this.tags, midi: br.app.stagebook.domain.SongMidi = this.midi): SongEditorUiState {
         val next = copy(title = title, author = author, year = year, text = text, tags = tags, midi = midi)
@@ -424,7 +428,6 @@ class SongEditorViewModel @Inject constructor(
         savedStateHandle[KEY_MIDI] = midiJson.encodeToString(br.app.stagebook.domain.SongMidi.serializer(), m)
     }
 
-    private val midiJson = kotlinx.serialization.json.Json { ignoreUnknownKeys = true }
 
     /** Stage look (editor preview). */
     val look: StateFlow<Look> = repository.library.map { it.look }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), repository.library.value.look)
