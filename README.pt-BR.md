@@ -237,6 +237,38 @@ textos são só dados, enviados como texto simples.
 - Os URBs de saída levam 8 pacotes (1 ms), até 32 na fila. Os URBs de entrada começam com 16 pacotes; se a conferência
   na abertura perde mais de 3% dos pacotes, passam para 128 e o relógio é conferido de novo.
 
+## Serviços e bibliotecas
+O Stagebook não tem servidor próprio. Ele fala com estes serviços públicos e gratuitos só com a **Internet** ligada em
+Ajustes (o modo essencial desliga todos), e manda só o que cada um precisa:
+
+| Serviço | Para quê | O que sai |
+|---|---|---|
+| [MusicBrainz](https://musicbrainz.org) | artista e ano da música | título e artista; 1 pedido por segundo |
+| [API do Deezer](https://developers.deezer.com/api) | BPM e duração sugeridos | título e artista |
+| [ntfy.sh](https://ntfy.sh) | enviar setlists, músicas e PDFs pelas 3 palavras, caixa da banda | tudo cifrado com a chave do código |
+| [GitHub Releases](https://github.com/julianoAffonso/stagebook/releases) | versões novas do app | só o pedido de download |
+| Busca do Google e sites de cifra e partitura | o navegador de importar, só nos sites que você abre | o que qualquer navegador manda |
+
+A banda na rede local (achar os aparelhos e enviar) usa a descoberta de serviços do próprio Android; nada sai do Wi-Fi.
+
+Bibliotecas do app, todas de código aberto:
+
+| Biblioteca | Para quê | Licença |
+|---|---|---|
+| [Kotlin](https://kotlinlang.org), [kotlinx.coroutines](https://github.com/Kotlin/kotlinx.coroutines), [kotlinx.serialization](https://github.com/Kotlin/kotlinx.serialization) | linguagem, trabalho em segundo plano, JSON | Apache 2.0 |
+| [Jetpack Compose](https://developer.android.com/compose) e Material 3 | todas as telas | Apache 2.0 |
+| [AndroidX](https://developer.android.com/jetpack/androidx) Activity, Lifecycle, Navigation, [CameraX](https://developer.android.com/camerax) | telas, navegação, câmera do QR | Apache 2.0 |
+| [Hilt](https://dagger.dev/hilt/) (Dagger) | ligar as partes do app | Apache 2.0 |
+| [Reorderable](https://github.com/Calvin-LL/Reorderable) | arrastar músicas no setlist | Apache 2.0 |
+| [ZXing](https://github.com/zxing/zxing) core | gerar e ler QR | Apache 2.0 |
+| [PdfBox-Android](https://github.com/TomRoush/PdfBox-Android) | deixar PDFs grandes menores | Apache 2.0 |
+| [stb_vorbis](https://github.com/nothings/stb), [dr_mp3 e dr_wav](https://github.com/mackron/dr_libs) | tocar as backing tracks | domínio público ou MIT |
+
+O próprio Android desenha os PDFs (`PdfRenderer`), lê a duração da faixa (`MediaMetadataRetriever`) e separa endereço
+de busca (`Linkify`). O servidor MCP (`mcp/`) usa o [SDK TypeScript do MCP](https://github.com/modelcontextprotocol/typescript-sdk)
+e o [zod](https://zod.dev) (MIT). Os testes usam JUnit, [Robolectric](https://robolectric.org) e
+[Roborazzi](https://github.com/takahirom/roborazzi).
+
 ## Licença
 Código disponível sob a **PolyForm Shield 1.0.0** ([LICENSE.md](LICENSE.md)). Pode usar à vontade, até em show pago,
 mudar e redistribuir. Só não vale usar o código para fazer um app concorrente.

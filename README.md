@@ -234,6 +234,39 @@ texts are only data, sent as plain text.
 - Output URBs carry 8 packets (1 ms), up to 32 in the queue. Input URBs start with 16 packets; if the check at open
   loses more than 3% of the packets, they go to 128 and the clock is checked again.
 
+## Services and libraries
+Stagebook has no server of its own. It talks to these free public services only when **Internet** is on in Settings
+(essential mode turns them all off), and sends only what each one needs:
+
+| Service | What for | What goes out |
+|---|---|---|
+| [MusicBrainz](https://musicbrainz.org) | artist and year of a song | title and artist; 1 request a second |
+| [Deezer API](https://developers.deezer.com/api) | suggested BPM and length | title and artist |
+| [ntfy.sh](https://ntfy.sh) | sending setlists, songs and PDFs by 3 words, band inbox | everything encrypted with the code's key |
+| [GitHub Releases](https://github.com/julianoAffonso/stagebook/releases) | new versions of the app | nothing but the download request |
+| Google search and chord/score sites | the import browser, only the sites you open | what any browser sends |
+
+The band on the local network (device discovery and sends) uses Android's own network service discovery; nothing
+leaves the Wi-Fi.
+
+Libraries in the app, all open source:
+
+| Library | What for | License |
+|---|---|---|
+| [Kotlin](https://kotlinlang.org), [kotlinx.coroutines](https://github.com/Kotlin/kotlinx.coroutines), [kotlinx.serialization](https://github.com/Kotlin/kotlinx.serialization) | language, background work, JSON | Apache 2.0 |
+| [Jetpack Compose](https://developer.android.com/compose) and Material 3 | every screen | Apache 2.0 |
+| [AndroidX](https://developer.android.com/jetpack/androidx) Activity, Lifecycle, Navigation, [CameraX](https://developer.android.com/camerax) | screens, navigation, the QR camera | Apache 2.0 |
+| [Hilt](https://dagger.dev/hilt/) (Dagger) | wiring the app's parts | Apache 2.0 |
+| [Reorderable](https://github.com/Calvin-LL/Reorderable) | dragging songs in a setlist | Apache 2.0 |
+| [ZXing](https://github.com/zxing/zxing) core | making and reading QR codes | Apache 2.0 |
+| [PdfBox-Android](https://github.com/TomRoush/PdfBox-Android) | making big PDFs smaller | Apache 2.0 |
+| [stb_vorbis](https://github.com/nothings/stb), [dr_mp3 and dr_wav](https://github.com/mackron/dr_libs) | decoding backing tracks | public domain or MIT |
+
+Android itself draws the PDFs (`PdfRenderer`), reads a track's length (`MediaMetadataRetriever`) and tells a web
+address from a search (`Linkify`). The MCP server (`mcp/`) uses the [MCP TypeScript SDK](https://github.com/modelcontextprotocol/typescript-sdk)
+and [zod](https://zod.dev) (MIT). The tests use JUnit, [Robolectric](https://robolectric.org) and
+[Roborazzi](https://github.com/takahirom/roborazzi).
+
 ## License
 Source available under **PolyForm Shield 1.0.0** ([LICENSE.md](LICENSE.md)). Use it as you like, paid gigs included,
 change it and share it. You just can't use the code to make a competing app.
