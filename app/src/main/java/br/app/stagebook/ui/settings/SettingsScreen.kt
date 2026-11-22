@@ -1981,8 +1981,13 @@ private fun EnrichCard(uiState: SettingsUiState, actions: SettingsActions) {
             // one state, said once (user, 22/11: "all looked up" above "59 looked up" below was confusing)
             val missing = uiState.missingData
             val tried = uiState.triedData
+            // one sentence and one button (user, 22/11: two counts with two look-alike buttons were confusing). The songs
+            // looked up before are counted inside the total; the button looks up the ones not looked up yet, and once
+            // every one was, it looks them all up again
+            val all = missing + tried
             val status = when {
                 e.offline -> stringResource(R.string.enrich_offline)
+                missing > 0 && tried > 0 -> pluralStringResource(R.plurals.enrich_missing, all, all) + " " + pluralStringResource(R.plurals.enrich_tried_inside, tried, tried)
                 missing > 0 -> pluralStringResource(R.plurals.enrich_missing, missing, missing)
                 tried > 0 -> pluralStringResource(R.plurals.enrich_tried, tried, tried)
                 else -> stringResource(R.string.enrich_nothing)
@@ -1991,11 +1996,7 @@ private fun EnrichCard(uiState: SettingsUiState, actions: SettingsActions) {
             val done = if (e.total > 0) pluralStringResource(R.plurals.enrich_done, e.filled, e.filled) + " " else ""
             InfoText(done + status, Modifier.testTag(ENRICH_STATUS_TAG))
             if (missing > 0) ActionButton(stringResource(R.string.enrich_start), actions.onEnrich, Modifier.fillMaxWidth().settingsItem("enrich"), icon = AppIcons.Sync, tone = ButtonTone.Tonal)
-            // the ones looked up with no luck: their own button, asked for again only on purpose
-            if (tried > 0) {
-                if (missing > 0) InfoText(pluralStringResource(R.plurals.enrich_tried_others, tried, tried))
-                ActionButton(stringResource(R.string.enrich_again), actions.onEnrichAgain, Modifier.fillMaxWidth(), icon = AppIcons.Sync, tone = if (missing > 0) ButtonTone.Quiet else ButtonTone.Tonal)
-            }
+            else if (tried > 0) ActionButton(stringResource(R.string.enrich_again), actions.onEnrichAgain, Modifier.fillMaxWidth().settingsItem("enrich"), icon = AppIcons.Sync, tone = ButtonTone.Tonal)
         }
         if (e.running) {
             androidx.compose.material3.LinearProgressIndicator(

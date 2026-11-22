@@ -197,9 +197,9 @@ class LibraryEnricherTest {
         compose.onNodeWithText("já foram procuradas", substring = true).assertDoesNotExist()
         // new ones missing and some looked up before: the new ones first, the others below with their own button
         compose.runOnUiThread { state = state.copy(missingData = 3, triedData = 12) }
-        compose.onNodeWithText("3 músicas sem artista, ano, BPM ou duração.").performScrollTo().assertExists()
-        compose.onNodeWithText("Outras 12 já foram procuradas, sem resultado.").assertExists()
+        compose.onNodeWithText("15 músicas sem artista, ano, BPM ou duração. 12 delas já foram procuradas, sem resultado.").performScrollTo().assertExists()
         compose.onNodeWithText("Buscar o que falta").assertExists()
+        compose.onNodeWithText("Procurar de novo").assertDoesNotExist()   // one button only
         // just after a run, what it found comes first
         compose.runOnUiThread { state = state.copy(missingData = 0, triedData = 11, enrich = LibraryEnricher.Progress(done = 59, total = 59, filled = 48)) }
         compose.onNodeWithText("Pronto. 48 músicas ganharam dados novos. 11 músicas continuam sem algum dado. Os serviços não acharam.").performScrollTo().assertExists()

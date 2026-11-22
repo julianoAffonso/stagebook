@@ -161,10 +161,10 @@
         <item quantity="many">%d músicas continuam sem algum dado. Os serviços não acharam.</item>
         <item quantity="other">%d músicas continuam sem algum dado. Os serviços não acharam.</item>
     </plurals>
-    <plurals name="enrich_tried_others">
-        <item quantity="one">Outra %d já foi procurada, sem resultado.</item>
-        <item quantity="many">Outras %d já foram procuradas, sem resultado.</item>
-        <item quantity="other">Outras %d já foram procuradas, sem resultado.</item>
+    <plurals name="enrich_tried_inside">
+        <item quantity="one">%d delas já foi procurada, sem resultado.</item>
+        <item quantity="many">%d delas já foram procuradas, sem resultado.</item>
+        <item quantity="other">%d delas já foram procuradas, sem resultado.</item>
     </plurals>
     <string name="enrich_again">Procurar de novo</string>
     <plurals name="enrich_done">

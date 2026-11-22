@@ -153,9 +153,9 @@
         <item quantity="one">%d song still lacks something. The services didn\'t find it.</item>
         <item quantity="other">%d songs still lack something. The services didn\'t find it.</item>
     </plurals>
-    <plurals name="enrich_tried_others">
-        <item quantity="one">%d more was looked up, with no luck.</item>
-        <item quantity="other">%d more were looked up, with no luck.</item>
+    <plurals name="enrich_tried_inside">
+        <item quantity="one">%d of them was looked up already, with no luck.</item>
+        <item quantity="other">%d of them were looked up already, with no luck.</item>
     </plurals>
     <string name="enrich_again">Look again</string>
     <plurals name="enrich_done">
