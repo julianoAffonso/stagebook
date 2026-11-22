@@ -1,8 +1,6 @@
 package br.app.stagebook.data
 
 import br.app.stagebook.domain.Chords
-import br.app.stagebook.domain.SongMatch
-import br.app.stagebook.domain.TextKey
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -49,7 +47,7 @@ class DeezerBpm @Inject constructor() {
 
     private fun lookup(title: String, artist: String, alive: () -> Boolean): Facts? {
         val q = URLEncoder.encode("$title $artist".trim(), "UTF-8")
-        val id = get("${endpoint}search?q=$q&limit=5", alive)?.let { pickTrack(it, title, artist) } ?: return null
+        val id = get("${endpoint}search?q=$q&limit=$SEARCH_LIMIT", alive)?.let { pickTrack(it, title, artist) } ?: return null
         return get("${endpoint}track/$id", alive)?.let { Facts(bpmOf(it) ?: 0, secondsOf(it) ?: 0) }?.takeIf { it.bpm > 0 || it.seconds > 0 }
     }
 
@@ -59,13 +57,17 @@ class DeezerBpm @Inject constructor() {
         s.toInt().takeIf { it in 1..Chords.MAX_DURATION_S }
     }.getOrNull()
 
-    /** The search track that is the song (same title; with an artist, it breaks the tie); null if none matches. */
+    /**
+     * The search track that is the song (user, 22/11): the title without the version Deezer adds ("(Remastered 2009)",
+     * "Ao Vivo"), the studio version first, the artist one of a duo or with a small typo ([TrackPick]); null if none is.
+     */
     internal fun pickTrack(searchJson: String, title: String, artist: String): Long? = runCatching {
         val data = json.parseToJsonElement(searchJson).jsonObject["data"]?.jsonArray ?: return null
-        data.map { it.jsonObject }.firstOrNull { t ->
-            TextKey.of(t.str("title")) == TextKey.of(title) &&
-                (artist.isBlank() || SongMatch.sameArtistKey(TextKey.of(t["artist"]?.jsonObject?.str("name").orEmpty()), TextKey.of(artist)))
-        }?.get("id")?.jsonPrimitive?.longOrNull
+        val found = data.map { it.jsonObject }.mapNotNull { t ->
+            val id = t["id"]?.jsonPrimitive?.longOrNull ?: return@mapNotNull null
+            br.app.stagebook.domain.TrackPick.Result(id, t.str("title"), t["artist"]?.jsonObject?.str("name").orEmpty())
+        }
+        br.app.stagebook.domain.TrackPick.best(found, title, artist)
     }.getOrNull()
 
     /** The track's BPM, rounded; null if it has none (0) or it's unreasonable. */
@@ -102,5 +104,5 @@ class DeezerBpm @Inject constructor() {
     private object Busy
     internal var pauseMs = 700L   // the tests shorten it
 
-    private companion object { const val TIMEOUT_MS = 6_000; const val ATTEMPTS = 3 }
+    private companion object { const val TIMEOUT_MS = 6_000; const val ATTEMPTS = 3; const val SEARCH_LIMIT = 10 }
 }
