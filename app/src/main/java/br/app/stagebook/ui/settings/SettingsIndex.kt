@@ -193,6 +193,7 @@ private val allItems: List<SettingsItem> by lazy {
         item("about_help", A, R.string.about_help, R.string.about_help_open, R.string.about_help_text, R.string.kw_help),
         item("about_update", A, R.string.settings_update, R.string.settings_update, R.string.settings_update_help, R.string.kw_update, hide = noInternet),
         item("about_privacy", A, R.string.about_privacy, R.string.about_privacy, R.string.about_privacy_text, R.string.kw_privacy),
+        item("about_credits", A, R.string.about_credits, R.string.about_credits, R.string.about_services_text, R.string.kw_credits),
         item("about_code", A, R.string.about_open_source, R.string.about_see_code, R.string.about_open_source_text, R.string.kw_code),
         item("about_support", A, R.string.about_support, R.string.about_support, R.string.about_support_text, R.string.kw_support),
     )

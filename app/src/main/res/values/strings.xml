@@ -250,6 +250,10 @@
     <string name="about_tagline">Lyrics, chords and backing tracks to play live, solo or with the band.</string>
     <string name="about_privacy">Privacy</string>
     <string name="about_privacy_text">Your songs, setlists and settings stay on this device. What goes to the band or over the internet is protected, and nobody in between can read it. No account, no ads, no tracking.</string>
+    <string name="about_credits">Services and libraries</string>
+    <string name="about_services_text">Stagebook has no server of its own. With Internet on, it uses:\n• MusicBrainz: artist and year\n• Deezer API: BPM and length\n• ntfy.sh: sends by 3 words and the band inbox, encrypted\n• GitHub Releases: new versions\n• The sites you open in the import browser</string>
+    <string name="about_libraries_text">Made with open source libraries: Kotlin, kotlinx.coroutines and kotlinx.serialization, Jetpack Compose and Material 3, AndroidX and CameraX, Hilt, Reorderable, ZXing and PdfBox-Android (Apache 2.0); stb_vorbis, dr_mp3 and dr_wav (public domain or MIT).</string>
+    <string name="kw_credits">serviços bibliotecas licenças créditos services libraries licenses credits open source</string>
     <string name="about_open_source">Source available</string>
     <string name="about_open_source_text">Stagebook is free and anyone can see the code. Use it as you like, paid gigs included, and help make it better. Just don\'t copy it to make a competing app.</string>
     <string name="about_see_code">See the code</string>

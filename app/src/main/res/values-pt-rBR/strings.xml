@@ -264,6 +264,10 @@
     <string name="about_tagline">Letras, cifras e backing tracks para tocar ao vivo, sozinho ou com a banda.</string>
     <string name="about_privacy">Privacidade</string>
     <string name="about_privacy_text">Suas músicas, setlists e ajustes ficam neste aparelho. O que vai para a banda ou pela internet vai protegido, e ninguém no caminho consegue ler. Sem conta, sem propaganda, sem rastreio.</string>
+    <string name="about_credits">Serviços e bibliotecas</string>
+    <string name="about_services_text">O Stagebook não tem servidor próprio. Com a internet ligada, ele usa:\n• MusicBrainz: artista e ano\n• API do Deezer: BPM e duração\n• ntfy.sh: envios por 3 palavras e caixa da banda, cifrados\n• GitHub Releases: versões novas\n• Os sites que você abre no navegador da importação</string>
+    <string name="about_libraries_text">Feito com bibliotecas de código aberto: Kotlin, kotlinx.coroutines e kotlinx.serialization, Jetpack Compose e Material 3, AndroidX e CameraX, Hilt, Reorderable, ZXing e PdfBox-Android (Apache 2.0); stb_vorbis, dr_mp3 e dr_wav (domínio público ou MIT).</string>
+    <string name="kw_credits">serviços bibliotecas licenças créditos services libraries licenses credits open source</string>
     <string name="about_open_source">Código disponível</string>
     <string name="about_open_source_text">O Stagebook é gratuito e qualquer um pode ver o código. Use à vontade, até em show pago, e ajude a melhorar. Só não vale copiar para fazer um app concorrente.</string>
     <string name="about_see_code">Ver o código</string>

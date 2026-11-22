@@ -2130,6 +2130,11 @@ private fun AboutDetail(uiState: SettingsUiState, actions: SettingsActions) {
         Text(stringResource(R.string.about_open_source_text), style = MaterialTheme.typography.bodyMedium)
         ActionButton(stringResource(R.string.about_see_code), { actions.onOpenLink(AppLinks.REPOSITORY) }, Modifier.settingsItem("about_code"), icon = AppIcons.Public, tone = ButtonTone.Tonal)
     }
+    // what the app talks to and what it is made of (user, 22/11); the open source licenses ask for the credit
+    SettingsCard(stringResource(R.string.about_credits)) {
+        Text(stringResource(R.string.about_services_text), style = MaterialTheme.typography.bodyMedium, modifier = Modifier.settingsItem("about_credits"))
+        Text(stringResource(R.string.about_libraries_text), style = MaterialTheme.typography.bodyMedium)
+    }
     SettingsCard(stringResource(R.string.about_support)) {
         Text(stringResource(R.string.about_support_text), style = MaterialTheme.typography.bodyMedium, modifier = Modifier.settingsItem("about_support"))
         // the button only shows when the donation link is filled in (AppLinks.DONATE)
