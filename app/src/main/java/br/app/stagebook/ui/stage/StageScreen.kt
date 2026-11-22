@@ -1126,6 +1126,22 @@ fun StageScreen(
             // a PDF song: its pages in place of the lyrics. The page count is what the pedal, the tap and the swipe turn through
             if (song.pdf.isNotEmpty()) {
                 val open by rememberPdfOpen(pdfFile(song.pdf))
+                // scroll mode: the pages one under the other, scrolled like the lyrics (user, 22/11). The pedal, the tap
+                // and the swipe go through its steps as through pages; the page it was left on isn't kept (steps aren't pages)
+                if (look.stageMode == br.app.stagebook.data.model.StageMode.SCROLL) {
+                    SideEffect { autoAvailable = pageCountFor == index && pageCount > 1 }
+                    val autoPx = with(LocalDensity.current) { (look.autoScroll * br.app.stagebook.data.model.Look.AUTO_SCROLL_DP_PER_LEVEL).dp.toPx() }
+                    Box(Modifier.fillMaxSize()) {
+                        PdfScrollView(
+                            open, current, song.pdfInvert ?: look.pdfInvert, onStepCount = { pageCount = it; pageCountFor = index },
+                            crops = song.pdfCrops, marks = song.pdfMarks, markColor = Color(look.highlightColor),
+                            autoOn = autoOn, autoPxPerSecond = autoPx, onAutoEnd = { autoOn = false },
+                            onPaused = { k -> onPosition(index, k) }, pageKey = index,
+                        )
+                        trackOverlays()
+                    }
+                    return@BoxWithConstraints
+                }
                 // it comes up on the page it was left on (once, when the song arrives on its first page, with its count known);
                 // after that each page turned is kept. A song entered from behind (the last page) is left where it is
                 var restoredFor by remember { mutableIntStateOf(-1) }
