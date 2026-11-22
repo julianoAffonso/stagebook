@@ -19,6 +19,12 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import javax.inject.Inject
 
+/**
+ * The app takes the external screen (user, 22/11): only with the extras on (essential mode lets it go, T19) and the
+ * option not on Nothing. Otherwise Android mirrors the tablet.
+ */
+val Look.takesExternalScreen: Boolean get() = extrasOn && externalShow != ExternalShow.OFF
+
 @HiltViewModel
 class ExternalScreenViewModel @Inject constructor(
     repository: LibraryRepository,
@@ -38,7 +44,7 @@ class ExternalScreenViewModel @Inject constructor(
 @Composable
 fun ExternalScreenHost(mirror: StageMirror, viewModel: ExternalScreenViewModel = hiltViewModel()) {
     val look by viewModel.look.collectAsStateWithLifecycle()
-    val display = rememberPresentationDisplay(look.extrasOn && look.externalShow != ExternalShow.OFF)
+    val display = rememberPresentationDisplay(look.takesExternalScreen)
     SideEffect { mirror.active = display != null }
     // scrolling, the stage lets the screen go: Android mirrors the tablet, faithful to its zoom and its turn (user, 22/11)
     if (display != null && !mirror.mirrorTablet) ExternalPresentation(display) { ExternalStageContent(mirror.frame, look, viewModel::pdfFile, idleImage = viewModel.image) }

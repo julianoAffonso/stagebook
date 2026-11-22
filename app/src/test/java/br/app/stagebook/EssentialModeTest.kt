@@ -1,5 +1,6 @@
 package br.app.stagebook
 
+import br.app.stagebook.ui.stage.takesExternalScreen
 import androidx.test.core.app.ApplicationProvider
 import br.app.stagebook.data.AppUpdater
 import br.app.stagebook.data.LibraryRepository
@@ -36,6 +37,12 @@ import org.robolectric.annotation.Config
 class EssentialModeTest {
     @get:org.junit.Rule val compose = androidx.compose.ui.test.junit4.v2.createComposeRule()
     private val context = ApplicationProvider.getApplicationContext<android.app.Application>()
+
+    @Test fun `essential mode lets the external screen go - Android mirrors the tablet`() {
+        assertTrue(Look().takesExternalScreen)
+        assertFalse(Look(extrasOn = false).takesExternalScreen)
+        assertFalse(Look(externalShow = br.app.stagebook.data.model.ExternalShow.OFF).takesExternalScreen)
+    }
 
     @Test fun `essential only with all four off`() {
         assertFalse(Look().essential)   // new app: everything on, the player too

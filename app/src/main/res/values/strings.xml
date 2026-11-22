@@ -346,7 +346,7 @@
     <string name="essential_player">Track player</string>
     <string name="essential_player_detail">Backing tracks, USB audio interface and mixer</string>
     <string name="essential_extras">Metronome and chord extras</string>
-    <string name="essential_extras_detail">Chord sound and details, metronome, Now Playing and song MIDI</string>
+    <string name="essential_extras_detail">Chord sound and details, metronome, Now Playing, external screen and song MIDI</string>
     <string name="essential_banner">Essential mode on</string>
     <string name="essential_alert_title">Essential mode on</string>
     <string name="essential_alert_text">Lyrics, chords, chord diagrams and the pedal stay on. What\'s off:</string>

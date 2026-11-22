@@ -362,7 +362,7 @@
     <string name="essential_player">Player de faixas</string>
     <string name="essential_player_detail">Backing tracks, interface de áudio USB e mixer</string>
     <string name="essential_extras">Metrônomo e extras dos acordes</string>
-    <string name="essential_extras_detail">Som e detalhes do acorde, metrônomo, Now Playing e MIDI das músicas</string>
+    <string name="essential_extras_detail">Som e detalhes do acorde, metrônomo, Now Playing, tela externa e MIDI das músicas</string>
     <string name="essential_banner">Modo essencial ligado</string>
     <string name="essential_alert_title">Modo essencial ligado</string>
     <string name="essential_alert_text">Ficam a letra, a cifra, os diagramas dos acordes e o pedal. O que está desligado:</string>
