@@ -187,11 +187,12 @@ object ImportSites {
         ImportSite("LaCuerda", "https://acordes.lacuerda.net/"),
     )
     // free scores in PDF (public domain or free licence, chosen 15/11): the person browses, taps a PDF, and it comes in as a song.
-    // Not on the list on purpose: sites that ask for an account or payment for the PDF (MuseScore), sites that refuse any
-    // automated check (CPDL answers 403, so it can't be confirmed to open), and chord/lyrics sites (they have no PDF, and the
-    // lists above import those as text).
+    // Not on the list on purpose: sites that ask for an account or payment for the PDF (MuseScore, Musopen, Free-scores,
+    // 8notes) and chord/lyrics sites (they have no PDF, and the lists above import those as text). CPDL answers 403 to an
+    // automated check but works for a person browsing: imported on the S26 end to end (22/11), in IMSLP's place
     val PDF = listOf(
         ImportSite("Mutopia Project", "https://www.mutopiaproject.org/"),
+        ImportSite("CPDL", "https://www.cpdl.org/wiki/"),
         ImportSite("Musica Brasilis", "https://musicabrasilis.org.br/"),
     )
 

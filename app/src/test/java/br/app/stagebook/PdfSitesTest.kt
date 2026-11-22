@@ -59,6 +59,8 @@ class PdfSitesTest {
     // IMSLP freezes on a phone (user, 22/11): off the suggested list and off a list a person saved with it
     @Test fun `IMSLP is off the PDF sites, also from a saved list`() {
         assertFalse(ImportSites.PDF.any { "imslp" in it.url })
+        // CPDL in its place: free choral scores, the PDF a direct link, no account (imported on the S26, 22/11)
+        assertTrue(ImportSites.PDF.any { it.name == "CPDL" && it.url.startsWith("https://www.cpdl.org/") })
         val saved = Look(pdfSites = listOf(
             br.app.stagebook.data.model.ImportSite("IMSLP", "https://imslp.org/"),
             br.app.stagebook.data.model.ImportSite("Meu", "https://meu.example/"),
