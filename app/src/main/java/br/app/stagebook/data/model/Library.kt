@@ -1,5 +1,6 @@
 package br.app.stagebook.data.model
 
+import androidx.core.net.toUri
 import androidx.compose.runtime.Immutable
 import br.app.stagebook.domain.PedalAction
 import kotlinx.serialization.SerialName
@@ -191,9 +192,12 @@ object ImportSites {
     // lists above import those as text).
     val PDF = listOf(
         ImportSite("Mutopia Project", "https://www.mutopiaproject.org/"),
-        ImportSite("IMSLP", "https://imslp.org/"),
         ImportSite("Musica Brasilis", "https://musicabrasilis.org.br/"),
     )
+
+    // taken off the PDF list (user, 22/11): IMSLP's new site freezes on a phone, in Chrome too, and its PDF button
+    // never answers. Also off the lists people already saved, so nobody lands on it
+    val RETIRED_PDF = listOf("imslp.org")
 }
 
 /** How the lyrics move on stage: turn pages (default) or scroll (user's request, 29/10). */
@@ -244,7 +248,8 @@ val Look.siteKind: SiteKind get() = if (chords) SiteKind.CHORDS else SiteKind.LY
 /** The import sites of one kind, in the user's order. */
 fun Look.sites(kind: SiteKind): List<ImportSite> = when (kind) {
     SiteKind.CHORDS -> chordSites
-    SiteKind.PDF -> pdfSites
+    SiteKind.PDF -> pdfSites.filterNot { site -> ImportSites.RETIRED_PDF.any { site.url.toUri().host?.endsWith(it) == true } }
+        .ifEmpty { ImportSites.PDF }
     SiteKind.LYRICS -> lyricSites
 }
 

@@ -56,6 +56,19 @@ class PdfSitesTest {
         assertFalse(Look().sites(SiteKind.LYRICS).any { it in ImportSites.PDF })
     }
 
+    // IMSLP freezes on a phone (user, 22/11): off the suggested list and off a list a person saved with it
+    @Test fun `IMSLP is off the PDF sites, also from a saved list`() {
+        assertFalse(ImportSites.PDF.any { "imslp" in it.url })
+        val saved = Look(pdfSites = listOf(
+            br.app.stagebook.data.model.ImportSite("IMSLP", "https://imslp.org/"),
+            br.app.stagebook.data.model.ImportSite("Meu", "https://meu.example/"),
+        ))
+        assertEquals(listOf("Meu"), saved.sites(SiteKind.PDF).map { it.name })
+        // a list that had only IMSLP gets the suggested one, never an empty browser
+        val only = Look(pdfSites = listOf(br.app.stagebook.data.model.ImportSite("IMSLP", "https://imslp.org/")))
+        assertEquals(ImportSites.PDF, only.sites(SiteKind.PDF))
+    }
+
     @Test fun `a person's own PDF list is kept and old libraries get the suggested one`() {
         val own = Look(pdfSites = listOf(br.app.stagebook.data.model.ImportSite("Meu", "https://meu.example/")))
         assertEquals("Meu", own.sites(SiteKind.PDF).single().name)
