@@ -73,6 +73,7 @@ data class SettingsUiState(
     val playedDays: Int = 0,
     // completing the library's missing data (user, 22/11): how many songs lack something, and the run going on
     val missingData: Int = 0,
+    val triedData: Int = 0,   // songs looked up that still lack what the services don't have
     val enrich: br.app.stagebook.data.LibraryEnricher.Progress = br.app.stagebook.data.LibraryEnricher.Progress(),
 )
 
@@ -171,6 +172,7 @@ class SettingsViewModel @Inject constructor(
 
     /** Looks up what the whole library lacks, at each service's pace; [stopEnrich] stops it. */
     fun enrich() = enricher.start()
+    fun enrichAgain() = enricher.start(again = true)
     fun stopEnrich() = enricher.stop()
 
     /** The history of [period] as a spreadsheet at [uri], with the column names in the app's language (user, 22/11). */
@@ -261,7 +263,7 @@ class SettingsViewModel @Inject constructor(
             val shown = key?.copy(action = PedalAction.of(key.keyCode, lib.look.pedalKeys))
             SettingsUiState(!loaded, lib.look, lib.songs.size, lib.sets.size, lastKey = shown, version = version, pedalConnected = lib.look.pedalName in connected, update = up)
                 .let { st -> br.app.stagebook.domain.PlayHistory.summary(lib.history).let { (n, d) -> st.copy(playedSongs = n, playedDays = d) } }
-                .copy(missingData = enricher.missingCount(lib.songs))
+                .copy(missingData = enricher.missingCount(lib.songs), triedData = enricher.triedCount(lib.songs))
         },
         midi.state,
         language,

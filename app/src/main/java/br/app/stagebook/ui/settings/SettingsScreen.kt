@@ -439,6 +439,7 @@ fun SettingsRoute(
                     historySaver.launch("stagebook-${resources.getString(R.string.history_file)}-${java.time.LocalDate.now()}.csv")
                 },
                 onEnrich = viewModel::enrich,
+                onEnrichAgain = viewModel::enrichAgain,
                 onStopEnrich = viewModel::stopEnrich,
                 onFactoryReset = viewModel::factoryReset,
                 onMetronome = viewModel::setMetronome,
@@ -549,6 +550,7 @@ data class SettingsActions(
     val onBackup: (Set<br.app.stagebook.data.Backup.Part>) -> Unit = {},
     val onExportHistory: (br.app.stagebook.domain.PlayHistory.Period) -> Unit = {},
     val onEnrich: () -> Unit = {},
+    val onEnrichAgain: () -> Unit = {},   // the songs looked up before with no luck, once more
     val onStopEnrich: () -> Unit = {},
     val onAutoTags: (national: String, international: String, language: String, preview: Boolean) -> Pair<Int, Int> = { _, _, _, _ -> 0 to 0 },
     val onRestore: () -> Unit = {},
@@ -1959,7 +1961,8 @@ private fun EnrichCard(uiState: SettingsUiState, actions: SettingsActions) {
                 e.running -> stringResource(R.string.enrich_running, e.done, e.total)
                 e.offline -> stringResource(R.string.enrich_offline)
                 e.total > 0 -> pluralStringResource(R.plurals.enrich_done, e.filled, e.filled)
-                uiState.missingData == 0 -> stringResource(R.string.enrich_nothing)
+                uiState.missingData == 0 && uiState.triedData == 0 -> stringResource(R.string.enrich_nothing)
+                uiState.missingData == 0 -> stringResource(R.string.enrich_all_looked)
                 else -> pluralStringResource(R.plurals.enrich_missing, uiState.missingData, uiState.missingData)
             },
             Modifier.testTag(ENRICH_STATUS_TAG),
@@ -1970,8 +1973,13 @@ private fun EnrichCard(uiState: SettingsUiState, actions: SettingsActions) {
                 modifier = Modifier.fillMaxWidth(),
             )
             ActionButton(stringResource(R.string.enrich_stop), actions.onStopEnrich, Modifier.fillMaxWidth(), icon = AppIcons.Stop, tone = ButtonTone.Tonal)
-        } else if (uiState.missingData > 0) {
-            ActionButton(stringResource(R.string.enrich_start), actions.onEnrich, Modifier.fillMaxWidth().settingsItem("enrich"), icon = AppIcons.Sync, tone = ButtonTone.Tonal)
+        } else {
+            if (uiState.missingData > 0) ActionButton(stringResource(R.string.enrich_start), actions.onEnrich, Modifier.fillMaxWidth().settingsItem("enrich"), icon = AppIcons.Sync, tone = ButtonTone.Tonal)
+            // looked up already and the services don't have it: said apart, and asked for again only on purpose
+            if (uiState.triedData > 0) {
+                InfoText(pluralStringResource(R.plurals.enrich_tried, uiState.triedData, uiState.triedData))
+                ActionButton(stringResource(R.string.enrich_again), actions.onEnrichAgain, Modifier.fillMaxWidth(), icon = AppIcons.Sync, tone = ButtonTone.Quiet)
+            }
         }
     }
 }

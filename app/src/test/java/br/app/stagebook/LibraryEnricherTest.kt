@@ -48,9 +48,10 @@ class LibraryEnricherTest {
     private fun repo() = LibraryRepository(context, scope).also { r -> runBlocking { withTimeout(5_000) { r.loaded.first { it } } } }
 
     private fun enricher(repo: LibraryRepository, asked: MutableList<String> = mutableListOf()) =
-        LibraryEnricher(repo, MusicBrainz(), DeezerBpm(), Connectivity(context), scope).apply {
+        LibraryEnricher(repo, MusicBrainz(), DeezerBpm(), Connectivity(context), scope, br.app.stagebook.data.TrackStore(context), context).apply {
             online = { true }
             deezerSpacingMs = 0
+            roundPauseMs = 0
             artistYear = { t, _ -> asked += "mb:$t"; MusicBrainz.Info(t, "Found Artist", "1999") }
             facts = { t, _ -> asked += "dz:$t"; DeezerBpm.Facts(bpm = 120, seconds = 225) }
         }
@@ -82,6 +83,54 @@ class LibraryEnricherTest {
         // "Duas" had artist and year: MusicBrainz isn't asked for it, only Deezer
         assertEquals(listOf("mb:Uma", "dz:Uma", "dz:Duas"), asked)
         assertEquals(complete, repo.song("c"))
+    }
+
+    @Test fun `one press is enough - a service that was busy is asked again in the same run`() = runBlocking {
+        val repo = repo()
+        repo.restore(listOf(Song("a", "Uma", text = Chords.setDirective(Chords.setDirective("x", "tempo", "100"), "duration", "3:00"))), emptyList())
+        var calls = 0
+        val e = enricher(repo).apply { artistYear = { t, _ -> calls++; if (calls == 1) null else MusicBrainz.Info(t, "Found Artist", "1999") } }
+        e.start()
+        withTimeout(5_000) { e.progress.first { !it.running && it.done > 0 } }
+        assertEquals("Found Artist", repo.song("a")!!.author)
+        assertEquals(2, calls)
+        assertEquals(0, e.missingCount(repo.library.value.songs))
+    }
+
+    @Test fun `what the services don't have leaves the count until the song changes, and Look again asks for it`() = runBlocking {
+        val repo = repo()
+        repo.restore(listOf(Song("a", "Rara", "Banda", "2000")), emptyList())
+        val asked = mutableListOf<String>()
+        val e = enricher(repo, asked).apply { facts = { t, _ -> asked += "dz:$t"; null } }
+        assertEquals(1, e.missingCount(repo.library.value.songs))
+        e.start()
+        withTimeout(5_000) { e.progress.first { !it.running && it.done > 0 } }
+        assertEquals(0, e.missingCount(repo.library.value.songs))
+        assertEquals(1, e.triedCount(repo.library.value.songs))
+        // a press now finds nothing to look up; Look again does
+        asked.clear()
+        e.start()
+        assertEquals(emptyList<String>(), asked)
+        e.start(again = true)
+        withTimeout(5_000) { e.progress.first { !it.running && it.done > 0 } }
+        assertTrue(asked.isNotEmpty())
+        // a song renamed is another lookup: it counts again
+        repo.updateSong("a") { it.copy(title = "Rara (versão)") }
+        withTimeout(5_000) { while (repo.song("a")!!.title != "Rara (versão)") kotlinx.coroutines.delay(10) }
+        assertEquals(1, e.missingCount(repo.library.value.songs))
+    }
+
+    @Test fun `a song with a backing track takes its length from the track`() = runBlocking {
+        val repo = repo()
+        repo.restore(listOf(Song("a", "Com faixa", "Banda", "2000", track = "t.ogg")), emptyList())
+        val e = enricher(repo).apply {
+            trackSeconds = { if (it == "t.ogg") 200 else 0 }
+            facts = { _, _ -> DeezerBpm.Facts(bpm = 100, seconds = 999) }
+        }
+        e.start()
+        withTimeout(5_000) { e.progress.first { !it.running && it.done > 0 } }
+        assertEquals(200, Chords.duration(repo.song("a")!!.text))
+        assertEquals(100, Chords.tempo(repo.song("a")!!.text))
     }
 
     @Test fun `offline or in essential mode nothing is asked`() = runBlocking {

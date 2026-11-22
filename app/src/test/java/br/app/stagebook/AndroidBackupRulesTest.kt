@@ -38,6 +38,7 @@ class AndroidBackupRulesTest {
         "player" to false, "receive_links" to false, "resume_after_update" to false, "stage_quiet" to false,
         "setlist_pick" to false,   // the tags last used while adding songs to a setlist, by its id: nothing without that library
         "setlist_show" to false,   // what was played tonight on this device: no use on another one
+        "enrich" to false,   // which songs were looked up with no luck: this device's library ids, read again on the next look
         "lead" to false,   // where each track's first sound is: a cache, read again from the file
         "last_stage" to false,   // the stage the app opens on: this device's place, no use on another one
         "share" to false,   // the last "Only this Wi-Fi" choice when sending to the band: this device's habit
