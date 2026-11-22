@@ -277,7 +277,7 @@ fun SearchWithFilter(
         if (stacked) {
             androidx.compose.foundation.layout.Column(verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(gap)) {
                 SearchField(query, onQueryChange, placeholder, Modifier.fillMaxWidth())
-                filter?.invoke(Modifier.fillMaxWidth())
+                filter(Modifier.fillMaxWidth())
             }
         } else androidx.compose.foundation.layout.Row(horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(gap)) {
             // on phones, beside the filter, the long hint was cut: "Search" goes on top, like "Tags" (user, 01/11)

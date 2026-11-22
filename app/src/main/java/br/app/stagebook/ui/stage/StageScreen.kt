@@ -1140,9 +1140,9 @@ fun StageScreen(
                     if (ready != null && visible != null && song.pdfHidden.isNotEmpty()) br.app.stagebook.ui.stage.PdfOpen.Ready(ready.pages.only(visible)) else opened
                 }
                 val hiding = visible != null && song.pdfHidden.isNotEmpty()
-                val shownMarks = if (hiding) br.app.stagebook.domain.PdfHidden.marks(song.pdfMarks, visible!!) else song.pdfMarks
-                val shownCrops = if (hiding) br.app.stagebook.domain.PdfHidden.crops(song.pdfCrops, visible!!) else song.pdfCrops
-                fun fileOf(page: Int) = if (hiding) br.app.stagebook.domain.PdfHidden.fileOf(page, visible!!) else page
+                val shownMarks = if (hiding) br.app.stagebook.domain.PdfHidden.marks(song.pdfMarks, visible) else song.pdfMarks
+                val shownCrops = if (hiding) br.app.stagebook.domain.PdfHidden.crops(song.pdfCrops, visible) else song.pdfCrops
+                fun fileOf(page: Int) = if (hiding) br.app.stagebook.domain.PdfHidden.fileOf(page, visible) else page
                 // scroll mode: the pages one under the other, scrolled like the lyrics (user, 22/11). The pedal, the tap
                 // and the swipe go through its steps as through pages; the page it was left on isn't kept (steps aren't pages)
                 if (look.stageMode == br.app.stagebook.data.model.StageMode.SCROLL) {
@@ -1690,7 +1690,7 @@ fun StageScreen(
     // (read when touched, never while composing: the targets are a new object at every composition, and reading them here
     // made the stage compose for ever)
     StageEdgeTaps(band = { edgeBand[0] to edgeBand[1] }, vertical = { latest.vertical }, enabled = { !latest.marking }, dismiss = { latest.dismiss() }, onPrevious = { latest.previous() }, onNext = { latest.next() })
-    if (onBreakNow && breakSince != null) {
+    if (onBreakNow) {
         val next = uiState.songs[index + 1]
         val nextKey = remember(next.text) { Chords.key(next.text) }
         val title = if (next.missing) stringResource(R.string.set_item_missing) else next.title

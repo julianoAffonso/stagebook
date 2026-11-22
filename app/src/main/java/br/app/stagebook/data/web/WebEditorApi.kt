@@ -31,7 +31,7 @@ class WebEditorApi(
     private val inspector: br.app.stagebook.data.PdfInspector = br.app.stagebook.data.PdfInspector(),
     // a page of a song's PDF as an image, for the crop window (the renderer can't draw in the tests: they pass their own)
     private val pageImage: (java.io.File, Int) -> ByteArray? = { f, n -> br.app.stagebook.data.PdfPreview.jpeg(f, n) },
-    private val workDir: () -> java.io.File = { java.io.File(System.getProperty("java.io.tmpdir")) },
+    private val workDir: () -> java.io.File = { java.io.File(System.getProperty("java.io.tmpdir") ?: ".") },
 ) {
     /** The band, for Import → Sync with the band / Received from the band. */
     class Band(val items: () -> List<br.app.stagebook.data.BandInbox.Item>, val sync: () -> Unit)

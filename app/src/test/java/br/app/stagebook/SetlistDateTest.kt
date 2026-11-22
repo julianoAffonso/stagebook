@@ -23,7 +23,6 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
-import kotlinx.serialization.json.Json
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Rule
@@ -72,7 +71,7 @@ class SetlistDateTest {
     }
 
     @Test fun `a setlist saved before the day existed reads with no day`() {
-        val old = Json { ignoreUnknownKeys = true }.decodeFromString<Setlist>("""{"id":"1","name":"Antigo","items":["a"]}""")
+        val old = lenientJson.decodeFromString<Setlist>("""{"id":"1","name":"Antigo","items":["a"]}""")
         assertEquals("", old.date)
     }
 

@@ -43,7 +43,7 @@ class TrackEndsTest {
     }
 
     @Test fun `old settings keep today's stop and start at the first sound`() {
-        val old = kotlinx.serialization.json.Json { ignoreUnknownKeys = true }.decodeFromString(Look.serializer(), "{}")
+        val old = lenientJson.decodeFromString(Look.serializer(), "{}")
         assertEquals(0, old.stopFadeMs)
         assertTrue(old.trimSilence)
     }

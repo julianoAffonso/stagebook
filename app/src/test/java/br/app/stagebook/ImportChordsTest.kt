@@ -1,3 +1,5 @@
+@file:OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
+
 package br.app.stagebook
 
 import androidx.lifecycle.SavedStateHandle

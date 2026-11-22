@@ -74,7 +74,7 @@ class PdfSitesTest {
     @Test fun `a person's own PDF list is kept and old libraries get the suggested one`() {
         val own = Look(pdfSites = listOf(br.app.stagebook.data.model.ImportSite("Meu", "https://meu.example/")))
         assertEquals("Meu", own.sites(SiteKind.PDF).single().name)
-        val old = kotlinx.serialization.json.Json { ignoreUnknownKeys = true }.decodeFromString(Look.serializer(), "{}")
+        val old = lenientJson.decodeFromString(Look.serializer(), "{}")
         assertEquals(ImportSites.PDF, old.pdfSites)
     }
 

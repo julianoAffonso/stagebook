@@ -97,6 +97,6 @@ class StageScrollHitTest {
         compose.waitForIdle()
         compose.onNodeWithContentDescription("Esconder os acordes desta música").performClick()
         compose.waitForIdle()
-        org.junit.Assert.assertTrue("escondidos: $hidden", hidden != null && "G" in hidden!!)
+        org.junit.Assert.assertTrue("escondidos: $hidden", hidden != null && "G" in hidden)
     }
 }

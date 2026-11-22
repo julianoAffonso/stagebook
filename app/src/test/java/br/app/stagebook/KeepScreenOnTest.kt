@@ -30,14 +30,15 @@ class KeepScreenOnTest {
             if (new) KeepScreenOn()
         }
         compose.waitForIdle()
-        assertTrue(view!!.keepScreenOn)
+        val shown = checkNotNull(view)
+        assertTrue(shown.keepScreenOn)
         new = true   // the next song's stage comes in
         compose.waitForIdle()
         old = false  // the old one leaves after the fade
         compose.waitForIdle()
-        assertTrue(view!!.keepScreenOn)
+        assertTrue(shown.keepScreenOn)
         new = false  // leaving the stage
         compose.waitForIdle()
-        assertFalse(view!!.keepScreenOn)
+        assertFalse(shown.keepScreenOn)
     }
 }

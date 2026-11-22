@@ -1,3 +1,5 @@
+@file:OptIn(com.github.takahirom.roborazzi.ExperimentalRoborazziApi::class)
+
 package br.app.stagebook
 
 import br.app.stagebook.R

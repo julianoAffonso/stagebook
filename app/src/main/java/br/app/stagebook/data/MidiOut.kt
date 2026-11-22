@@ -104,7 +104,7 @@ class MidiOut @Inject constructor(
         val m = manager ?: return null
         @Suppress("DEPRECATION")
         val info = m.devices.firstOrNull { usable(it) && keyOf(it) == key } ?: return null
-        if (!watching) { m.registerDeviceCallback(removed, main); watching = true }
+        if (!watching) { m.watchDevices(removed, main); watching = true }
         val opened = withTimeoutOrNull(OPEN_TIMEOUT_MS) {
             // answered after the wait gave up: nobody would close it (audit 07/11)
             suspendCancellableCoroutine<MidiDevice?> { c -> m.openDevice(info, { dev -> if (c.isActive) c.resume(dev) else dev?.close() }, main) }

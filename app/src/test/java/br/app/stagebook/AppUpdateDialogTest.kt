@@ -38,7 +38,7 @@ class AppUpdateDialogTest {
     @Test fun `back only closes the window`() {
         show()
         compose.waitForIdle()
-        ShadowDialog.getLatestDialog().onBackPressed()
+        (ShadowDialog.getLatestDialog() as androidx.activity.ComponentDialog).onBackPressedDispatcher.onBackPressed()
         compose.waitForIdle()
         assertTrue(closed)
         assertFalse(later)

@@ -1237,7 +1237,7 @@ private fun MidiOutCard(look: Look, actions: SettingsActions) {
         val none = stringResource(R.string.settings_midi_out_none)
         OptionDropdown(
             stringResource(R.string.settings_midi_out_device), options, options.firstOrNull { it?.key == look.midiOut }, actions.onMidiOut,
-            { o -> when { o == null -> none; away && o.key == saved?.key -> awayName; else -> o.name } },
+            { o -> when { o == null -> none; away && o.key == saved.key -> awayName; else -> o.name } },
             Modifier.fillMaxWidth().settingsItem("midi_out"),
             onOpen = actions.onMidiOutputsOpen,
         )

@@ -1,3 +1,5 @@
+@file:OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
+
 package br.app.stagebook
 
 import br.app.stagebook.domain.Newest

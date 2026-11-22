@@ -18,7 +18,6 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
-import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.int
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
@@ -77,7 +76,7 @@ class SetlistBreaksShareTest {
 
     private fun list(name: String, vararg titles: String) = (listOf(QrPayload.HEADER, titles.size.toString(), name) + titles).joinToString("\n")
 
-    private val json = Json { ignoreUnknownKeys = true }
+    private val json = lenientJson
 
     // ---- what goes out ----
 
@@ -175,7 +174,7 @@ class SetlistBreaksShareTest {
         inbox.add("ana", "Ana", list("Sem dizer", "A", "B"), emptyList())
         assertNull(inbox.items.value.single { it.setName == "Sem dizer" }.breaks)
         // what was saved before the breaks existed still opens
-        val saved = Json { ignoreUnknownKeys = true }.decodeFromString(BandInbox.Item.serializer(), """{"id":"1","fromId":"ana","fromName":"Ana","text":"x"}""")
+        val saved = lenientJson.decodeFromString(BandInbox.Item.serializer(), """{"id":"1","fromId":"ana","fromName":"Ana","text":"x"}""")
         assertNull(saved.breaks)
     }
 

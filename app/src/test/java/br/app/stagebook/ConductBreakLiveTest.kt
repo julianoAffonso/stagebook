@@ -23,7 +23,6 @@ import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.setMain
 import kotlinx.coroutines.withTimeout
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.json.Json
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -203,7 +202,7 @@ class ConductBreakLiveTest {
         val songs = listOf(Conduct.Item("A"), Conduct.Item("B"))
         val new = Conduct.encode(Conduct.Msg(Conduct.OPEN, "Voz", "Show", songs, 0, breakMs = 44_000, breakPaused = true))
         assertTrue("breakPaused" in new)
-        val old = Json { ignoreUnknownKeys = true }.decodeFromString(OldMsg.serializer(), new)
+        val old = lenientJson.decodeFromString(OldMsg.serializer(), new)
         assertEquals(OldMsg(Conduct.OPEN, "Voz", "Show", songs, 0, breakMs = 44_000), old)
         // running: the message is, byte for byte, the one that went before
         assertFalse("breakPaused" in Conduct.encode(Conduct.Msg(Conduct.OPEN, "Voz", "Show", songs, 0, breakMs = 44_000)))
@@ -212,7 +211,7 @@ class ConductBreakLiveTest {
     @Test fun `a leader from before the pause field never says paused, and the follower counts by itself`() {
         val p = Pair2()
         val songs = p.items
-        val old = Json { ignoreUnknownKeys = true }.encodeToString(OldMsg.serializer(), OldMsg(Conduct.OPEN, "Voz", "Show", songs, 0, breakMs = 5_000))
+        val old = lenientJson.encodeToString(OldMsg.serializer(), OldMsg(Conduct.OPEN, "Voz", "Show", songs, 0, breakMs = 5_000))
         p.followerLink.conductHandler!!.invoke(voice, Conduct.decode(old)!!)
         assertNotNull(p.following().breakSince)
         assertNull(p.following().breakFrozen)

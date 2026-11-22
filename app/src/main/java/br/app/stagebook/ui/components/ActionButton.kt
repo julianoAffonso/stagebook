@@ -75,7 +75,7 @@ fun ActionButton(
             contentDescription = "$text. $disabledHint"
             disabled()
             role = Role.Button
-            onClick { message.show(disabledHint!!); true }
+            onClick { message.show(disabledHint); true }
         }
     } else Modifier
     Box(modifier.then(describe), contentAlignment = if (tone == ButtonTone.Primary) Alignment.CenterEnd else Alignment.CenterStart) {
@@ -97,7 +97,7 @@ fun ActionButton(
         // with large system text the label wraps to two lines instead of losing its end ("Nova mú…", device test B-20)
         Text(text, style = MaterialTheme.typography.labelLarge, maxLines = 2, overflow = TextOverflow.Ellipsis, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
     }
-    if (explain) Box(Modifier.matchParentSize().pointerInput(disabledHint) { detectTapGestures { message.show(disabledHint!!) } })
+    if (explain) Box(Modifier.matchParentSize().pointerInput(disabledHint) { detectTapGestures { message.show(disabledHint) } })
     }
 }
 

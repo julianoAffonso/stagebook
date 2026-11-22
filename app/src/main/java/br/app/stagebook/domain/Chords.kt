@@ -274,7 +274,7 @@ object Chords {
             // dropped the frets from the song; audit 03/11)
             val lyric = next != null && next.isNotBlank() && !isChordLine(next) && !isDirective(next) && Sections.detect(next) == null &&
                 positions(line).none { (_, t) -> shapeToken.matches(t) }
-            out += if (lyric) merge(line, next!!) else chordsOnly(line)
+            out += if (lyric) merge(line, next) else chordsOnly(line)
             i += if (lyric) 2 else 1
         }
         return out.joinToString("\n")

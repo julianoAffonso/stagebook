@@ -60,7 +60,7 @@ class ChordPlayTest {
         compose.onNodeWithText("O diagrama é de G. Com capo na 2ª casa, soa A.").assertExists()
         compose.onNodeWithContentDescription("Tocar").performClick()
         assertTrue(played!!.isNotEmpty())
-        assertTrue(played!!.all { it >= 40 + 2 })   // everything at least 2 frets above the lowest string
+        assertTrue(played.all { it >= 40 + 2 })   // everything at least 2 frets above the lowest string
     }
 
     @Test fun `keyboard does not use capo - no notice and no higher note`() {

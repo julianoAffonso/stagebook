@@ -65,7 +65,7 @@ private const val LINE_ALPHA = 0.7f
 
 private val sample = List(Spectrum.BINS) { b ->
     // music-like shape: strong lows, mids, falling highs
-    -18f - b * 0.6f + 6f * cos(b / 5f).toFloat()
+    -18f - b * 0.6f + 6f * cos(b / 5f)
 }
 
 @LightPreview

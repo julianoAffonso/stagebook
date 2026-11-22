@@ -163,7 +163,7 @@ class PdfInternetTest {
         val repo = repo(); val c = cloud(repo).withServer()
         val song = SetlistCloud.SharedSong("Spoof", "Ana", "", "x", pdfAt = "https://example.com/file/x.bin", pdfName = "x.pdf")
         val plain = listOf(
-            SetlistCloud.pack(byteArrayOf('S'.code.toByte(), '1'.code.toByte()), kotlinx.serialization.json.Json { encodeDefaults = false }.encodeToString(SetlistCloud.SharedSong.serializer(), song)),
+            SetlistCloud.pack(byteArrayOf('S'.code.toByte(), '1'.code.toByte()), sparseJson.encodeToString(SetlistCloud.SharedSong.serializer(), song)),
             br.app.stagebook.domain.QrPayload.pack(SetlistCloud.looseList(listOf("Spoof" to "Ana"))),
         )
         val got = (c.read(plain) as SetlistCloud.Received.Ok).songs.single()
@@ -190,7 +190,7 @@ class PdfInternetTest {
         val repo = repo(); val c = cloud(repo)
         val song = SetlistCloud.SharedSong("Spoof", "Ana", "", "x", pdfFile = "../../databases/x", pdfProblem = "TOO_BIG", pdfName = "x.pdf")
         val plain = listOf(
-            SetlistCloud.pack(byteArrayOf('S'.code.toByte(), '1'.code.toByte()), kotlinx.serialization.json.Json { encodeDefaults = false }.encodeToString(SetlistCloud.SharedSong.serializer(), song)),
+            SetlistCloud.pack(byteArrayOf('S'.code.toByte(), '1'.code.toByte()), sparseJson.encodeToString(SetlistCloud.SharedSong.serializer(), song)),
             br.app.stagebook.domain.QrPayload.pack(SetlistCloud.looseList(listOf("Spoof" to "Ana"))),
         )
         val got = (c.read(plain) as SetlistCloud.Received.Ok).songs.single()

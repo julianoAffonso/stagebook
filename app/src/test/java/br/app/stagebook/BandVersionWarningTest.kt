@@ -6,7 +6,6 @@ import br.app.stagebook.data.BandSession
 import br.app.stagebook.domain.BandCrypto
 import br.app.stagebook.domain.BandProtocol
 import kotlinx.coroutines.runBlocking
-import kotlinx.serialization.json.Json
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -79,7 +78,7 @@ class BandVersionWarningTest {
     }
 
     @Test fun `a Hello with no version is read as 2, because the published app never wrote it`() {
-        val h = Json { ignoreUnknownKeys = true }.decodeFromString<BandProtocol.Hello>("""{"id":"i","name":"n","key":"k"}""")
+        val h = lenientJson.decodeFromString<BandProtocol.Hello>("""{"id":"i","name":"n","key":"k"}""")
         assertEquals(2, h.v)
         // a mismatch with this app (3), so a published app on the network gets "version" instead of being taken for current
         assertTrue(h.v != BandProtocol.VERSION)

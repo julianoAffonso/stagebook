@@ -78,6 +78,8 @@ class SettingsSearchIndexTest {
 
     @Test fun `a keystroke does not read the strings again`() {
         var reads = 0
+        // a Resources that counts lookups: subclassing has only this constructor, deprecated with no replacement
+        @Suppress("DEPRECATION")
         val counting = object : Resources(context.resources.assets, context.resources.displayMetrics, context.resources.configuration) {
             override fun getString(id: Int): String { reads++; return context.resources.getString(id) }
             override fun getString(id: Int, vararg args: Any?): String { reads++; return context.resources.getString(id, *args) }

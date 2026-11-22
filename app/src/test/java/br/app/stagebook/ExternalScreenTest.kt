@@ -116,7 +116,7 @@ class ExternalScreenTest {
         val first = mirror.frame!!
         assertEquals("l", first.songId)
         assertEquals(0, first.lines!!.first)
-        assertTrue("one page holds part of the song: ${first.lines}", first.lines!!.last < 299)
+        assertTrue("one page holds part of the song: ${first.lines}", first.lines.last < 299)
         compose.runOnUiThread {
             pedal.dispatch(KeyEvent(0, 0, KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_PAGE_DOWN, 0))
             pedal.dispatch(KeyEvent(0, 0, KeyEvent.ACTION_UP, KeyEvent.KEYCODE_PAGE_DOWN, 0))
@@ -124,7 +124,7 @@ class ExternalScreenTest {
         compose.waitForIdle()
         val second = mirror.frame!!.lines!!
         assertNotEquals(first.lines, second)
-        assertTrue(second.first > first.lines!!.first)
+        assertTrue(second.first > first.lines.first)
     }
 
     @Test fun `Settings offers it beside Now Playing, and it goes with the extras`() {

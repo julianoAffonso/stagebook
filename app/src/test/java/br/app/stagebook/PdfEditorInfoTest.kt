@@ -108,7 +108,7 @@ class PdfEditorInfoTest {
         assertNotEquals(first.file, second.file)
         assertEquals(pdfs.file(vm.pdf), second.file)
         assertEquals(5_009L, second.bytes)
-        assertFalse("the PDF before is gone from the disk", first.file!!.exists())
+        assertFalse("the PDF before is gone from the disk", first.file.exists())
         assertEquals(vm.pdf, repo.library.value.songs.single().pdf)
         vm.removePdf()
         assertNull(vm.pdfInfo)

@@ -108,7 +108,7 @@ class MidiPedal @Inject constructor(
         val m = manager ?: return
         if (started) return
         started = true
-        m.registerDeviceCallback(callback, null)
+        m.watchDevices(callback, android.os.Handler(android.os.Looper.getMainLooper()))
         scope.launch {
             repository.library.map { it.look.midiUsb }.distinctUntilChanged().collect(::setUsb)
         }
