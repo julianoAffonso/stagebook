@@ -39,6 +39,7 @@ class AndroidBackupRulesTest {
         "setlist_pick" to false,   // the tags last used while adding songs to a setlist, by its id: nothing without that library
         "setlist_show" to false,   // what was played tonight on this device: no use on another one
         "last_stage" to false,   // the stage the app opens on: this device's place, no use on another one
+        "share" to false,   // the last "Only this Wi-Fi" choice when sending to the band: this device's habit
         "usb_delivery" to false, "usb_no_input" to false, "usb_queue" to false, "usb_route" to false, "versao_nova" to false, "web_editor" to false,
     )
 

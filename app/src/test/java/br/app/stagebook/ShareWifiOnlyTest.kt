@@ -1,5 +1,7 @@
 package br.app.stagebook
 
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -37,5 +39,21 @@ class ShareWifiOnlyTest {
     @Test fun `with the internet off there is no switch, it is Wi-Fi only already`() {
         show(internetOn = false)
         compose.onNodeWithText("Só deste Wi-Fi").assertDoesNotExist()
+    }
+
+    // the last choice is kept on this device (user, 22/11)
+    @Test fun `Only this Wi-Fi is remembered the next time the sheet opens`() {
+        androidx.test.core.app.ApplicationProvider.getApplicationContext<android.app.Application>().getSharedPreferences("share", 0).edit().clear().commit()
+        var open by androidx.compose.runtime.mutableStateOf(true)
+        compose.setContent {
+            StagebookTheme { if (open) ShareOptions(3, online = true, onQr = null, onInternet = {}, band = 2, onBand = { s, w -> sent = s to w }, limits = ShareLimits(lists = 1, songs = 3)) }
+        }
+        compose.onNodeWithText("Só deste Wi-Fi").performClick()
+        open = false
+        compose.waitForIdle()
+        open = true
+        compose.waitForIdle()
+        compose.onNodeWithText("Mandar para a banda", substring = true).performClick()
+        assertEquals(true to true, sent)
     }
 }

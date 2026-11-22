@@ -273,8 +273,9 @@ fun ShareOptions(
 ) {
     var withSongs by rememberSaveable { mutableStateOf(true) }
     // only who is on this Wi-Fi, nothing over the internet (user, 22/11): a band all in one room, or a setlist kept off the
-    // server
-    var wifiOnly by rememberSaveable { mutableStateOf(false) }
+    // server. The last choice is kept on this device (user, 22/11)
+    val prefs = androidx.compose.ui.platform.LocalContext.current.getSharedPreferences(PREFS, android.content.Context.MODE_PRIVATE)
+    var wifiOnly by rememberSaveable { mutableStateOf(prefs.getBoolean(KEY_WIFI_ONLY, false)) }
     val bandOk = br.app.stagebook.domain.BandContent.bandFits(limits.lists)
     val songsGoing = if (withSongs) limits.songs else 0
     val internetOk = br.app.stagebook.domain.BandContent.internetFits(limits.lists, songsGoing)
@@ -303,7 +304,7 @@ fun ShareOptions(
             if (internetOn) SwitchRow(
                 stringResource(R.string.share_band_wifi_only),
                 wifiOnly,
-                { wifiOnly = it },
+                { wifiOnly = it; prefs.edit().putBoolean(KEY_WIFI_ONLY, it).apply() },
                 detail = stringResource(R.string.share_band_wifi_only_hint),
             )
         }
@@ -336,6 +337,8 @@ fun ShareOptions(
 }
 
 private const val MEGABYTE = 1024L * 1024
+private const val PREFS = "share"
+private const val KEY_WIFI_ONLY = "wifi_only"
 
 /** Why the PDFs don't go over the internet, in numbers: what they need, what the server takes, what is left after the songs. */
 @Composable

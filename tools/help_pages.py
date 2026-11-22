@@ -288,11 +288,11 @@ SECTIONS = [
         "id": "compartilhar", "pt": "Compartilhar e QR", "en": "Sharing and QR",
         "text_pt": [
             "Num setlist, ou com várias músicas selecionadas, Compartilhar oferece os caminhos abaixo. Quem recebe sempre confere antes de entrar.",
-            "Com alguém na banda, o primeiro caminho é Mandar para a banda: quem está no mesmo Wi-Fi recebe na hora, e os outros pela internet em até 12 horas. Com Só deste Wi-Fi ligado, nada vai pela internet: só quem está no mesmo Wi-Fi recebe. Veja [Mandar e receber](#banda-mandar).",
+            "Com alguém na banda, o primeiro caminho é Mandar para a banda: quem está no mesmo Wi-Fi recebe na hora, e os outros pela internet em até 12 horas. Com Só deste Wi-Fi ligado, nada vai pela internet: só quem está no mesmo Wi-Fi recebe. O app lembra a última escolha. Veja [Mandar e receber](#banda-mandar).",
         ],
         "text_en": [
             "In a setlist, or with several songs selected, Share offers the ways below. Whoever receives always checks before anything comes in.",
-            "With someone in the band, the first way is Send to the band: whoever is on the same Wi-Fi gets it right away, and the others online within 12 hours. With Only this Wi-Fi on, nothing goes over the internet: only whoever is on the same Wi-Fi gets it. See [Sending and receiving](#banda-mandar).",
+            "With someone in the band, the first way is Send to the band: whoever is on the same Wi-Fi gets it right away, and the others online within 12 hours. With Only this Wi-Fi on, nothing goes over the internet: only whoever is on the same Wi-Fi gets it. The app remembers your last choice. See [Sending and receiving](#banda-mandar).",
         ],
         "figs": [Fig(("jornada_compartilhar_1_folha_tablet", "jornada_compartilhar_1_folha", "Compartilhar: com internet e, embaixo, sem internet", "Share: with internet and, below, without it"))],
         "subs": [
