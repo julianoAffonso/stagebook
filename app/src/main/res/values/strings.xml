@@ -140,7 +140,8 @@
     <string name="enrich_title">Complete song details</string>
     <string name="enrich_start">Look up what is missing</string>
     <string name="enrich_stop">Stop</string>
-    <string name="enrich_running">Looking up song %1$d of %2$d. You can leave this screen.</string>
+    <string name="enrich_running">Looking up song %1$d of %2$d</string>
+    <string name="enrich_leave">You can leave this screen.</string>
     <string name="enrich_offline">No internet right now. Try again when you are connected.</string>
     <string name="enrich_nothing">Every song has artist, year, BPM and length.</string>
     <plurals name="enrich_missing">

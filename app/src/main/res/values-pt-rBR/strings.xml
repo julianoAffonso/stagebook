@@ -146,7 +146,8 @@
     <string name="enrich_title">Completar dados das músicas</string>
     <string name="enrich_start">Buscar o que falta</string>
     <string name="enrich_stop">Parar</string>
-    <string name="enrich_running">Buscando a música %1$d de %2$d. Pode sair desta tela.</string>
+    <string name="enrich_running">Buscando a música %1$d de %2$d</string>
+    <string name="enrich_leave">Pode sair desta tela.</string>
     <string name="enrich_offline">Sem internet agora. Tente de novo quando estiver conectado.</string>
     <string name="enrich_nothing">Todas as músicas têm artista, ano, BPM e duração.</string>
     <plurals name="enrich_missing">

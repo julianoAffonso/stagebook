@@ -1967,9 +1967,18 @@ private fun EnrichCard(uiState: SettingsUiState, actions: SettingsActions) {
     if (!uiState.look.internetOn) return   // essential mode (T19): no lookups, no card
     val e = uiState.enrich
     SettingsCard(stringResource(R.string.enrich_title)) {
-        InfoText(
+        // running: the count on its own line, in figures of one width, and the note below it, so the card never changes
+        // height as the number grows (user, 22/11: the line broke at 10 and everything under it jumped)
+        if (e.running) {
+            Text(
+                stringResource(R.string.enrich_running, e.done, e.total),
+                style = MaterialTheme.typography.bodyMedium.copy(fontFeatureSettings = "tnum"),
+                color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, softWrap = false,
+                modifier = Modifier.testTag(ENRICH_STATUS_TAG),
+            )
+            InfoText(stringResource(R.string.enrich_leave))
+        } else InfoText(
             when {
-                e.running -> stringResource(R.string.enrich_running, e.done, e.total)
                 e.offline -> stringResource(R.string.enrich_offline)
                 e.total > 0 -> pluralStringResource(R.plurals.enrich_done, e.filled, e.filled)
                 uiState.missingData == 0 && uiState.triedData == 0 -> stringResource(R.string.enrich_nothing)

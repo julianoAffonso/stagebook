@@ -161,7 +161,8 @@ class LibraryEnricherTest {
         compose.onNodeWithText("Buscar o que falta").performScrollTo().performClick()
         assertTrue(started)
         state = state.copy(enrich = LibraryEnricher.Progress(running = true, done = 1, total = 3))
-        compose.onNodeWithText("Buscando a música 1 de 3. Pode sair desta tela.").performScrollTo().assertExists()
+        compose.onNodeWithText("Buscando a música 1 de 3").performScrollTo().assertExists()
+        compose.onNodeWithText("Pode sair desta tela.").assertExists()
         compose.onNodeWithText("Parar").performScrollTo().performClick()
         assertTrue(stopped)
     }
