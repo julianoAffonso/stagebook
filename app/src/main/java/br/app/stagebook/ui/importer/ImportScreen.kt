@@ -300,7 +300,11 @@ fun ImportScreen(
                         onValueChange = { address = it },
                         placeholder = { Text(stringResource(R.string.import_address_hint)) },
                         singleLine = true,
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri, imeAction = ImeAction.Go),
+                        // an address: no capitals and no autocorrect (the keyboard put a space after each period, user 22/11)
+                        keyboardOptions = KeyboardOptions(
+                            keyboardType = KeyboardType.Uri, imeAction = ImeAction.Go, autoCorrectEnabled = false,
+                            capitalization = androidx.compose.ui.text.input.KeyboardCapitalization.None,
+                        ),
                         // the page shows up whole: the keyboard closes on Go (device test B-03)
                         keyboardActions = KeyboardActions(onGo = { webView?.loadUrl(urlFor(address)); keyboard?.hide(); focus.clearFocus() }),
                         shape = MaterialTheme.shapes.medium,

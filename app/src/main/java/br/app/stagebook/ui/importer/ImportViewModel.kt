@@ -139,12 +139,20 @@ class ImportViewModel @Inject constructor(
     companion object {
         /** Address, domain or a Google search for "<word> <text>" (lyrics or chords, depending on the profile). */
         fun urlFor(q: String, word: String = "letra"): String {
-            val s = q.trim()
+            // a phone's keyboard may put a space after each period and capitals at the start ("HTTPS://clara. Imslp.
+            // Org/…", user 22/11): spaces right after . / : go, and the scheme and the site are lower case (the path keeps
+            // its case: some sites tell them apart)
+            val s = q.trim().replace(Regex("(?<=[./:])\\s+"), "")
             return when {
-                s.matches(Regex("(?i)^https?://.*")) -> s
-                s.matches(Regex("(?i)^[\\w.-]+\\.[a-z]{2,}(/.*)?$")) -> "https://$s"
-                else -> "https://www.google.com/search?q=" + Uri.encode("$word $s")
+                s.matches(Regex("(?i)^https?://\\S*$")) -> lowerSite(s)
+                s.matches(Regex("(?i)^[\\w.-]+\\.[a-z]{2,}(/\\S*)?$")) -> lowerSite("https://$s")
+                else -> "https://www.google.com/search?q=" + Uri.encode("$word ${q.trim()}")
             }
+        }
+
+        private fun lowerSite(url: String): String {
+            val m = Regex("^([^:]+://)([^/?#]*)(.*)$").find(url) ?: return url
+            return m.groupValues[1].lowercase() + m.groupValues[2].lowercase() + m.groupValues[3]
         }
 
         const val HOME = "https://www.letras.mus.br/"
