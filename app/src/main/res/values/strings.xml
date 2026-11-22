@@ -1330,6 +1330,7 @@
     <string name="hide_internet">Only with the internet on</string>
     <string name="hide_scroll">Only in Scroll mode</string>
     <string name="hide_pages">Only in Turn pages mode</string>
+    <string name="hide_external_off">Only when the external screen shows something</string>
     <string name="hide_sites_chords">Only with the Lyrics and chords profile</string>
     <string name="hide_sites_lyrics">Only with the Lyrics only profile</string>
     <string name="hide_pt">Only with the app in Portuguese</string>

@@ -93,5 +93,10 @@ class ExternalIdleTest {
         compose.runOnUiThread { state = state.copy(look = state.look.copy(externalIdle = ExternalIdle.IMAGE)) }
         compose.onNodeWithText("Trocar a imagem").performScrollTo().performClick()
         assertEquals(ExternalIdle.IMAGE, chosen)
+        // Nothing: Android mirrors the tablet, the choices of what the TV shows go away
+        compose.runOnUiThread { state = state.copy(look = state.look.copy(externalShow = br.app.stagebook.data.model.ExternalShow.OFF)) }
+        compose.onNodeWithText("Com o palco fechado").assertDoesNotExist()
+        compose.onNodeWithText("Trocar a imagem").assertDoesNotExist()
+        compose.onNodeWithText("Tela externa").performScrollTo().assertExists()
     }
 }

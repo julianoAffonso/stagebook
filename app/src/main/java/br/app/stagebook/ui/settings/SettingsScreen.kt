@@ -1886,18 +1886,21 @@ private fun ExternalScreenCard(look: Look, actions: SettingsActions) {
             stringResource(R.string.external_show), br.app.stagebook.data.model.ExternalShow.entries, look.externalShow, actions.onExternalShow,
             nameOf = { stringResource(names.getValue(it)) }, modifier = Modifier.settingsItem("external_show"),
         )
-        InfoText(stringResource(R.string.external_detail))
-        val idleNames = mapOf(
-            br.app.stagebook.data.model.ExternalIdle.LOGO to R.string.external_idle_logo,
-            br.app.stagebook.data.model.ExternalIdle.BLACK to R.string.external_idle_black,
-            br.app.stagebook.data.model.ExternalIdle.IMAGE to R.string.external_idle_image,
-        )
-        OptionDropdown(
-            stringResource(R.string.external_idle), br.app.stagebook.data.model.ExternalIdle.entries, look.externalIdle, actions.onExternalIdle,
-            nameOf = { stringResource(idleNames.getValue(it)) }, modifier = Modifier.settingsItem("external_idle"),
-        )
-        if (look.externalIdle == br.app.stagebook.data.model.ExternalIdle.IMAGE) {
-            ActionButton(stringResource(R.string.external_image_change), { actions.onExternalIdle(br.app.stagebook.data.model.ExternalIdle.IMAGE) }, icon = AppIcons.Image, tone = ButtonTone.Tonal)
+        // Nothing: Android mirrors the tablet, so what the TV shows (the PDF, the stage closed) isn't the app's to choose
+        if (look.externalShow != br.app.stagebook.data.model.ExternalShow.OFF) {
+            InfoText(stringResource(R.string.external_detail))
+            val idleNames = mapOf(
+                br.app.stagebook.data.model.ExternalIdle.LOGO to R.string.external_idle_logo,
+                br.app.stagebook.data.model.ExternalIdle.BLACK to R.string.external_idle_black,
+                br.app.stagebook.data.model.ExternalIdle.IMAGE to R.string.external_idle_image,
+            )
+            OptionDropdown(
+                stringResource(R.string.external_idle), br.app.stagebook.data.model.ExternalIdle.entries, look.externalIdle, actions.onExternalIdle,
+                nameOf = { stringResource(idleNames.getValue(it)) }, modifier = Modifier.settingsItem("external_idle"),
+            )
+            if (look.externalIdle == br.app.stagebook.data.model.ExternalIdle.IMAGE) {
+                ActionButton(stringResource(R.string.external_image_change), { actions.onExternalIdle(br.app.stagebook.data.model.ExternalIdle.IMAGE) }, icon = AppIcons.Image, tone = ButtonTone.Tonal)
+            }
         }
     }
 }
