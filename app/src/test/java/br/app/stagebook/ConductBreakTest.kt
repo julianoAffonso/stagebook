@@ -47,8 +47,8 @@ class ConductBreakTest {
         val sent = CopyOnWriteArrayList<Conduct.Msg>()
         val arrived = java.util.concurrent.atomic.AtomicInteger()   // messages the listener has already dealt with
         private val followerLink = link(repo)
-        val leader = BandConduct(link(repo), repo, DeviceIdentity(context)).also { it.clock = { leaderClock } }
-        val follower = BandConduct(followerLink, repo, DeviceIdentity(context)).also { it.clock = { followerClock } }
+        val leader = testConduct(repo = repo, link = link(repo)).also { it.clock = { leaderClock } }
+        val follower = testConduct(repo = repo, link = followerLink).also { it.clock = { followerClock } }
         var listening: BandLink = followerLink
 
         init {
@@ -61,10 +61,7 @@ class ConductBreakTest {
             }
         }
 
-        fun link(repo: LibraryRepository) = BandLink(
-            context, DeviceIdentity(context), br.app.stagebook.data.BandTrust(context), br.app.stagebook.data.StageGate(),
-            br.app.stagebook.data.BandInbox(context), repo,
-        )
+        fun link(repo: LibraryRepository) = testLink(repo = repo)
 
         fun following(who: BandConduct = follower) = who.role.value as Role.Following
 
@@ -86,8 +83,7 @@ class ConductBreakTest {
     private fun await(what: () -> Boolean) = runBlocking { withTimeout(10_000) { while (!what()) delay(10) } }
 
     private fun band(): Band = runBlocking {
-        val repo = LibraryRepository(context, CoroutineScope(Dispatchers.IO))
-        withTimeout(15_000) { repo.loaded.first { it } }
+        val repo = testRepo()
         repo.updateLook { it.copy(bandOn = true) }   // off, leading would end as soon as it starts
         withTimeout(15_000) { repo.library.first { it.look.bandOn } }
         Band(repo)
@@ -117,7 +113,7 @@ class ConductBreakTest {
         // four minutes later another device shows up, and the leader says the current song again
         b.leaderClock += 240_000
         val lateLink = b.link(b.repo)
-        val late = BandConduct(lateLink, b.repo, DeviceIdentity(context)).also { it.clock = { 5_000_000L } }
+        val late = testConduct(repo = b.repo, link = lateLink).also { it.clock = { 5_000_000L } }
         b.listening = lateLink
         b.told(2) { b.leader.search() }
         assertEquals(5_000_000L - 240_000, b.following(late).breakSince)
@@ -232,8 +228,7 @@ class ConductBreakTest {
     }
 
     @Test fun `with the band off, or not leading, a break sends nothing`() = runBlocking {
-        val repo = LibraryRepository(context, CoroutineScope(Dispatchers.IO))
-        withTimeout(15_000) { repo.loaded.first { it } }
+        val repo = testRepo()
         repo.updateLook { it.copy(bandOn = true) }
         withTimeout(15_000) { repo.library.first { it.look.bandOn } }
         val b = Band(repo)

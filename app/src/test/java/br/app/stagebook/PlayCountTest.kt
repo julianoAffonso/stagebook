@@ -43,8 +43,7 @@ class PlayCountTest {
     @After fun reset() = Dispatchers.resetMain()
 
     private fun scope() = CoroutineScope(SupervisorJob() + Dispatchers.IO)
-    private fun repo() = LibraryRepository(context, scope())
-        .also { r -> runBlocking { withTimeout(5_000) { r.loaded.first { it } }; r.restore(emptyList(), emptyList()) } }
+    private fun repo() = testRepo(scope = scope(), empty = true)
     private var day = "2026-11-19"
     private fun store(repo: LibraryRepository) = SetlistShowStore(context, repo, scope()).also { it.today = { day } }
     private fun wait(ms: Long) = main.scheduler.apply { advanceTimeBy(ms); runCurrent() }

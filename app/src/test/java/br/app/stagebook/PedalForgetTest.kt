@@ -50,15 +50,8 @@ class PedalForgetTest {
     private val b = KeyEvent.KEYCODE_B
 
     @Test fun `forgetting takes the button off the list with its command, and pressing it lists it again`() = runBlocking {
-        val repo = LibraryRepository(context, CoroutineScope(Dispatchers.IO))
-        withTimeout(15_000) { repo.loaded.first { it } }
-        val vm = SettingsViewModel(
-            repo, context, AppUpdater(context),
-            br.app.stagebook.data.MidiPedal(context, repo, CoroutineScope(Dispatchers.IO)),
-            br.app.stagebook.data.Backup(context, repo, br.app.stagebook.data.TrackStore(context)),
-            br.app.stagebook.data.MetronomeSound(context), br.app.stagebook.data.MidiOut(context, repo, CoroutineScope(Dispatchers.IO)),
-            br.app.stagebook.player.StagePlayer(context, repo), br.app.stagebook.data.LibraryEnricher(repo, br.app.stagebook.data.MusicBrainz(), br.app.stagebook.data.DeezerBpm(), br.app.stagebook.data.Connectivity(context), kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO), br.app.stagebook.data.TrackStore(context), context),
-        )
+        val repo = testRepo()
+        val vm = testSettingsVm(repo)
         suspend fun until(ok: (Look) -> Boolean) = withTimeout(15_000) { repo.library.first { ok(it.look) } }.look
 
         vm.onKey(PedalPress(a, down = true))

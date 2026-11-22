@@ -37,8 +37,7 @@ import org.robolectric.annotation.Config
 @Config(sdk = [35], application = android.app.Application::class)
 class WebEditorRowFactsTest {
     private val context = ApplicationProvider.getApplicationContext<android.app.Application>()
-    private val repo = LibraryRepository(context, CoroutineScope(SupervisorJob() + Dispatchers.IO))
-        .also { r -> runBlocking { withTimeout(5_000) { r.loaded.first { it } }; r.restore(emptyList(), emptyList()) } }
+    private val repo = testRepo(empty = true)
     private val device = WebEditorAuth.Device("d", "Chrome · Windows", "h", 0)
 
     private fun call(api: WebEditorApi, method: String, path: String, body: String = "") =

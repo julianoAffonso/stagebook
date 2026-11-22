@@ -41,8 +41,7 @@ class WebEditorPdfTest {
     private val counter = Pages()
 
     @Before fun setUp() {
-        repo = LibraryRepository(context, CoroutineScope(SupervisorJob() + Dispatchers.IO))
-        runBlocking { withTimeout(5_000) { repo.loaded.first { it } } }
+        repo = testRepo()
     }
 
     private fun api() = WebEditorApi(repo, pdfs = { pdfs }, inspector = PdfInspector(counter), workDir = { context.cacheDir })

@@ -40,7 +40,7 @@ class PdfAsTextTest {
     @get:Rule val compose = createComposeRule()
     private val context = ApplicationProvider.getApplicationContext<android.app.Application>()
 
-    private fun repo() = LibraryRepository(context, CoroutineScope(SupervisorJob() + Dispatchers.IO)).also { r -> runBlocking { withTimeout(5_000) { r.loaded.first { it } } } }
+    private fun repo() = testRepo()
 
     @Test fun `only lyrics or chords count as kept, not directives nor section titles`() {
         assertFalse(KeptLyrics.has(""))

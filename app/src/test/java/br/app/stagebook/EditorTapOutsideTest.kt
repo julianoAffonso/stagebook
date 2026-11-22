@@ -52,8 +52,7 @@ class EditorTapOutsideTest {
     @Test fun `a tap outside takes the focus off, the tools and the field do not`() {
         val context = ApplicationProvider.getApplicationContext<android.app.Application>()
         val scope = CoroutineScope(Dispatchers.IO)
-        val repo = LibraryRepository(context, scope)
-        runBlocking { withTimeout(5_000) { repo.loaded.first { it } } }
+        val repo = testRepo(scope = scope)
         val id = repo.saveSong(Song(title = "Hazard", author = "Richard Marx", text = "[G]linha 1\n[D]linha 2"))
         val vm = SongEditorViewModel(repo, SongMetadata(repo, MusicBrainz(), scope), ImportDraft(), SavedStateHandle(mapOf("songId" to id, "fromImport" to false, "cursor" to -1)), ImportQueue(repo), TrackStore(context), EditorQueue())
         runBlocking { withTimeout(5_000) { while (vm.uiState.loading) kotlinx.coroutines.delay(10) } }

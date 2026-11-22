@@ -40,10 +40,9 @@ class AskKindTest {
 
     private class Pages : PdfPageCounter { override fun pageCount(file: File): Int = 2 }
 
-    private fun repo() = LibraryRepository(context, CoroutineScope(SupervisorJob() + Dispatchers.IO))
-        .also { r -> runBlocking { withTimeout(5_000) { r.loaded.first { it } }; r.restore(emptyList(), emptyList()) } }
+    private fun repo() = testRepo(empty = true)
 
-    private fun link(repo: LibraryRepository) = BandLink(context, DeviceIdentity(context), BandTrust(context), StageGate(), BandInbox(context), repo, pdfs, PdfInspector(Pages()))
+    private fun link(repo: LibraryRepository) = testLink(repo = repo, pdfs = pdfs, inspector = PdfInspector(Pages()))
 
     @Test fun `the kind of a song is its PDF, else its chords, else its lyrics`() {
         assertEquals(AskKind.PDF, AskKind.of(Song(title = "A", text = chords, pdf = "a.pdf")))

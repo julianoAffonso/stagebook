@@ -24,8 +24,7 @@ class AutoTagsTest {
     private val en = "You know I love you, baby\nAnd I can't let it go, it's all in my heart"
 
     private fun repo(): Pair<LibraryRepository, List<String>> = runBlocking {
-        val r = LibraryRepository(context, CoroutineScope(SupervisorJob() + Dispatchers.IO))
-        withTimeout(5_000) { r.loaded.first { it } }
+        val r = testRepo()
         r to listOf(r.saveSong(Song(title = "Brasileira", text = pt)), r.saveSong(Song(title = "Gringa", text = en)))
     }
 

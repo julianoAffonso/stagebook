@@ -44,7 +44,7 @@ class InviteSingleUseTest {
     private val trust = BandTrust(context)
 
     private fun band(t: BandTrust = trust): Pair<BandInternet, BandLink> {
-        val link = BandLink(context, identity, t, StageGate(), BandInbox(context), repo)
+        val link = testLink(repo = repo, identity = identity, trust = t)
         return BandInternet(context, cloud, t, identity, BandInbox(context), Connectivity(context), link) to link
     }
 

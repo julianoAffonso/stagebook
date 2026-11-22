@@ -42,8 +42,7 @@ class SetlistBreaksShareTest {
     private val context = ApplicationProvider.getApplicationContext<android.app.Application>()
     private val identity = DeviceIdentity(context)
 
-    private fun repo() = LibraryRepository(context, CoroutineScope(SupervisorJob() + Dispatchers.IO))
-        .also { r -> runBlocking { withTimeout(5_000) { r.loaded.first { it } }; r.restore(emptyList(), emptyList()) } }
+    private fun repo() = testRepo(empty = true)
 
     private fun LibraryRepository.set(id: String) = library.value.setlist(id)!!
     private fun LibraryRepository.songs(vararg titles: String) = titles.map { saveSong(Song(title = it, author = "x", text = it)) }
@@ -60,7 +59,7 @@ class SetlistBreaksShareTest {
     }
 
     private fun link(repo: LibraryRepository, inbox: BandInbox = BandInbox(context)) =
-        BandLink(context, identity, br.app.stagebook.data.BandTrust(context), br.app.stagebook.data.StageGate(), inbox, repo)
+        testLink(repo = repo, identity = identity, inbox = inbox)
 
     private fun scan(repo: LibraryRepository, queue: ImportQueue = ImportQueue(repo), inbox: BandInbox = BandInbox(context), from: String = ""): ScanSetlistViewModel {
         val link = link(repo, inbox)

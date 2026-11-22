@@ -71,8 +71,7 @@ class EditorFlowTest {
         try {
             val context = ApplicationProvider.getApplicationContext<android.app.Application>()
             val scope = CoroutineScope(Dispatchers.IO)
-            val repo = LibraryRepository(context, scope)
-            withTimeout(5_000) { repo.loaded.first { it } }
+            val repo = testRepo(scope = scope)
             val id = repo.saveSong(Song(title = "Hazard", author = "Richard Marx", text = "letra antiga"))
             val meta = SongMetadata(repo, MusicBrainz(), scope)
             val handle = SavedStateHandle(mapOf("songId" to id, "fromImport" to false))
@@ -97,8 +96,7 @@ class EditorFlowTest {
         try {
             val context = ApplicationProvider.getApplicationContext<android.app.Application>()
             val scope = CoroutineScope(Dispatchers.IO)
-            val repo = LibraryRepository(context, scope)
-            withTimeout(5_000) { repo.loaded.first { it } }
+            val repo = testRepo(scope = scope)
             val meta = SongMetadata(repo, MusicBrainz(), scope)
             val draft = ImportDraft().apply { put(ImportDraft.Draft("Importada", "Banda", "1999", "[G]letra importada")) }
             val handle = SavedStateHandle(mapOf("fromImport" to true))
@@ -155,8 +153,7 @@ class EditorFlowTest {
         try {
             val context = ApplicationProvider.getApplicationContext<android.app.Application>()
             val scope = CoroutineScope(Dispatchers.IO)
-            val repo = LibraryRepository(context, scope)
-            withTimeout(5_000) { repo.loaded.first { it } }
+            val repo = testRepo(scope = scope)
             val tracks = br.app.stagebook.data.TrackStore(context)
             val vm = SongEditorViewModel(repo, SongMetadata(repo, MusicBrainz(), scope), ImportDraft(), SavedStateHandle(mapOf("fromImport" to false)), br.app.stagebook.data.ImportQueue(repo), tracks, br.app.stagebook.data.EditorQueue())
             withTimeout(5_000) { while (vm.uiState.loading) kotlinx.coroutines.delay(10) }
@@ -180,8 +177,7 @@ class EditorFlowTest {
         try {
             val context = ApplicationProvider.getApplicationContext<android.app.Application>()
             val scope = CoroutineScope(Dispatchers.IO)
-            val repo = LibraryRepository(context, scope)
-            withTimeout(5_000) { repo.loaded.first { it } }
+            val repo = testRepo(scope = scope)
             val tracks = br.app.stagebook.data.TrackStore(context).apply { lengthOf = { 263 } }
             fun editor() = SongEditorViewModel(repo, SongMetadata(repo, MusicBrainz(), scope), ImportDraft(), SavedStateHandle(mapOf("fromImport" to false)), br.app.stagebook.data.ImportQueue(repo), tracks, br.app.stagebook.data.EditorQueue())
             val audio = java.io.File(context.cacheDir, "faixa-duracao.ogg").apply { writeBytes("OggS".toByteArray() + ByteArray(12)) }

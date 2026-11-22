@@ -23,8 +23,7 @@ import org.robolectric.annotation.Config
 class LibraryEditsTest {
     private val context = ApplicationProvider.getApplicationContext<android.app.Application>()
 
-    private fun repo() = LibraryRepository(context, CoroutineScope(SupervisorJob() + Dispatchers.IO))
-        .also { r -> runBlocking { withTimeout(5_000) { r.loaded.first { it } } } }
+    private fun repo() = testRepo()
 
     private fun LibraryRepository.items(setId: String) = library.value.setlist(setId)!!.items
 

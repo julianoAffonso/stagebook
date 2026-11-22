@@ -55,11 +55,10 @@ class PdfBandPackageTest {
         override fun pageCount(file: File): Int = fail?.let { throw it } ?: pages
     }
 
-    private fun repo() = LibraryRepository(context, CoroutineScope(SupervisorJob() + Dispatchers.IO))
-        .also { r -> runBlocking { withTimeout(5_000) { r.loaded.first { it } }; r.restore(emptyList(), emptyList()) } }
+    private fun repo() = testRepo(empty = true)
 
     private fun link(repo: LibraryRepository, counter: PdfPageCounter = FakeCounter(), inbox: BandInbox = BandInbox(context)) =
-        BandLink(context, identity, BandTrust(context), StageGate(), inbox, repo, pdfs, PdfInspector(counter))
+        testLink(repo = repo, identity = identity, inbox = inbox, pdfs = pdfs, inspector = PdfInspector(counter))
 
     private fun pdfBytes(size: Int) = head + ByteArray(size - head.size) { (it % 251).toByte() }
 

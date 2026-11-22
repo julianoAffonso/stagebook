@@ -37,8 +37,7 @@ class WebEditorReceiveBreaksTest {
     private val list = "STAGEBOOK1\n5\nShow\n" + titles.joinToString("\n")
 
     @Before fun setUp() {
-        repo = LibraryRepository(context, CoroutineScope(SupervisorJob() + Dispatchers.IO))
-        runBlocking { withTimeout(5_000) { repo.loaded.first { it } } }
+        repo = testRepo()
     }
 
     private fun have(vararg which: String) = which.associateWith { repo.saveSong(Song(title = it, text = "[G]la")) }

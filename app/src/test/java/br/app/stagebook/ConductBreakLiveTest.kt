@@ -52,14 +52,7 @@ class ConductBreakLiveTest {
     private val voice = BandProtocol.Hello("voz", "Voz", "key")
 
     private inner class Pair2 {
-        val repo = LibraryRepository(context, CoroutineScope(SupervisorJob() + Dispatchers.IO)).also { r ->
-            runBlocking {
-                withTimeout(15_000) { r.loaded.first { it } }
-                r.restore(emptyList(), emptyList())
-                r.updateLook { it.copy(bandOn = true) }
-                withTimeout(15_000) { r.library.first { it.look.bandOn } }
-            }
-        }
+        val repo = testRepo(empty = true, bandOn = true)
         val set: String
         val items: List<Conduct.Item>
         init {
@@ -71,13 +64,10 @@ class ConductBreakLiveTest {
         val arrived = java.util.concurrent.atomic.AtomicInteger()
         var followerClock = 987_654_321_000L
         val trust = br.app.stagebook.data.BandTrust(context)
-        private fun link() = BandLink(
-            context, DeviceIdentity(context), trust, br.app.stagebook.data.StageGate(),
-            br.app.stagebook.data.BandInbox(context), repo,
-        )
+        private fun link() = testLink(repo = repo, trust = trust)
         val followerLink = link()
-        val follower = BandConduct(followerLink, repo, DeviceIdentity(context)).also { it.clock = { followerClock } }
-        val leader = BandConduct(link(), repo, DeviceIdentity(context)).also { c ->
+        val follower = testConduct(repo = repo, link = followerLink).also { it.clock = { followerClock } }
+        val leader = testConduct(repo = repo, link = link()).also { c ->
             c.deliver = { msg ->
                 sent += msg
                 followerLink.conductHandler?.invoke(voice, Conduct.decode(Conduct.encode(msg))!!)

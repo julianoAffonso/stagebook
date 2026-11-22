@@ -21,8 +21,7 @@ import kotlinx.coroutines.withTimeout
 internal fun openEditorVm(title: String = "Hazard", author: String = "Richard Marx", text: String, cursor: Int = -1, queue: EditorQueue = EditorQueue()): SongEditorViewModel {
     val context = ApplicationProvider.getApplicationContext<android.app.Application>()
     val scope = CoroutineScope(Dispatchers.IO)
-    val repo = LibraryRepository(context, scope)
-    runBlocking { withTimeout(5_000) { repo.loaded.first { it } } }
+    val repo = testRepo(scope = scope)
     val id = repo.saveSong(Song(title = title, author = author, text = text))
     val vm = SongEditorViewModel(repo, SongMetadata(repo, MusicBrainz(), scope), ImportDraft(), SavedStateHandle(mapOf("songId" to id, "fromImport" to false, "cursor" to cursor)), ImportQueue(repo), TrackStore(context), queue)
     runBlocking { withTimeout(5_000) { while (vm.uiState.loading) kotlinx.coroutines.delay(10) } }

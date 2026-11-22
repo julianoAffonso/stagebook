@@ -45,14 +45,10 @@ class BandAuditResilienceTest {
     private val songs = listOf(Conduct.Item("Primeira"), Conduct.Item("Segunda"), Conduct.Item("Terceira"))
 
     private val repo = runBlocking {
-        LibraryRepository(context, CoroutineScope(SupervisorJob() + Dispatchers.IO)).also { r ->
-            withTimeout(15_000) { r.loaded.first { it } }
-            r.updateLook { it.copy(bandOn = true) }
-            withTimeout(15_000) { r.library.first { it.look.bandOn } }
-        }
+        testRepo(bandOn = true)
     }
-    private val link = BandLink(context, identity, trust, br.app.stagebook.data.StageGate(), BandInbox(context), repo)
-    private val conduct = BandConduct(link, repo, identity).also { it.deliver = { m -> sent += m; emptyMap() } }
+    private val link = testLink(repo = repo, identity = identity, trust = trust)
+    private val conduct = testConduct(repo = repo, link = link, identity = identity).also { it.deliver = { m -> sent += m; emptyMap() } }
 
     @After fun clean() {
         trust.remove("sem-membro")
@@ -215,7 +211,7 @@ class BandAuditResilienceTest {
 
     // ---- an automatic sync waits for the stage to close ----
     private fun internet(stage: br.app.stagebook.data.StageGate): BandInternet {
-        val l = BandLink(context, identity, trust, stage, BandInbox(context), repo)
+        val l = testLink(repo = repo, identity = identity, trust = trust, stage = stage)
         return BandInternet(context, SetlistCloud(repo, identity), trust, identity, BandInbox(context), br.app.stagebook.data.Connectivity(context), l)
     }
 

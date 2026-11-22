@@ -62,8 +62,7 @@ class ConductMissingSongsTest {
     private fun await(what: () -> Boolean) = runBlocking { withTimeout(10_000) { while (!what()) delay(10) } }
 
     private fun repo(on: android.content.Context, vararg have: Pair<String, String>): LibraryRepository = runBlocking {
-        val repo = LibraryRepository(on, CoroutineScope(Dispatchers.IO))
-        withTimeout(15_000) { repo.loaded.first { it } }
+        val repo = testRepo(on)
         repo.updateLook { it.copy(bandOn = true, chords = true) }
         have.forEach { (title, text) -> repo.saveSong(Song(title = title, author = songs.firstOrNull { it.title == title }?.artist.orEmpty(), text = text)) }
         repo
@@ -74,10 +73,10 @@ class ConductMissingSongsTest {
         val leaderRepo = repo(device("leader"), *leaderHas.map { it to chords }.toTypedArray())
         val repo = repo(followerDevice, *followerHas)
         val inbox = BandInbox(followerDevice)
-        val leaderLink = BandLink(context, DeviceIdentity(context), br.app.stagebook.data.BandTrust(context), br.app.stagebook.data.StageGate(), BandInbox(device("leader")), leaderRepo)
-        val link = BandLink(context, DeviceIdentity(context), br.app.stagebook.data.BandTrust(context), br.app.stagebook.data.StageGate(), inbox, repo)
-        val leader = BandConduct(leaderLink, leaderRepo, DeviceIdentity(context))
-        val follower = BandConduct(link, repo, DeviceIdentity(context))
+        val leaderLink = testLink(repo = leaderRepo, inbox = BandInbox(device("leader")))
+        val link = testLink(repo = repo, inbox = inbox)
+        val leader = testConduct(repo = leaderRepo, link = leaderLink)
+        val follower = testConduct(repo = repo, link = link)
 
         /** Another following device, known only by what it answers. */
         var guitar: Conduct.Lack? = Conduct.Lack("Guitarra", listOf("Segunda"))

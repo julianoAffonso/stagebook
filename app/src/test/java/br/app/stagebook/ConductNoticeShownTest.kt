@@ -58,11 +58,8 @@ class ConductNoticeShownTest {
             withTimeout(15_000) { r.library.first { it.look.bandOn } }
         }
     }
-    private val link = BandLink(
-        context, DeviceIdentity(context), br.app.stagebook.data.BandTrust(context), br.app.stagebook.data.StageGate(),
-        br.app.stagebook.data.BandInbox(context), repo,
-    )
-    private val follower = BandConduct(link, repo, DeviceIdentity(context))
+    private val link = testLink(repo = repo)
+    private val follower = testConduct(repo = repo, link = link)
     private var shown by mutableStateOf(true)
 
     private fun following() {

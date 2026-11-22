@@ -71,7 +71,7 @@ class SongDurationTest {
     }
 
     @Test fun `the editor on the computer keeps and changes the length`() {
-        val repo = LibraryRepository(context, CoroutineScope(SupervisorJob() + Dispatchers.IO)).also { r -> runBlocking { withTimeout(5_000) { r.loaded.first { it } } } }
+        val repo = testRepo()
         val api = WebEditorApi(repo)
         val device = WebEditorAuth.Device("d", "n", "h", 0)
         api.handle(HttpRequest("POST", "/api/songs", body = """{"title":"Tempo","text":"[Verso]\nPrimeira linha da letra\nSegunda linha","duration":"345"}""".toByteArray()), device)

@@ -34,8 +34,7 @@ class WebEditorMoreTest {
     private val device = WebEditorAuth.Device("d", "Chrome · Windows", "h", 0)
 
     @Before fun setUp() {
-        repo = LibraryRepository(context, CoroutineScope(SupervisorJob() + Dispatchers.IO))
-        runBlocking { withTimeout(5_000) { repo.loaded.first { it } } }
+        repo = testRepo()
     }
 
     private fun call(api: WebEditorApi, method: String, path: String, body: String = "", file: File? = null) =

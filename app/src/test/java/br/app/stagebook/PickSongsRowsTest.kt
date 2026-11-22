@@ -50,8 +50,7 @@ class PickSongsRowsTest {
         Dispatchers.setMain(UnconfinedTestDispatcher())   // the search waits for the typing to stop on its clock
         try {
             runBlocking {
-                val repo = LibraryRepository(context, CoroutineScope(SupervisorJob() + Dispatchers.IO))
-                withTimeout(5_000) { repo.loaded.first { it } }
+                val repo = testRepo()
                 val ids = listOf(
                     Song(title = "Primeira", author = " Banda Fictícia ", year = "1985", text = "{key: Em}\n{tempo: 120}\n{capo: 2}\nlinha", track = "a.ogg"),
                     Song(title = "Segunda", author = "Trio Imaginário", year = "1999", text = "{key: G}\nlinha"),
@@ -98,8 +97,7 @@ class PickSongsRowsTest {
         Dispatchers.setMain(UnconfinedTestDispatcher())
         try {
             runBlocking {
-                val repo = LibraryRepository(context, CoroutineScope(SupervisorJob() + Dispatchers.IO))
-                withTimeout(5_000) { repo.loaded.first { it } }
+                val repo = testRepo()
                 val ids = listOf(Song(title = "A", text = "linha"), Song(title = "B", text = "linha"), Song(title = "C", text = "linha")).map(repo::saveSong)
                 val set = repo.createSetlist("Show").also { repo.addToSetlist(it, listOf(ids[0])) }
                 val vm = PickSongsViewModel(repo, SavedStateHandle(mapOf("setId" to set)))
@@ -132,8 +130,7 @@ class PickSongsRowsTest {
     }
 
     private fun pickerWithOneChecked(): Triple<PickSongsViewModel, LibraryRepository, Pair<String, String>> = runBlocking {
-        val repo = LibraryRepository(context, CoroutineScope(SupervisorJob() + Dispatchers.IO))
-        withTimeout(5_000) { repo.loaded.first { it } }
+        val repo = testRepo()
         val ids = listOf(Song(title = "A", text = "linha"), Song(title = "B", text = "linha")).map(repo::saveSong)
         val set = repo.createSetlist("Show").also { repo.addToSetlist(it, listOf(ids[0])) }
         val vm = PickSongsViewModel(repo, SavedStateHandle(mapOf("setId" to set)))

@@ -52,14 +52,13 @@ class NormalizeFlowTest {
     fun `mark sections only touches lyrics without titles and says how many changed`() = runBlocking {
         Dispatchers.setMain(kotlinx.coroutines.test.UnconfinedTestDispatcher())   // the work left the main thread
         val context = ApplicationProvider.getApplicationContext<android.app.Application>()
-        val repo = LibraryRepository(context, CoroutineScope(Dispatchers.IO))
-        withTimeout(5_000) { repo.loaded.first { it } }
+        val repo = testRepo()
         repo.saveSong(Song(title = "A", text = "Chorus:\nlinha\n\nVerse 2\noutra"))
         repo.saveSong(Song(title = "B", text = "[Refrão]\nsem mudança"))
         repo.saveSong(Song(title = "E", text = "{start_of_chorus}\num\n{end_of_chorus}\n\num\n\ndois\n\num"))
         repo.saveSong(Song(title = "C", text = "um\ndois\n\nrefrão aqui\nde novo\n\ntrês\nquatro\n\nrefrão aqui\nde novo"))
         repo.saveSong(Song(title = "D", text = "nada\nse\n\nrepete\naqui"))
-        val vm = SettingsViewModel(repo, context, br.app.stagebook.data.AppUpdater(context), br.app.stagebook.data.MidiPedal(context, repo, CoroutineScope(Dispatchers.IO)), br.app.stagebook.data.Backup(context, repo, br.app.stagebook.data.TrackStore(context)), br.app.stagebook.data.MetronomeSound(context), br.app.stagebook.data.MidiOut(context, repo, CoroutineScope(Dispatchers.IO)), br.app.stagebook.player.StagePlayer(context, repo), br.app.stagebook.data.LibraryEnricher(repo, br.app.stagebook.data.MusicBrainz(), br.app.stagebook.data.DeezerBpm(), br.app.stagebook.data.Connectivity(context), kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO), br.app.stagebook.data.TrackStore(context), context))
+        val vm = testSettingsVm(repo)
         vm.normalizeSections()
         assertEquals(SettingsMessage.Normalized(1, 1), withTimeout(5_000) { vm.messages.first() })
         // existing titles stay as they are (the stage shows them in the app's language)

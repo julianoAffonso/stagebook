@@ -61,20 +61,13 @@ class FollowRealStageWindowTest {
     private val gate = FollowGate()
     private lateinit var nav: NavHostController
 
-    private val repo = LibraryRepository(context, CoroutineScope(SupervisorJob() + Dispatchers.IO)).also { r ->
-        runBlocking {
-            withTimeout(15_000) { r.loaded.first { it } }
-            r.restore(emptyList(), emptyList())
-            r.updateLook { it.copy(bandOn = true) }
-            withTimeout(15_000) { r.library.first { it.look.bandOn } }
-        }
-    }
+    private val repo = testRepo(empty = true, bandOn = true)
     private val ids = listOf("Aaa", "Bbb", "Ccc").map { repo.saveSong(Song(title = it, author = "x", text = "{key: G}\nLetra $it")) }
     private val set = repo.createSetlist("Show").also { repo.addToSetlist(it, ids); repo.addBreak(it) }   // break before Bbb
     private val items = listOf("Aaa", "Bbb", "Ccc").map { Conduct.Item(it, "x") }
-    private val followerLink = BandLink(context, DeviceIdentity(context), br.app.stagebook.data.BandTrust(context), br.app.stagebook.data.StageGate(), br.app.stagebook.data.BandInbox(context), repo)
-    private val follower = BandConduct(followerLink, repo, DeviceIdentity(context))
-    private val leader = BandConduct(BandLink(context, DeviceIdentity(context), br.app.stagebook.data.BandTrust(context), br.app.stagebook.data.StageGate(), br.app.stagebook.data.BandInbox(context), repo), repo, DeviceIdentity(context)).also { c ->
+    private val followerLink = testLink(repo = repo)
+    private val follower = testConduct(repo = repo, link = followerLink)
+    private val leader = testConduct(repo = repo, link = testLink(repo = repo)).also { c ->
         c.deliver = { msg -> followerLink.conductHandler?.invoke(voice, Conduct.decode(Conduct.encode(msg))!!); emptyMap() }
     }
 

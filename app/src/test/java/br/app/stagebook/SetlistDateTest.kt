@@ -41,8 +41,7 @@ class SetlistDateTest {
 
     private fun repo(): LibraryRepository {
         val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO).also { scopes += it }
-        return LibraryRepository(ApplicationProvider.getApplicationContext<android.app.Application>(), scope)
-            .also { r -> runBlocking { withTimeout(5_000) { r.loaded.first { it } }; r.restore(emptyList(), emptyList()) } }
+        return testRepo(ApplicationProvider.getApplicationContext<android.app.Application>(), scope = scope, empty = true)
     }
 
     private fun row(id: String, date: String) = SetlistRowUi(id, id, 0, date)

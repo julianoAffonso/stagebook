@@ -39,7 +39,7 @@ class PlayHistoryTest {
     @get:Rule val compose = createComposeRule()
     private val context = ApplicationProvider.getApplicationContext<android.app.Application>()
 
-    private fun repo() = LibraryRepository(context, CoroutineScope(SupervisorJob() + Dispatchers.IO)).also { r -> runBlocking { withTimeout(5_000) { r.loaded.first { it } } } }
+    private fun repo() = testRepo()
 
     @Test fun `a song played counts once per show day, with its setlist and its name as it was`() = runBlocking {
         val repo = repo()

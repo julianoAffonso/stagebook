@@ -54,8 +54,7 @@ class ImportChordsTest {
 
     private fun import(chords: Boolean): String = runBlocking {
         Dispatchers.setMain(UnconfinedTestDispatcher())
-        val repo = LibraryRepository(context, CoroutineScope(Dispatchers.IO))
-        withTimeout(5_000) { repo.loaded.first { it } }
+        val repo = testRepo()
         repo.updateLook { it.copy(chords = chords) }
         val draft = ImportDraft()
         val vm = ImportViewModel(repo, br.app.stagebook.data.PageImporter(repo, MusicBrainz(), br.app.stagebook.data.DeezerBpm(), br.app.stagebook.data.Connectivity(androidx.test.core.app.ApplicationProvider.getApplicationContext())), draft, SavedStateHandle(mapOf("query" to "")), br.app.stagebook.data.ImportQueue(repo))
@@ -66,8 +65,7 @@ class ImportChordsTest {
 
     @Test fun `without internet the import still opens and says artist, year and BPM were not filled in (device test B-27)`() = runBlocking {
         Dispatchers.setMain(UnconfinedTestDispatcher())
-        val repo = LibraryRepository(context, CoroutineScope(Dispatchers.IO))
-        withTimeout(5_000) { repo.loaded.first { it } }
+        val repo = testRepo()
         // the test device has no validated internet: the lookups can't run
         val vm = ImportViewModel(repo, br.app.stagebook.data.PageImporter(repo, MusicBrainz(), br.app.stagebook.data.DeezerBpm(), br.app.stagebook.data.Connectivity(context)), ImportDraft(), SavedStateHandle(mapOf("query" to "")), br.app.stagebook.data.ImportQueue(repo))
         vm.onExtracted(raw())
@@ -78,8 +76,7 @@ class ImportChordsTest {
 
     @Test fun `a search results page is refused - open the chords page first (B-05)`() = runBlocking {
         Dispatchers.setMain(UnconfinedTestDispatcher())
-        val repo = LibraryRepository(context, CoroutineScope(Dispatchers.IO))
-        withTimeout(5_000) { repo.loaded.first { it } }
+        val repo = testRepo()
         val importer = br.app.stagebook.data.PageImporter(repo, MusicBrainz(), br.app.stagebook.data.DeezerBpm(), br.app.stagebook.data.Connectivity(context))
         val page = br.app.stagebook.domain.PageData(title = "cifra wave tom jobim", text = "Uma linha inventada para o teste aqui\nOutra linha de exemplo bem comum\nMais uma frase qualquer sem sentido\nE a última linha do exemplo", site = "www.google.com")
         assertEquals(br.app.stagebook.data.PageImport.Problem(br.app.stagebook.data.ImportProblem.SEARCH_PAGE), importer.fromPage(page, false))
@@ -87,8 +84,7 @@ class ImportChordsTest {
     }
 
     private fun importer(chords: Boolean = true) = runBlocking {
-        val repo = LibraryRepository(context, CoroutineScope(Dispatchers.IO))
-        withTimeout(5_000) { repo.loaded.first { it } }
+        val repo = testRepo()
         repo.updateLook { it.copy(chords = chords) }
         br.app.stagebook.data.PageImporter(repo, MusicBrainz(), br.app.stagebook.data.DeezerBpm(), br.app.stagebook.data.Connectivity(context))
     }
@@ -192,8 +188,7 @@ class ImportChordsTest {
 
     private fun importTab(include: Boolean): String = runBlocking {
         Dispatchers.setMain(UnconfinedTestDispatcher())
-        val repo = LibraryRepository(context, CoroutineScope(Dispatchers.IO))
-        withTimeout(5_000) { repo.loaded.first { it } }
+        val repo = testRepo()
         repo.updateLook { it.copy(chords = true) }
         val draft = ImportDraft()
         val vm = ImportViewModel(repo, br.app.stagebook.data.PageImporter(repo, MusicBrainz(), br.app.stagebook.data.DeezerBpm(), br.app.stagebook.data.Connectivity(androidx.test.core.app.ApplicationProvider.getApplicationContext())), draft, SavedStateHandle(mapOf("query" to "")), br.app.stagebook.data.ImportQueue(repo))
@@ -220,8 +215,7 @@ class ImportChordsTest {
     // given at that instant was dropped, the editor never opened. Answered here in the same instant the question shows
     @Test fun `an answer given the instant the tablature question shows is not lost`() = runBlocking {
         Dispatchers.setMain(UnconfinedTestDispatcher())
-        val repo = LibraryRepository(context, CoroutineScope(Dispatchers.IO))
-        withTimeout(5_000) { repo.loaded.first { it } }
+        val repo = testRepo()
         repo.updateLook { it.copy(chords = true) }
         val draft = ImportDraft()
         val vm = ImportViewModel(repo, br.app.stagebook.data.PageImporter(repo, MusicBrainz(), br.app.stagebook.data.DeezerBpm(), br.app.stagebook.data.Connectivity(androidx.test.core.app.ApplicationProvider.getApplicationContext())), draft, SavedStateHandle(mapOf("query" to "")), br.app.stagebook.data.ImportQueue(repo))

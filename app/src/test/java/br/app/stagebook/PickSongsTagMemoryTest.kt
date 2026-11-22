@@ -33,8 +33,7 @@ class PickSongsTagMemoryTest {
         Dispatchers.setMain(UnconfinedTestDispatcher())
         try {
             runBlocking {
-                val repo = LibraryRepository(context, CoroutineScope(SupervisorJob() + Dispatchers.IO))
-                withTimeout(5_000) { repo.loaded.first { it } }
+                val repo = testRepo()
                 repo.saveSong(Song(title = "Um", author = "x", text = "linha", tags = listOf("Rock")))
                 repo.saveSong(Song(title = "Dois", author = "x", text = "linha", tags = listOf("Lenta")))
                 val a = repo.createSetlist("A")

@@ -48,8 +48,8 @@ class FollowAgainTest {
         val sent = CopyOnWriteArrayList<Conduct.Msg>()
         val arrived = java.util.concurrent.atomic.AtomicInteger()
         private val followerLink = link()
-        val leader = BandConduct(link(), repo, DeviceIdentity(context)).also { it.clock = { leaderClock } }
-        val follower = BandConduct(followerLink, repo, DeviceIdentity(context)).also { it.clock = { followerClock } }
+        val leader = testConduct(repo = repo, link = link()).also { it.clock = { leaderClock } }
+        val follower = testConduct(repo = repo, link = followerLink).also { it.clock = { followerClock } }
         val opened = CopyOnWriteArrayList<String>()
 
         init {
@@ -57,10 +57,7 @@ class FollowAgainTest {
             CoroutineScope(Dispatchers.Unconfined).launch { follower.openSong.collect { opened += it } }
         }
 
-        fun link() = BandLink(
-            context, DeviceIdentity(context), br.app.stagebook.data.BandTrust(context), br.app.stagebook.data.StageGate(),
-            br.app.stagebook.data.BandInbox(context), repo,
-        )
+        fun link() = testLink(repo = repo)
 
         /** What reaches the follower from the leader's device, as it travels: text. */
         fun say(msg: Conduct.Msg, from: BandProtocol.Hello = voice) = followerLink.conductHandler?.invoke(from, Conduct.decode(Conduct.encode(msg))!!)
@@ -84,8 +81,7 @@ class FollowAgainTest {
     private fun await(what: () -> Boolean) = runBlocking { withTimeout(10_000) { while (!what()) delay(10) } }
 
     private fun band(vararg have: String): Pair<Band, Map<String, String>> = runBlocking {
-        val repo = LibraryRepository(context, CoroutineScope(Dispatchers.IO))
-        withTimeout(15_000) { repo.loaded.first { it } }
+        val repo = testRepo()
         repo.updateLook { it.copy(bandOn = true) }
         withTimeout(15_000) { repo.library.first { it.look.bandOn } }
         val ids = have.associateWith { title ->

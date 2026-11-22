@@ -55,8 +55,7 @@ class InboxVersionTest {
     private fun oldAppSaysUpdate(json: String): Boolean =
         lenientJson.decodeFromString<OldPack>(json).v > 2
 
-    private fun repo() = LibraryRepository(context, CoroutineScope(SupervisorJob() + Dispatchers.IO))
-        .also { r -> runBlocking { withTimeout(5_000) { r.loaded.first { it } }; r.restore(emptyList(), emptyList()) } }
+    private fun repo() = testRepo(empty = true)
 
     private fun LibraryRepository.show(withBreak: Boolean): String {
         val s = createSetlist("Show")
@@ -66,7 +65,7 @@ class InboxVersionTest {
     }
 
     private fun link(repo: LibraryRepository) =
-        BandLink(context, identity, br.app.stagebook.data.BandTrust(context), br.app.stagebook.data.StageGate(), BandInbox(context), repo)
+        testLink(repo = repo, identity = identity)
 
     private fun inboxWire(withBreak: Boolean): String {
         val repo = repo(); val cloud = SetlistCloud(repo, identity)

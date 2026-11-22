@@ -29,8 +29,7 @@ class BackupTest {
     private val context = ApplicationProvider.getApplicationContext<android.app.Application>()
 
     private fun setup(): Triple<LibraryRepository, TrackStore, Backup> = runBlocking {
-        val repo = LibraryRepository(context, CoroutineScope(SupervisorJob() + Dispatchers.IO))
-        withTimeout(5_000) { repo.loaded.first { it } }
+        val repo = testRepo()
         val tracks = TrackStore(context)
         Triple(repo, tracks, Backup(context, repo, tracks))
     }
@@ -108,8 +107,7 @@ class BackupTest {
     }
 
     @Test fun `restoring the band - the band in memory follows the file`() = runBlocking {
-        val repo = LibraryRepository(context, CoroutineScope(SupervisorJob() + Dispatchers.IO))
-        withTimeout(5_000) { repo.loaded.first { it } }
+        val repo = testRepo()
         val trust = br.app.stagebook.data.BandTrust(context)
         val backup = Backup(context, repo, TrackStore(context), trust)
         trust.add("ana", "Tablet da Ana", "k1")
@@ -128,8 +126,7 @@ class BackupTest {
         val prefs = context.getSharedPreferences("identity", android.content.Context.MODE_PRIVATE)
         prefs.edit().clear().commit()
         if (identity) br.app.stagebook.data.DeviceIdentity(context).id   // the key pair is made on first use
-        val repo = LibraryRepository(context, CoroutineScope(SupervisorJob() + Dispatchers.IO))
-        withTimeout(5_000) { repo.loaded.first { it } }
+        val repo = testRepo()
         val trust = br.app.stagebook.data.BandTrust(context)
         trust.members.value.forEach { trust.remove(it.id) }
         val backup = Backup(context, repo, TrackStore(context), trust)

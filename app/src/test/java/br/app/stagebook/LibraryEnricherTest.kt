@@ -46,10 +46,10 @@ class LibraryEnricherTest {
     private val context = ApplicationProvider.getApplicationContext<android.content.Context>()
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
-    private fun repo() = LibraryRepository(context, scope).also { r -> runBlocking { withTimeout(5_000) { r.loaded.first { it } } } }
+    private fun repo() = testRepo(scope = scope)
 
     private fun enricher(repo: LibraryRepository, asked: MutableList<String> = mutableListOf()) =
-        LibraryEnricher(repo, MusicBrainz(), DeezerBpm(), Connectivity(context), scope, br.app.stagebook.data.TrackStore(context), context).apply {
+        testEnricher(repo, scope).apply {
             online = { true }
             deezerSpacingMs = 0
             roundPauseMs = 0

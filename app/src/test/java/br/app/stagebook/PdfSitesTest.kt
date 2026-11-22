@@ -40,8 +40,7 @@ class PdfSitesTest {
     private val context = ApplicationProvider.getApplicationContext<android.app.Application>()
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     @After fun stop() { scope.cancel() }
-    private val repo = LibraryRepository(context, scope)
-        .also { r -> runBlocking { withTimeout(5_000) { r.loaded.first { it } }; r.restore(emptyList(), emptyList()) } }
+    private val repo = testRepo(scope = scope, empty = true)
     private val importer = PdfImporter(repo, PdfStore(context), PdfInspector(object : PdfPageCounter { override fun pageCount(file: File) = 2 }))
     private val pdf = "%PDF-1.7\n".toByteArray() + ByteArray(80)
 

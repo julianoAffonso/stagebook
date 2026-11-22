@@ -33,14 +33,10 @@ class SongsSetPickTest {
     @Test fun `a setlist created after opening shows in the picker - a deleted one says it is gone`() = runBlocking {
         Dispatchers.setMain(UnconfinedTestDispatcher())
         try {
-            val repo = LibraryRepository(context, CoroutineScope(SupervisorJob() + Dispatchers.IO))
-            withTimeout(5_000) { repo.loaded.first { it } }
+            val repo = testRepo()
             val song = repo.saveSong(Song(title = "Uma", author = "Banda", text = "letra"))
             val identity = br.app.stagebook.data.DeviceIdentity(context)
-            val link = br.app.stagebook.data.BandLink(
-                context, identity, br.app.stagebook.data.BandTrust(context),
-                br.app.stagebook.data.StageGate(), br.app.stagebook.data.BandInbox(context), repo,
-            )
+            val link = testLink(repo = repo, identity = identity)
             val cloud = br.app.stagebook.data.SetlistCloud(repo, identity)
             val vm = SongsViewModel(
                 repo, br.app.stagebook.data.Connectivity(context), cloud, link, br.app.stagebook.data.BandTrust(context),
@@ -62,15 +58,11 @@ class SongsSetPickTest {
     @Test fun `the tags dialog sees every chosen song - also the ones the search hides`() = runBlocking {
         Dispatchers.setMain(UnconfinedTestDispatcher())
         try {
-            val repo = LibraryRepository(context, CoroutineScope(SupervisorJob() + Dispatchers.IO))
-            withTimeout(5_000) { repo.loaded.first { it } }
+            val repo = testRepo()
             val a = repo.saveSong(Song(title = "Primeira", author = "Banda", text = "letra", tags = listOf("Lenta")))
             val b = repo.saveSong(Song(title = "Segunda", author = "Banda", text = "letra", tags = listOf("Rock")))
             val identity = br.app.stagebook.data.DeviceIdentity(context)
-            val link = br.app.stagebook.data.BandLink(
-                context, identity, br.app.stagebook.data.BandTrust(context),
-                br.app.stagebook.data.StageGate(), br.app.stagebook.data.BandInbox(context), repo,
-            )
+            val link = testLink(repo = repo, identity = identity)
             val cloud = br.app.stagebook.data.SetlistCloud(repo, identity)
             val vm = SongsViewModel(
                 repo, br.app.stagebook.data.Connectivity(context), cloud, link, br.app.stagebook.data.BandTrust(context),

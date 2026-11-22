@@ -30,7 +30,7 @@ class LibraryRepositoryTest {
     private val crashes = mutableListOf<Throwable>()
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO + CoroutineExceptionHandler { _, e -> synchronized(crashes) { crashes += e } })
 
-    private fun repo() = LibraryRepository(context, scope).also { r -> runBlocking { withTimeout(5_000) { r.loaded.first { it } } } }
+    private fun repo() = testRepo(scope = scope)
 
     private fun waitWrites() = Thread.sleep(400)
 

@@ -100,15 +100,13 @@ class AndroidBackupRulesTest {
     @Test fun `the library that came without its tracks opens with the links cleared, and saved that way`() = runBlocking {
         val context = ApplicationProvider.getApplicationContext<android.app.Application>()
         File(context.filesDir, "tracks").apply { mkdirs() }.resolve("here.ogg").writeBytes(byteArrayOf(1))
-        val first = LibraryRepository(context, CoroutineScope(SupervisorJob() + Dispatchers.IO))
-        withTimeout(5_000) { first.loaded.first { it } }
+        val first = testRepo()
         first.saveSong(Song(title = "Here", author = "x", text = "l", track = "here.ogg", trackName = "Here"))
         first.saveSong(Song(title = "Gone", author = "x", text = "l", track = "gone.ogg", trackName = "Gone live"))
         val file = File(context.filesDir, "stagebook.json")
         withTimeout(5_000) { while (!file.exists() || !file.readText().contains("gone.ogg")) delay(20) }
 
-        val second = LibraryRepository(context, CoroutineScope(SupervisorJob() + Dispatchers.IO))
-        withTimeout(5_000) { second.loaded.first { it } }
+        val second = testRepo()
         val songs = second.library.value.songs.associateBy { it.title }
         assertEquals("here.ogg", songs.getValue("Here").track)
         assertEquals("", songs.getValue("Gone").track)

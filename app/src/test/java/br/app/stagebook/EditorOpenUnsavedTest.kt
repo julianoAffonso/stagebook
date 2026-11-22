@@ -45,8 +45,7 @@ class EditorOpenUnsavedTest {
     private fun open(text: String, cursor: Int): SongEditorViewModel {
         val context = ApplicationProvider.getApplicationContext<android.app.Application>()
         val scope = CoroutineScope(Dispatchers.IO)
-        val repo = LibraryRepository(context, scope)
-        runBlocking { withTimeout(5_000) { repo.loaded.first { it } } }
+        val repo = testRepo(scope = scope)
         val id = repo.saveSong(Song(title = "Hazard", author = "Richard Marx", text = text))
         val vm = SongEditorViewModel(repo, SongMetadata(repo, MusicBrainz(), scope), ImportDraft(), SavedStateHandle(mapOf("songId" to id, "fromImport" to false, "cursor" to cursor)), br.app.stagebook.data.ImportQueue(repo), br.app.stagebook.data.TrackStore(context), br.app.stagebook.data.EditorQueue())
         runBlocking { withTimeout(5_000) { while (vm.uiState.loading) kotlinx.coroutines.delay(10) } }

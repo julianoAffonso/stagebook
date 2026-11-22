@@ -47,8 +47,7 @@ class PdfInternetTest {
         override fun pageCount(file: File): Int = fail?.let { throw it } ?: 2
     }
 
-    private fun repo() = LibraryRepository(context, CoroutineScope(SupervisorJob() + Dispatchers.IO))
-        .also { r -> runBlocking { withTimeout(5_000) { r.loaded.first { it } }; r.restore(emptyList(), emptyList()) } }
+    private fun repo() = testRepo(empty = true)
 
     // a PDF whose bytes don't compress (random), the worst case for a message
     private fun pdfBytes(size: Int) = "%PDF-1.7\n".toByteArray() + java.util.Random(7).let { r -> ByteArray(size - 9).also(r::nextBytes) }

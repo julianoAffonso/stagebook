@@ -53,11 +53,10 @@ class ReceivedFileRestoreTest {
 
     @Before fun start() {
         Dispatchers.setMain(UnconfinedTestDispatcher())
-        repo = LibraryRepository(context, scope)
-        runBlocking { withTimeout(5_000) { repo.loaded.first { it } } }
+        repo = testRepo(scope = scope)
         backup = Backup(context, repo, TrackStore(context))
         incoming = IncomingFiles(context, backup)
-        vm = SettingsViewModel(repo, context, AppUpdater(context), MidiPedal(context, repo, scope), backup, MetronomeSound(context), MidiOut(context, repo, scope), br.app.stagebook.player.StagePlayer(context, repo), br.app.stagebook.data.LibraryEnricher(repo, br.app.stagebook.data.MusicBrainz(), br.app.stagebook.data.DeezerBpm(), br.app.stagebook.data.Connectivity(context), kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO), br.app.stagebook.data.TrackStore(context), context))
+        vm = testSettingsVm(repo, scope = scope, backup = backup)
     }
 
     @After fun stop() = Dispatchers.resetMain()

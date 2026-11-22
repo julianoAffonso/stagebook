@@ -60,8 +60,7 @@ class SetlistShowTest {
 
     private fun scope() = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
-    private fun repo() = LibraryRepository(context, scope())
-        .also { r -> runBlocking { withTimeout(5_000) { r.loaded.first { it } }; r.restore(emptyList(), emptyList()) } }
+    private fun repo() = testRepo(scope = scope(), empty = true)
 
     private fun store(repo: LibraryRepository) = SetlistShowStore(context, repo, scope()).also { it.today = { "2026-11-13" } }
 
@@ -245,12 +244,12 @@ class SetlistShowTest {
         val identity = DeviceIdentity(context)
         val trust = BandTrust(context)
         val inbox = BandInbox(context)
-        val link = BandLink(context, identity, trust, StageGate(), inbox, repo)
+        val link = testLink(repo = repo, identity = identity, trust = trust, inbox = inbox)
         val cloud = SetlistCloud(repo, identity)
         val connectivity = Connectivity(context)
         return SetlistDetailViewModel(
             repo, SavedStateHandle(mapOf("setId" to set)), cloud, connectivity, link, trust,
-            BandInternet(context, cloud, trust, identity, inbox, connectivity, link), br.app.stagebook.data.BandConduct(link, repo, identity), show,
+            BandInternet(context, cloud, trust, identity, inbox, connectivity, link), testConduct(repo = repo, link = link, identity = identity), show,
         )
     }
 

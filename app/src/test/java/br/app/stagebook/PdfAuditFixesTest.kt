@@ -51,8 +51,7 @@ class PdfAuditFixesTest {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     @After fun stop() { scope.cancel() }
 
-    private fun repo() = LibraryRepository(context, scope)
-        .also { r -> runBlocking { withTimeout(5_000) { r.loaded.first { it } }; r.restore(emptyList(), emptyList()) } }
+    private fun repo() = testRepo(scope = scope, empty = true)
 
     private class Source(override val pageCount: Int = 3, val failRender: Boolean = false) : PdfSource {
         @Volatile var closed = false
@@ -92,11 +91,7 @@ class PdfAuditFixesTest {
     }
 
     @Test fun `what a band member answers never carries the file name it says about its own files, and a PDF that came is checked`() {
-        val link = BandLink(
-            context, br.app.stagebook.data.DeviceIdentity(context), br.app.stagebook.data.BandTrust(context),
-            br.app.stagebook.data.StageGate(), br.app.stagebook.data.BandInbox(context), repo(),
-            br.app.stagebook.data.PdfStore(context), br.app.stagebook.data.PdfInspector(object : br.app.stagebook.data.PdfPageCounter { override fun pageCount(file: java.io.File) = 2 }),
-        )
+        val link = testLink(repo = repo(), inspector = br.app.stagebook.data.PdfInspector(object : br.app.stagebook.data.PdfPageCounter { override fun pageCount(file: java.io.File) = 2 }))
         // a path of the sender's own: never believed. The bytes are looked at, and what is kept has a name made here
         val json = """[{"title":"A","author":"B","year":"","text":"[G]linha","pdfFile":"../library.json","pdf":"JVBERi0=","pdfName":"x.pdf"}]"""
         val answered: List<SetlistCloud.SharedSong> = link.readAnswer(json.toByteArray())

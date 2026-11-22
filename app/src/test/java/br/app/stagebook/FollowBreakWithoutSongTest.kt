@@ -54,8 +54,8 @@ class FollowBreakWithoutSongTest {
         var followerClock = 987_654_321_000L
         val arrived = java.util.concurrent.atomic.AtomicInteger()
         private val followerLink = link()
-        val leader = BandConduct(link(), repo, DeviceIdentity(context)).also { it.clock = { leaderClock } }
-        val follower = BandConduct(followerLink, repo, DeviceIdentity(context)).also { it.clock = { followerClock } }
+        val leader = testConduct(repo = repo, link = link()).also { it.clock = { leaderClock } }
+        val follower = testConduct(repo = repo, link = followerLink).also { it.clock = { followerClock } }
         var listening: BandLink = followerLink
         val opened = CopyOnWriteArrayList<String>()
 
@@ -68,10 +68,7 @@ class FollowBreakWithoutSongTest {
             watch(follower, opened)
         }
 
-        fun link() = BandLink(
-            context, DeviceIdentity(context), br.app.stagebook.data.BandTrust(context), br.app.stagebook.data.StageGate(),
-            br.app.stagebook.data.BandInbox(context), repo,
-        )
+        fun link() = testLink(repo = repo)
 
         fun watch(who: BandConduct, into: MutableList<String>) {
             CoroutineScope(Dispatchers.Unconfined).launch { who.openSong.collect { into += it } }
@@ -98,8 +95,7 @@ class FollowBreakWithoutSongTest {
 
     /** A band whose follower has only the songs named in [have]; returns their ids by title too. */
     private fun band(vararg have: String): Pair<Band, Map<String, String>> = runBlocking {
-        val repo = LibraryRepository(context, CoroutineScope(Dispatchers.IO))
-        withTimeout(15_000) { repo.loaded.first { it } }
+        val repo = testRepo()
         repo.updateLook { it.copy(bandOn = true) }
         withTimeout(15_000) { repo.library.first { it.look.bandOn } }
         val ids = have.associateWith { title ->
@@ -174,7 +170,7 @@ class FollowBreakWithoutSongTest {
         b.told { b.leader.rest("s1", 0) }
         b.leaderClock += 240_000   // four minutes later another device shows up
         val lateLink = b.link()
-        val late = BandConduct(lateLink, b.repo, DeviceIdentity(context)).also { it.clock = { 5_000_000L } }
+        val late = testConduct(repo = b.repo, link = lateLink).also { it.clock = { 5_000_000L } }
         val opened = CopyOnWriteArrayList<String>()
         b.watch(late, opened)
         b.listening = lateLink

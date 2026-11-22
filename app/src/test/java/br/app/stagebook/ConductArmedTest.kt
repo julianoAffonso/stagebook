@@ -68,14 +68,10 @@ class ConductArmedTest {
     private val sent = mutableListOf<Conduct.Msg>()
 
     private val repo = runBlocking {
-        LibraryRepository(context, CoroutineScope(Dispatchers.IO)).also { r ->
-            withTimeout(15_000) { r.loaded.first { it } }
-            r.updateLook { it.copy(bandOn = true) }
-            withTimeout(15_000) { r.library.first { it.look.bandOn } }
-        }
+        testRepo(bandOn = true)
     }
-    private val link = BandLink(context, identity, trust, br.app.stagebook.data.StageGate(), BandInbox(context), repo)
-    private val conduct = BandConduct(link, repo, identity).also { it.deliver = { m -> sent += m; emptyMap() } }
+    private val link = testLink(repo = repo, identity = identity, trust = trust)
+    private val conduct = testConduct(repo = repo, link = link, identity = identity).also { it.deliver = { m -> sent += m; emptyMap() } }
     private val setId = repo.createSetlist("Show de sábado").also { id ->
         repo.addToSetlist(id, listOf("A", "B", "C").map { repo.saveSong(Song(title = it, author = "x", text = it)) })
     }

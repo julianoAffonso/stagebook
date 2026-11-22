@@ -33,9 +33,7 @@ import java.io.File
 class ContentGuardTest {
     private val context = ApplicationProvider.getApplicationContext<android.app.Application>()
 
-    private fun repo(): LibraryRepository = LibraryRepository(context, CoroutineScope(SupervisorJob() + Dispatchers.IO)).also { r ->
-        runBlocking { withTimeout(5_000) { r.loaded.first { it } } }
-    }
+    private fun repo(): LibraryRepository = testRepo()
 
     @Test fun `verses look like lyrics, a page of prose doesn't`() {
         assertTrue(BandContent.looksLikeLyrics("Saio cedo pela rua sem saber\nOnde a estrada vai dar\nLevo o violão e um papel"))

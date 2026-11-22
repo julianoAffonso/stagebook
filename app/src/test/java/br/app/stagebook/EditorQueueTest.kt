@@ -46,8 +46,7 @@ class EditorQueueTest {
     private fun rig(count: Int = 4): Rig {
         val context = ApplicationProvider.getApplicationContext<android.app.Application>()
         val scope = CoroutineScope(Dispatchers.IO)
-        val repo = LibraryRepository(context, scope)
-        runBlocking { withTimeout(5_000) { repo.loaded.first { it } } }
+        val repo = testRepo(scope = scope)
         val ids = (1..count).map { repo.saveSong(Song(title = "Song $it", author = "Band", text = "[G]letra $it")) }
         return Rig(repo, ids, EditorQueue(), context, scope)
     }

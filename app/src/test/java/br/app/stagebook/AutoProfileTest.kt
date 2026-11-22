@@ -73,8 +73,7 @@ class AutoProfileTest {
     }
 
     private fun importer(look: Look, kind: String): ImportViewModel = runBlocking {
-        val repo = LibraryRepository(context, CoroutineScope(Dispatchers.IO))
-        withTimeout(5_000) { repo.loaded.first { it } }
+        val repo = testRepo()
         repo.updateLook { look }
         ImportViewModel(
             repo, br.app.stagebook.data.PageImporter(repo, MusicBrainz(), br.app.stagebook.data.DeezerBpm(), br.app.stagebook.data.Connectivity(context)),

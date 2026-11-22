@@ -28,10 +28,7 @@ import org.robolectric.annotation.Config
 class ScanSetlistTest {
     private val context = ApplicationProvider.getApplicationContext<android.app.Application>()
 
-    private fun bandLink(repo: LibraryRepository) = br.app.stagebook.data.BandLink(
-        context, br.app.stagebook.data.DeviceIdentity(context), br.app.stagebook.data.BandTrust(context),
-        br.app.stagebook.data.StageGate(), br.app.stagebook.data.BandInbox(context), repo,
-    )
+    private fun bandLink(repo: LibraryRepository) = testLink(repo = repo)
 
     private fun bandInternet(repo: LibraryRepository) = br.app.stagebook.data.BandInternet(
         context, br.app.stagebook.data.SetlistCloud(repo, br.app.stagebook.data.DeviceIdentity(context)),
@@ -43,8 +40,7 @@ class ScanSetlistTest {
         (listOf(QrPayload.HEADER, titles.size.toString(), name) + titles).joinToString("\n")
 
     private fun setup(): Triple<LibraryRepository, ScanSetlistViewModel, List<String>> = runBlocking {
-        val repo = LibraryRepository(context, CoroutineScope(SupervisorJob() + Dispatchers.IO))
-        withTimeout(5_000) { repo.loaded.first { it } }
+        val repo = testRepo()
         val ids = listOf("Canção do Mar", "Noite Clara", "Estrada Longa").map { repo.saveSong(Song(title = it, author = "Banda")) }
         Triple(repo, ScanSetlistViewModel(repo, br.app.stagebook.data.ImportQueue(repo), br.app.stagebook.data.SetlistCloud(repo, br.app.stagebook.data.DeviceIdentity(context)), androidx.lifecycle.SavedStateHandle(mapOf("code" to "", "inbox" to "")), br.app.stagebook.data.BandInbox(context), bandLink(repo), bandInternet(repo), br.app.stagebook.data.BandTrust(context), br.app.stagebook.data.Connectivity(context)), ids)
     }

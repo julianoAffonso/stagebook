@@ -67,21 +67,14 @@ class FollowerBreakShownTest {
     private fun scope() = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     private inner class Tablet {
-        val repo = LibraryRepository(context, scope()).also { r ->
-            runBlocking {
-                withTimeout(5_000) { r.loaded.first { it } }
-                r.restore(emptyList(), emptyList())
-                r.updateLook { it.copy(bandOn = true) }
-                withTimeout(5_000) { r.library.first { it.look.bandOn } }
-            }
-        }
+        val repo = testRepo(scope = scope(), empty = true, bandOn = true)
         val ids = listOf("A", "B", "C", "D", "E").map { repo.saveSong(Song(title = it, author = "x", text = "{key: G}\n$it")) }
         val set = repo.createSetlist("Show").also { repo.addToSetlist(it, ids); repo.addBreak(it); repo.moveRow(it, 4, 2) }   // A B | C D E
         val show = SetlistShowStore(context, repo, scope()).also { it.today = { "2026-11-14" } }
         val items = listOf("A", "B", "C", "D", "E").map { Conduct.Item(it, "x") }
         private val identity = DeviceIdentity(context)
-        val link = BandLink(context, identity, BandTrust(context), StageGate(), BandInbox(context), repo)
-        val conduct = BandConduct(link, repo, identity)
+        val link = testLink(repo = repo, identity = identity)
+        val conduct = testConduct(repo = repo, link = link, identity = identity)
         private val cloud = SetlistCloud(repo, identity)
         private val connectivity = Connectivity(context)
         val vm = SetlistDetailViewModel(
