@@ -34,18 +34,30 @@ class DeezerBpm @Inject constructor() {
     private val io = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val json = Json { ignoreUnknownKeys = true }
 
+    /** What Deezer knows of the track: its BPM and its length in seconds (each 0 when it has none; user, 22/11). */
+    data class Facts(val bpm: Int = 0, val seconds: Int = 0)
+
     /** The BPM within [ms] at most (a stuck network doesn't hold up the import); null with no answer or no data. */
-    suspend fun lookupWithin(title: String, artist: String, ms: Long): Int? {
+    suspend fun lookupWithin(title: String, artist: String, ms: Long): Int? = factsWithin(title, artist, ms)?.bpm?.takeIf { it > 0 }
+
+    /** The track's BPM and length within [ms] at most, from the same two requests; null with no answer or no track. */
+    suspend fun factsWithin(title: String, artist: String, ms: Long): Facts? {
         if (title.isBlank()) return null
         val job = io.async { lookup(title, artist) { isActive } }
         return try { withTimeoutOrNull(ms) { job.await() } } finally { job.cancel() }
     }
 
-    private fun lookup(title: String, artist: String, alive: () -> Boolean): Int? {
+    private fun lookup(title: String, artist: String, alive: () -> Boolean): Facts? {
         val q = URLEncoder.encode("$title $artist".trim(), "UTF-8")
         val id = get("${endpoint}search?q=$q&limit=5", alive)?.let { pickTrack(it, title, artist) } ?: return null
-        return get("${endpoint}track/$id", alive)?.let(::bpmOf)
+        return get("${endpoint}track/$id", alive)?.let { Facts(bpmOf(it) ?: 0, secondsOf(it) ?: 0) }?.takeIf { it.bpm > 0 || it.seconds > 0 }
     }
+
+    /** The track's length in seconds; null if it has none or it's unreasonable (over three hours). */
+    internal fun secondsOf(trackJson: String): Int? = runCatching {
+        val s = json.parseToJsonElement(trackJson).jsonObject["duration"]?.jsonPrimitive?.longOrNull ?: return null
+        s.toInt().takeIf { it in 1..Chords.MAX_DURATION_S }
+    }.getOrNull()
 
     /** The search track that is the song (same title; with an artist, it breaks the tie); null if none matches. */
     internal fun pickTrack(searchJson: String, title: String, artist: String): Long? = runCatching {
