@@ -45,7 +45,7 @@ class PdfStageTest {
 
     /** A PDF of [count] pages, each 400 x 600, drawn as a plain bitmap, that counts what it was asked. */
     private class FakeSource(override val pageCount: Int) : PdfSource {
-        val rendered = mutableListOf<Pair<Int, Int>>()
+        val rendered = java.util.concurrent.CopyOnWriteArrayList<Pair<Int, Int>>()   // written where the pages are drawn, read by the test
         var closed = false
         override fun pageSize(page: Int) = 400 to 600
         override fun render(page: Int, width: Int): Bitmap {
@@ -85,7 +85,9 @@ class PdfStageTest {
         compose.waitUntil(5_000) { count == 7 }
         compose.waitUntil(5_000) { compose.onAllNodesWithContentDescription("Página 4 de 7 do PDF").fetchSemanticsNodes().isNotEmpty() }
         compose.onNodeWithContentDescription("Página 4 de 7 do PDF").assertIsDisplayed()
-        assertTrue("page 3 was drawn, and 4 ahead", source.rendered.any { it.first == 3 } && source.rendered.any { it.first == 4 })
+        // the page ahead is drawn off the main thread, after the one on screen: waited for, not read at once (it failed
+        // on a slow runner, 23/11)
+        compose.waitUntil(5_000) { source.rendered.any { it.first == 3 } && source.rendered.any { it.first == 4 } }
     }
 
     @Test fun `a PDF that can't be opened says so`() {
