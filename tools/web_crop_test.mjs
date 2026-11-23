@@ -104,3 +104,24 @@ test("the preview of a trimmed page takes only the part kept, inside the picture
   const edge = L.cropPixels(crop(0, 0.9, 0.9, 1, 1), 10, 10);
   assert.ok(edge.left + edge.width <= 10 && edge.top + edge.height <= 10 && edge.width >= 1 && edge.height >= 1);
 });
+
+test("a scan: grey paper is read by its own paper, and the dark band around the sheet is not content", () => {
+  const w = 400, h = 500, d = new Uint8ClampedArray(w * h * 4);
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+    const i = (y * w + x) * 4, band = x < 20 || y < 20 || x >= w - 20 || y >= h - 20, ink = x >= 100 && x < 300 && y >= 150 && y < 350;
+    d[i] = d[i + 1] = d[i + 2] = band ? 24 : ink ? 0 : 185; d[i + 3] = 255;
+  }
+  const f = L.cropInk(d, w, h);
+  near(f.left, 0.25 - L.CROP_AIR); near(f.top, 0.3 - L.CROP_AIR); near(f.right, 0.75 + L.CROP_AIR); near(f.bottom, 0.7 + L.CROP_AIR);
+});
+
+test("a line that reaches the page's edge stays, and a page dark all over keeps the whole page", () => {
+  const w = 200, h = 200, d = new Uint8ClampedArray(w * h * 4);
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+    const i = (y * w + x) * 4, ink = (x >= 60 && x < 140 && y >= 60 && y < 140) || (y >= 98 && y < 102 && x < 60);
+    d[i] = d[i + 1] = d[i + 2] = ink ? 0 : 255; d[i + 3] = 255;
+  }
+  near(L.cropInk(d, w, h).left, 0);
+  const all = L.cropInk(sheet(100, 100, 0, 0, 100, 100), 100, 100);
+  assert.deepEqual([all.left, all.top, all.right, all.bottom], [0, 0, 1, 1]);
+});

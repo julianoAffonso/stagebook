@@ -1081,19 +1081,49 @@ function showSet(set) {
 const CROP_ALL = -1, CROP_MIN = 0.1;
 // the automatic trim (domain/PdfAutoCrop.kt): the frame around what is drawn on a page of [w] x [h] RGBA [data], with a
 // little air; null for a blank page. A scan's grey haze and a speck of dust are not content
-const CROP_AIR = 0.015, CROP_INK_BELOW = 200, CROP_SPECK = 0.004, CROP_AUTO_WIDTH = 300;
+const CROP_AIR = 0.015, CROP_INK_BELOW = 200, CROP_INK_UNDER_PAPER = 30, CROP_BORDER_SHARE = 0.5, CROP_SPECK = 0.004, CROP_AUTO_WIDTH = 300;
 function cropInk(data, w, h) {
-  const rows = new Int32Array(h), cols = new Int32Array(w);
-  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
-    const i = (y * w + x) * 4;
-    if (data[i + 3] < 128) continue;
-    if (Math.floor((data[i] * 299 + data[i + 1] * 587 + data[i + 2] * 114) / 1000) < CROP_INK_BELOW) { rows[y]++; cols[x]++; }
+  const size = w * h, light = new Uint8Array(size), seen = new Int32Array(256);
+  for (let i = 0; i < size; i++) {
+    const k = i * 4;
+    light[i] = data[k + 3] < 128 ? 255 : Math.floor((data[k] * 299 + data[k + 1] * 587 + data[k + 2] * 114) / 1000);
+    seen[light[i]]++;
   }
+  // a scan's paper is rarely white: the paper is the most common lightness of the light half of the page
+  let paper = 255;
+  for (let v = 128; v < 256; v++) if (seen[v] > seen[paper]) paper = v;
+  const inkBelow = Math.min(CROP_INK_BELOW, paper - CROP_INK_UNDER_PAPER), ink = new Uint8Array(size);
+  for (let i = 0; i < size; i++) ink[i] = light[i] < inkBelow ? 1 : 0;
+  cropDropBand(ink, w, h);
+  const rows = new Int32Array(h), cols = new Int32Array(w);
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) if (ink[y * w + x]) { rows[y]++; cols[x]++; }
   const rowNeeds = Math.max(1, Math.floor(w * CROP_SPECK)), colNeeds = Math.max(1, Math.floor(h * CROP_SPECK));
   const first = (a, needs) => a.findIndex((v) => v >= needs), last = (a, needs) => a.findLastIndex((v) => v >= needs);
   const top = first(rows, rowNeeds), left = first(cols, colNeeds);
   if (top < 0 || left < 0) return null;
   return { left: Math.max(0, left / w - CROP_AIR), top: Math.max(0, top / h - CROP_AIR), right: Math.min(1, (last(cols, colNeeds) + 1) / w + CROP_AIR), bottom: Math.min(1, (last(rows, rowNeeds) + 1) / h + CROP_AIR) };
+}
+// the dark band a scanner leaves around the sheet: what is dark and joined to the page's edge, when the edge is dark along
+// most of its length (a line that merely reaches the edge stays, and so does a page dark all over)
+function cropDropBand(ink, w, h) {
+  const edge = [];
+  for (let x = 0; x < w; x++) edge.push(x, (h - 1) * w + x);
+  for (let y = 1; y < h - 1; y++) edge.push(y * w, y * w + w - 1);
+  if (edge.filter((i) => ink[i]).length < edge.length * CROP_BORDER_SHARE) return;
+  const band = new Uint8Array(ink.length), queue = new Int32Array(ink.length);
+  let head = 0, tail = 0, total = 0;
+  for (let i = 0; i < ink.length; i++) total += ink[i];
+  const take = (i) => { if (ink[i] && !band[i]) { band[i] = 1; queue[tail++] = i; } };
+  for (const i of edge) take(i);
+  while (head < tail) {
+    const i = queue[head++], x = i % w;
+    if (x > 0) take(i - 1);
+    if (x < w - 1) take(i + 1);
+    if (i >= w) take(i - w);
+    if (i < ink.length - w) take(i + w);
+  }
+  if (tail === total) return;
+  for (let k = 0; k < tail; k++) ink[queue[k]] = 0;
 }
 function cropAround(frames) {
   const some = frames.filter(Boolean);

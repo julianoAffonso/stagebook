@@ -41,6 +41,46 @@ class PdfAutoCropTest {
         assertEquals(0.2f - PdfAutoCrop.AIR, f.top, 0.001f)
     }
 
+    @Test fun `a scan on grey paper is read by its own paper, not by white`() {
+        // paper at 185 (darker than the white rule's line): the block is still what is drawn
+        val f = PdfAutoCrop.frame(page(400, 400, 100, 120, 300, 280, paper = 0xFFB9B9B9.toInt()), 400, 400)!!
+        assertEquals(0.25f - PdfAutoCrop.AIR, f.left, 0.001f)
+        assertEquals(0.3f - PdfAutoCrop.AIR, f.top, 0.001f)
+        assertEquals(0.75f + PdfAutoCrop.AIR, f.right, 0.001f)
+        assertEquals(0.7f + PdfAutoCrop.AIR, f.bottom, 0.001f)
+    }
+
+    @Test fun `the dark band a scanner leaves around the sheet is not content`() {
+        // a sheet of grey paper inside a dark band 20 wide all round, with a block drawn on it
+        val w = 400; val h = 500
+        val pixels = IntArray(w * h) { i ->
+            val x = i % w; val y = i / w
+            when {
+                x < 20 || y < 20 || x >= w - 20 || y >= h - 20 -> 0xFF181818.toInt()
+                x in 100 until 300 && y in 150 until 350 -> black
+                else -> 0xFFE0E0E0.toInt()
+            }
+        }
+        val f = PdfAutoCrop.frame(pixels, w, h)!!
+        assertEquals(0.25f - PdfAutoCrop.AIR, f.left, 0.001f)
+        assertEquals(0.3f - PdfAutoCrop.AIR, f.top, 0.001f)
+        assertEquals(0.75f + PdfAutoCrop.AIR, f.right, 0.001f)
+        assertEquals(0.7f + PdfAutoCrop.AIR, f.bottom, 0.001f)
+    }
+
+    @Test fun `a line of the music that reaches the edge of the page stays, with what it is joined to`() {
+        // a block with a line from it to the left edge: the edge is not dark along its length, so nothing is taken off
+        val w = 200; val h = 200
+        val pixels = IntArray(w * h) { i ->
+            val x = i % w; val y = i / w
+            if ((x in 60 until 140 && y in 60 until 140) || (y in 98 until 102 && x < 60)) black else white
+        }
+        val f = PdfAutoCrop.frame(pixels, w, h)!!
+        assertEquals(0f, f.left, 0.001f)
+        assertEquals(0.3f - PdfAutoCrop.AIR, f.top, 0.001f)
+        assertEquals(0.7f + PdfAutoCrop.AIR, f.right, 0.001f)
+    }
+
     @Test fun `one frame for several pages holds what each has, and blank pages don't count`() {
         val a = PdfAutoCrop.Frame(0.2f, 0.1f, 0.8f, 0.6f)
         val b = PdfAutoCrop.Frame(0.1f, 0.3f, 0.7f, 0.9f)
