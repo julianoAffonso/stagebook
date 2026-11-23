@@ -4,6 +4,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onAllNodesWithText
@@ -116,5 +117,21 @@ class PdfCropDragTest {
         val crop = autoCrop(thisPageOnly = true)
         assertEquals(1, crop.page)
         assertEquals("left: $crop", 0.25f - 0.015f, crop.left, 0.01f)
+    }
+
+    // real text widths (Robolectric's own never wrap), on a phone with large letters
+    @org.robolectric.annotation.GraphicsMode(org.robolectric.annotation.GraphicsMode.Mode.NATIVE)
+    @Config(qualifiers = "+w360dp-h800dp-xxhdpi")
+    @Test fun `on a phone with large letters Save and No crop stay on one line each, with Automatic on the title's line`() {
+        compose.setContent {
+            androidx.compose.runtime.CompositionLocalProvider(androidx.compose.ui.platform.LocalDensity provides androidx.compose.ui.unit.Density(3f, fontScale = 1.3f)) {
+                StagebookTheme { PdfCropDialog(EditorPdf("a.pdf", pages = 3, bytes = 1_000), onSet = {}, onClear = {}, onDismiss = {}) }
+            }
+        }
+        compose.waitForIdle()
+        fun box(text: String) = compose.onNodeWithText(text, useUnmergedTree = true).getUnclippedBoundsInRoot()
+        // one line of this text is about 26 dp tall; two would be over 50
+        listOf("Salvar", "Sem recorte", "Automático").forEach { assertTrue("$it broke into lines: ${(box(it).bottom - box(it).top).value} dp", (box(it).bottom - box(it).top).value < 40f) }
+        assertTrue("Automatic sits on the title's line", box("Automático").top.value < box("Recortar o PDF").bottom.value)
     }
 }

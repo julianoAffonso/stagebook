@@ -120,7 +120,10 @@ fun PdfCropDialog(
             Column(Modifier.systemBarsPadding().padding(Spacing.m), verticalArrangement = Arrangement.spacedBy(Spacing.m)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     IconButton(onClick = onDismiss) { Icon(AppIcons.Close, stringResource(R.string.action_cancel)) }
-                    Text(stringResource(R.string.pdf_crop_title), style = MaterialTheme.typography.titleLarge, modifier = Modifier.weight(1f))
+                    Text(stringResource(R.string.pdf_crop_title), style = MaterialTheme.typography.titleLarge, modifier = Modifier.weight(1f), maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+                    // at the end of the title's line: a third button in the row below broke "Salvar" in two on a phone with
+                    // large letters (device, 23/11)
+                    ActionButton(stringResource(R.string.pdf_crop_auto), auto, icon = AppIcons.Crop, tone = ButtonTone.Tonal, enabled = ready != null && !finding)
                 }
                 Text(stringResource(R.string.pdf_crop_hint), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
@@ -149,7 +152,6 @@ fun PdfCropDialog(
                 )
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(Spacing.s), verticalAlignment = Alignment.CenterVertically) {
                     ActionButton(stringResource(R.string.pdf_crop_none), { onClear(scope); onDismiss() }, Modifier.weight(1f), icon = AppIcons.Replay, tone = ButtonTone.Quiet)
-                    ActionButton(stringResource(R.string.pdf_crop_auto), auto, icon = AppIcons.Crop, tone = ButtonTone.Tonal, enabled = ready != null && !finding)
                     ActionButton(stringResource(R.string.action_save), { onSet(PdfCrop(scope, frame.left, frame.top, frame.right, frame.bottom)); onDismiss() }, Modifier.weight(1f), icon = AppIcons.Save)
                 }
             }
