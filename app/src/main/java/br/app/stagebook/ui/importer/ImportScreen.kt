@@ -186,6 +186,8 @@ fun ImportScreen(
     // the app's first WebView loads all of Chromium (up to ~1 s on the Fire): the screen shows first (address bar and
     // "loading") and the browser is created on the next frame
     var webView by remember { mutableStateOf<WebView?>(null) }
+    // how many times Android killed the page's process: each time the page is made again (audit 22/11)
+    var rendererGone by remember { androidx.compose.runtime.mutableIntStateOf(0) }
     fun newWebView() =
         WebView(context).apply {
             settings.javaScriptEnabled = true   // lyrics extraction runs as a script on the page
@@ -209,6 +211,14 @@ fun ImportScreen(
                     }
                 }
                 override fun doUpdateVisitedHistory(view: WebView, url: String, isReload: Boolean) { canGoBack = view.canGoBack() }
+                // Android killed the page's process (low memory on an ad-heavy site): not handled, the whole app was closed
+                // with it. This WebView is dead: it is let go (destroyed below) and a new one opens on the same address.
+                override fun onRenderProcessGone(view: WebView, detail: android.webkit.RenderProcessGoneDetail): Boolean {
+                    reading = false   // the script it was running will never answer
+                    webView = null
+                    rendererGone++
+                    return true
+                }
             }
             webChromeClient = object : WebChromeClient() {
                 override fun onProgressChanged(view: WebView, newProgress: Int) { progress = newProgress }
@@ -221,6 +231,11 @@ fun ImportScreen(
         } catch (_: android.util.AndroidRuntimeException) {
             snackbar.showSnackbar(cantOpen)   // the system's WebView is missing or updating
         }
+    }
+    LaunchedEffect(rendererGone) {
+        if (rendererGone == 0) return@LaunchedEffect
+        val back = address
+        runCatching { webView = newWebView().also { it.loadUrl(if (back.isBlank()) home else urlFor(back)) } }
     }
     // lyrics sites have ads and scripts: with the app in the background or the screen off, they stop
     val lifecycle = LocalLifecycleOwner.current.lifecycle
@@ -343,7 +358,8 @@ fun ImportScreen(
                         IconButton(onClick = { notice = false }) { Icon(AppIcons.Close, stringResource(R.string.action_close)) }
                     }
                 }
-                webView?.let { w -> AndroidView(factory = { w }, modifier = Modifier.fillMaxWidth().weight(1f)) }
+                // keyed: a page made again after its process died is another view
+                webView?.let { w -> androidx.compose.runtime.key(w) { AndroidView(factory = { w }, modifier = Modifier.fillMaxWidth().weight(1f)) } }
                     ?: Box(Modifier.fillMaxWidth().weight(1f), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
             }
             LoadingOverlay(visible = uiState.busy, message = stringResource(R.string.import_busy))

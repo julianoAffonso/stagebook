@@ -114,7 +114,9 @@ fun StagebookNavHost(
     // a page shared from a browser (user, 22/11): the import browser opens on it, and the person imports from there as
     // from any site (the kind, PDF or lyrics and chords, is told by the address: ImportViewModel)
     LaunchedEffect(sharedPages) {
-        sharedPages.collect { url -> nav.navigate(Importer(url)) { launchSingleTop = true } }
+        // in place of an importer already open: kept (launchSingleTop), it stayed on its old page and the shared one was
+        // ignored (audit 22/11)
+        sharedPages.collect { url -> nav.navigate(Importer(url)) { popUpTo<Importer> { inclusive = true } } }
     }
     // the update going in: the system takes over, so the person is told what is happening, and only what is true
     val installStartedText = androidx.compose.runtime.rememberUpdatedState(androidx.compose.ui.res.stringResource(br.app.stagebook.R.string.update_installing))
