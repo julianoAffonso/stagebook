@@ -5,7 +5,7 @@
 # On the device: Developer options → Wireless debugging on, same Wi-Fi as the Mac. The port changes every time
 # debugging is turned on, so it comes from macOS Bonjour (dns-sd), not adb's mDNS (off on some Macs: adb 37's
 # aborts on the Quick Share announcement). At the end it writes ~/.cache/stagebook-aparelhos.env with TCL=, S26=,
-# FIRE= (serials for adb -s); load it with: source ~/.cache/stagebook-aparelhos.env
+# FIRE=, ONEPLUS=, CHUWI= (serials for adb -s); load it with: source ~/.cache/stagebook-aparelhos.env
 set -uo pipefail
 ADB=${ADB:-$(command -v adb)}
 [ -n "$ADB" ] || { echo "adb not found (brew install android-platform-tools)"; exit 1; }
@@ -45,6 +45,8 @@ while read -r serial estado _; do
         tcl*) nome=TCL ;;
         samsung*) nome=S26 ;;
         amazon*) nome=FIRE ;;
+        oneplus*) nome=ONEPLUS ;;
+        chuwi*) nome=CHUWI ;;
         *) nome=OUTRO ;;
     esac
     echo "$nome=$serial  ($modelo)"
@@ -53,4 +55,4 @@ while read -r serial estado _; do
 done < <("$ADB" devices | tail -n +2 | grep -v '^$')
 mv "$ENV_FILE.tmp" "$ENV_FILE"
 [ $achou -eq 1 ] || { echo "no device connected: turn on Wireless debugging on the device (same Wi-Fi as the Mac) or pair (tools/connect.sh parear)"; exit 1; }
-echo "serials in $ENV_FILE (source it to use \$TCL, \$S26, \$FIRE)"
+echo "serials in $ENV_FILE (source it to use \$TCL, \$S26, \$FIRE, \$ONEPLUS, \$CHUWI)"
