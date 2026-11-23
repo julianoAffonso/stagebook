@@ -51,6 +51,13 @@ export function fakeTablet({ approve = true, busy = false } = {}) {
     if (url.pathname === "/api/capo") { const d = JSON.parse(body); return send(200, { text: d.text, meta: { key: d.meta.key, capo: d.capo } }); }
     if (url.pathname === "/api/sets" && req.method === "GET") return send(200, [...sets.values()].map((t) => ({ id: t.id, name: t.name, count: t.items.length })));
     if (url.pathname === "/api/sets" && req.method === "POST") { const d = JSON.parse(body); const id = "t" + (sets.size + 1); sets.set(id, { id, name: d.name || "data", items: d.items, breaks: d.breaks ?? [], date: d.date ?? "today" }); return send(200, { id }); }
+    const dup = url.pathname.match(/^\/api\/sets\/([^/]+)\/duplicate$/);
+    if (dup && req.method === "POST") {
+      const from = sets.get(dup[1]); if (!from) return send(404);
+      const id = "t" + (sets.size + 1);
+      sets.set(id, { ...from, id, name: JSON.parse(body || "{}").name || from.name, items: [...from.items] });
+      return send(200, { id });
+    }
     const t = url.pathname.match(/^\/api\/sets\/([^/]+)$/);
     if (t) {
       const set = sets.get(t[1]); if (!set) return send(404);

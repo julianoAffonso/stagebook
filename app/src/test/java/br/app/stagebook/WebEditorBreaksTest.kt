@@ -6,6 +6,7 @@ import br.app.stagebook.data.model.Song
 import br.app.stagebook.data.web.HttpRequest
 import br.app.stagebook.data.web.WebEditorApi
 import br.app.stagebook.data.web.WebEditorAuth
+import br.app.stagebook.data.web.WebEditorServer
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -146,5 +147,40 @@ class WebEditorBreaksTest {
         assertEquals("Needs at least 2 songs", t["breakNeedsTwo"])
         assertEquals(listOf("%d songs", "%d song", "%d songs"), listOf(t["songCount0"], t["songCount1"], t["songCountN"]))
         assertEquals(listOf("%d breaks", "%d break", "%d breaks"), listOf(t["breakCount0"], t["breakCount1"], t["breakCountN"]))
+    }
+
+    // ---- Duplicate (user, 23/11: the computer's editor had no way to copy a setlist) ----
+
+    @Test fun `duplicate makes a copy with the name sent, the same songs and breaks, first in the list`() {
+        val id = create(ids, "[2,4]")
+        val made = call("POST", "/api/sets/$id/duplicate", """{"name":"Show (cópia)"}""")
+        assertEquals(200, made.status)
+        val copy = Regex("\"id\":\"([^\"]+)\"").find(made.text())!!.groupValues[1]
+        assertTrue(copy != id)
+        val sets = repo.library.value.sets
+        assertEquals(listOf("Show (cópia)", "Show"), sets.map { it.name })
+        assertEquals(sets[1].items, sets[0].items)
+        assertEquals(listOf(2, 4), sets[0].breaks)
+        // the original is left as it was
+        assertEquals(listOf(2, 4), breaksOf(id))
+    }
+
+    @Test fun `duplicate with no name keeps the setlist's own, and one that is gone is not found`() {
+        val id = create(ids)
+        assertEquals(200, call("POST", "/api/sets/$id/duplicate").status)
+        assertEquals(listOf("Show", "Show"), repo.library.value.sets.map { it.name })
+        assertEquals(404, call("POST", "/api/sets/nope/duplicate", "{}").status)
+    }
+
+    @Test fun `the page has the Duplicate button and its texts come from the app's strings in both languages`() {
+        val html = context.assets.open("web/index.html").bufferedReader().readText()
+        assertTrue("id=\"set-duplicate\"" in html)
+        for (lang in listOf("en", "pt-BR")) {
+            val c = android.content.res.Configuration(context.resources.configuration).apply { setLocale(java.util.Locale.forLanguageTag(lang)) }
+            val texts = WebEditorServer.texts(context.createConfigurationContext(c), R.string.editor_lyrics)
+            listOf("setDuplicate", "setCopyName", "setDuplicated").forEach { assertTrue("$lang $it", !texts[it].isNullOrBlank()) }
+            // the copy is named as the app names it
+            assertEquals(context.createConfigurationContext(c).getString(R.string.set_duplicate), texts["setDuplicate"])
+        }
     }
 }
