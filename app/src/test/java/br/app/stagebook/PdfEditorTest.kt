@@ -366,7 +366,7 @@ class PdfEditorTest {
         compose.onNodeWithText("Todas as páginas").assertExists()
         compose.onNodeWithText("Só esta página").assertExists()
         compose.onNodeWithText("1 / 3").assertExists()
-        compose.onNodeWithText("Salvar").performClick()
+        compose.onNode(androidx.compose.ui.test.hasContentDescription("Salvar") and androidx.compose.ui.test.hasAnyAncestor(androidx.compose.ui.test.hasTestTag("pdf_crop_save"))).performClick()
         compose.waitForIdle()
         assertEquals(br.app.stagebook.data.model.PdfCrop.ALL, set?.page)
     }
@@ -381,13 +381,13 @@ class PdfEditorTest {
         compose.onNodeWithContentDescription("Próxima página").performClick()
         compose.waitForIdle()
         compose.onNodeWithText("2 / 3").assertExists()
-        compose.onNodeWithText("Salvar").performClick()
+        compose.onNode(androidx.compose.ui.test.hasContentDescription("Salvar") and androidx.compose.ui.test.hasAnyAncestor(androidx.compose.ui.test.hasTestTag("pdf_crop_save"))).performClick()
         compose.waitForIdle()
         assertEquals(1, set?.page)
         // again: no crop for that scope
         compose.onNodeWithText("Recortar").performClick()
         compose.waitForIdle()
-        compose.onNodeWithText("Sem recorte").performClick()
+        compose.onNode(androidx.compose.ui.test.hasContentDescription("Sem recorte") and androidx.compose.ui.test.hasAnyAncestor(androidx.compose.ui.test.hasTestTag("pdf_crop_none"))).performClick()
         compose.waitForIdle()
         assertEquals(br.app.stagebook.data.model.PdfCrop.ALL, cleared)
     }
@@ -401,7 +401,7 @@ class PdfEditorTest {
         // the left edge 30% in, then the right edge 30% in: the first must still be there after the second
         frame.performTouchInput { down(Offset(1f, height / 2f)); moveBy(Offset(width * 0.3f, 0f)); up() }
         frame.performTouchInput { down(Offset(width - 2f, height / 2f)); moveBy(Offset(-width * 0.3f, 0f)); up() }
-        compose.onNodeWithText("Salvar").performClick()
+        compose.onNode(androidx.compose.ui.test.hasContentDescription("Salvar") and androidx.compose.ui.test.hasAnyAncestor(androidx.compose.ui.test.hasTestTag("pdf_crop_save"))).performClick()
         compose.waitForIdle()
         val crop = set!!
         assertEquals("left kept: $crop", 0.3f, crop.left, 0.05f)
@@ -420,7 +420,7 @@ class PdfEditorTest {
         val frame = compose.onNodeWithTag("pdf_crop_frame")
         frame.performTouchInput { down(Offset(1f, height / 2f)); moveBy(Offset(width * 0.25f, 0f)); up() }
         frame.performTouchInput { down(Offset(width / 2f, 1f)); moveBy(Offset(0f, height * 0.2f)); up() }
-        compose.onNodeWithText("Salvar").performClick()
+        compose.onNode(androidx.compose.ui.test.hasContentDescription("Salvar") and androidx.compose.ui.test.hasAnyAncestor(androidx.compose.ui.test.hasTestTag("pdf_crop_save"))).performClick()
         compose.waitForIdle()
         val crop = set!!
         assertEquals(0, crop.page)

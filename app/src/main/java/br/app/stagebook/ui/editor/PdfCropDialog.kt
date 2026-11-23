@@ -118,12 +118,19 @@ fun PdfCropDialog(
         Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
             onComposed()
             Column(Modifier.systemBarsPadding().padding(Spacing.m), verticalArrangement = Arrangement.spacedBy(Spacing.m)) {
+                // the app's own header (user, 23/11: "use here the wording and the icons of the rest of the app"): ✕ leaves, the
+                // title, and the actions as icons at the end, as in the song editor: taking the crop off (the "take off"
+                // circle of the lists) and saving (the diskette, in the main colour)
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     IconButton(onClick = onDismiss) { Icon(AppIcons.Close, stringResource(R.string.action_cancel)) }
                     Text(stringResource(R.string.pdf_crop_title), style = MaterialTheme.typography.titleLarge, modifier = Modifier.weight(1f), maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
-                    // at the end of the title's line: a third button in the row below broke "Salvar" in two on a phone with
-                    // large letters (device, 23/11)
-                    ActionButton(stringResource(R.string.pdf_crop_auto), auto, icon = AppIcons.Crop, tone = ButtonTone.Tonal, enabled = ready != null && !finding)
+                    Box(Modifier.testTag(CROP_NONE_TAG)) { br.app.stagebook.ui.components.TipIcon(stringResource(R.string.pdf_crop_none), AppIcons.RemoveCircle, { onClear(scope); onDismiss() }) }
+                    Box(Modifier.testTag(CROP_SAVE_TAG)) {
+                        br.app.stagebook.ui.components.TipIcon(
+                            stringResource(R.string.action_save), AppIcons.Save, { onSet(PdfCrop(scope, frame.left, frame.top, frame.right, frame.bottom)); onDismiss() },
+                            tint = MaterialTheme.colorScheme.primary,
+                        )
+                    }
                 }
                 Text(stringResource(R.string.pdf_crop_hint), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
@@ -142,18 +149,19 @@ fun PdfCropDialog(
                         CropFrame(frame)
                     }
                 }
-                if (pages > 1) Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center) {
-                    IconButton(onClick = { page = (page - 1).coerceAtLeast(0) }, enabled = page > 0) { Icon(AppIcons.ChevronLeft, stringResource(R.string.pdf_crop_previous)) }
-                    Text("${page + 1} / $pages", style = MaterialTheme.typography.titleMedium)
-                    IconButton(onClick = { page = (page + 1).coerceAtMost(pages - 1) }, enabled = page < pages - 1) { Icon(AppIcons.ChevronRight, stringResource(R.string.pdf_crop_next)) }
+                // Automatic keeps its name (its icon alone says nothing), at the start of the pages' line
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    ActionButton(stringResource(R.string.pdf_crop_auto), auto, icon = AppIcons.Crop, tone = ButtonTone.Tonal, enabled = ready != null && !finding)
+                    androidx.compose.foundation.layout.Spacer(Modifier.weight(1f))
+                    if (pages > 1) {
+                        IconButton(onClick = { page = (page - 1).coerceAtLeast(0) }, enabled = page > 0) { Icon(AppIcons.ChevronLeft, stringResource(R.string.pdf_crop_previous)) }
+                        Text("${page + 1} / $pages", style = MaterialTheme.typography.titleMedium)
+                        IconButton(onClick = { page = (page + 1).coerceAtMost(pages - 1) }, enabled = page < pages - 1) { Icon(AppIcons.ChevronRight, stringResource(R.string.pdf_crop_next)) }
+                    }
                 }
                 if (pages > 1) SegmentedChoice(
                     listOf(Choice(true, R.string.pdf_crop_all), Choice(false, R.string.pdf_crop_page)), all, { all = it },
                 )
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(Spacing.s), verticalAlignment = Alignment.CenterVertically) {
-                    ActionButton(stringResource(R.string.pdf_crop_none), { onClear(scope); onDismiss() }, Modifier.weight(1f), icon = AppIcons.Replay, tone = ButtonTone.Quiet)
-                    ActionButton(stringResource(R.string.action_save), { onSet(PdfCrop(scope, frame.left, frame.top, frame.right, frame.bottom)); onDismiss() }, Modifier.weight(1f), icon = AppIcons.Save)
-                }
             }
         }
     }
@@ -263,6 +271,8 @@ private class CropFrameState(from: PdfCrop) {
 private val HANDLE_ROOM = 12.dp
 
 internal const val CROP_FRAME_TAG = "pdf_crop_frame"
+internal const val CROP_SAVE_TAG = "pdf_crop_save"
+internal const val CROP_NONE_TAG = "pdf_crop_none"
 private const val PAGE_SHAPE = 2f / 3f   // a page of paper, until the real one is drawn
 private const val CROP_PAGE_WIDTH = 900
 private const val AUTO_PAGE_WIDTH = 300   // enough to find a margin; read for up to 24 pages

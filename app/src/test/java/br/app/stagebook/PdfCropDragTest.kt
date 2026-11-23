@@ -47,7 +47,7 @@ class PdfCropDragTest {
         frame.performTouchInput { down(Offset(width / 2f, height - 2f)); repeat(10) { moveBy(Offset(0f, -height * 0.02f)) }; up() }
         compose.waitForIdle()
         assertEquals("a drag draws the frame, it does not compose the window", before, composed)
-        compose.onNodeWithText("Salvar").performClick()
+        compose.onNode(androidx.compose.ui.test.hasContentDescription("Salvar") and androidx.compose.ui.test.hasAnyAncestor(androidx.compose.ui.test.hasTestTag("pdf_crop_save"))).performClick()
         compose.waitForIdle()
         val crop = set!!
         assertEquals("left: $crop", 0.3f, crop.left, 0.05f)
@@ -66,7 +66,7 @@ class PdfCropDragTest {
         compose.onNodeWithText("Só esta página").performClick()
         compose.waitForIdle()
         assertTrue(composed > before)
-        compose.onNodeWithText("Salvar").performClick()
+        compose.onNode(androidx.compose.ui.test.hasContentDescription("Salvar") and androidx.compose.ui.test.hasAnyAncestor(androidx.compose.ui.test.hasTestTag("pdf_crop_save"))).performClick()
         compose.waitForIdle()
         // page 1 of 3 has no trim of its own: its frame starts whole, not from the one for all pages
         assertEquals(PdfCrop(0), set)
@@ -98,7 +98,7 @@ class PdfCropDragTest {
         compose.onNodeWithText("Automático").performClick()
         // the pages are read off the main thread: the frame arrives a moment later, and the button is free again
         compose.waitUntil(5_000) { compose.onAllNodesWithText("Automático").fetchSemanticsNodes().isNotEmpty() && runCatching { compose.onNodeWithText("Automático").assertIsEnabled() }.isSuccess }
-        compose.onNodeWithText("Salvar").performClick()
+        compose.onNode(androidx.compose.ui.test.hasContentDescription("Salvar") and androidx.compose.ui.test.hasAnyAncestor(androidx.compose.ui.test.hasTestTag("pdf_crop_save"))).performClick()
         compose.waitUntil(5_000) { set != null }
         return set!!
     }
@@ -122,16 +122,24 @@ class PdfCropDragTest {
     // real text widths (Robolectric's own never wrap), on a phone with large letters
     @org.robolectric.annotation.GraphicsMode(org.robolectric.annotation.GraphicsMode.Mode.NATIVE)
     @Config(qualifiers = "+w360dp-h800dp-xxhdpi")
-    @Test fun `on a phone with large letters Save and No crop stay on one line each, with Automatic on the title's line`() {
+    @Test fun `the window speaks as the rest of the app - close, title, take off and the diskette on top, Automatic by name`() {
         compose.setContent {
             androidx.compose.runtime.CompositionLocalProvider(androidx.compose.ui.platform.LocalDensity provides androidx.compose.ui.unit.Density(3f, fontScale = 1.3f)) {
                 StagebookTheme { PdfCropDialog(EditorPdf("a.pdf", pages = 3, bytes = 1_000), onSet = {}, onClear = {}, onDismiss = {}) }
             }
         }
         compose.waitForIdle()
-        fun box(text: String) = compose.onNodeWithText(text, useUnmergedTree = true).getUnclippedBoundsInRoot()
-        // one line of this text is about 26 dp tall; two would be over 50
-        listOf("Salvar", "Sem recorte", "Automático").forEach { assertTrue("$it broke into lines: ${(box(it).bottom - box(it).top).value} dp", (box(it).bottom - box(it).top).value < 40f) }
-        assertTrue("Automatic sits on the title's line", box("Automático").top.value < box("Recortar o PDF").bottom.value)
+        val title = compose.onNodeWithText("Recortar o PDF").getUnclippedBoundsInRoot()
+        // the two actions are icons on the title's line, saving last, and there is no row of worded buttons at the bottom
+        val none = compose.onNodeWithContentDescription("Sem recorte").getUnclippedBoundsInRoot()
+        val save = compose.onNodeWithContentDescription("Salvar").getUnclippedBoundsInRoot()
+        assertTrue("on the title's line", none.top.value < title.bottom.value && save.top.value < title.bottom.value)
+        assertTrue("saving comes last", save.left.value > none.left.value)
+        assertEquals(0, compose.onAllNodesWithText("Salvar").fetchSemanticsNodes().size)
+        // Automatic is worded, on one line (two lines would be over 50 dp), on the pages' line
+        val auto = compose.onNodeWithText("Automático", useUnmergedTree = true).getUnclippedBoundsInRoot()
+        assertTrue("Automático broke into lines: ${(auto.bottom - auto.top).value} dp", (auto.bottom - auto.top).value < 40f)
+        val turner = compose.onNodeWithText("1 / 3").getUnclippedBoundsInRoot()
+        assertTrue("beside the page turner", auto.bottom.value > turner.top.value && auto.top.value < turner.bottom.value && auto.right.value < turner.left.value)
     }
 }
