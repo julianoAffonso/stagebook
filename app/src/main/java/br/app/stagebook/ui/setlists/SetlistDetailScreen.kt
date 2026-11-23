@@ -95,6 +95,7 @@ fun SetlistDetailRoute(
     viewModel: SetlistDetailViewModel = hiltViewModel(),
     openShare: Boolean = false,
     toList: Int = 0,   // the Setlists tab tapped again: back to the list, asking first if an edit is half done
+    startEditing: Boolean = false,   // the list's card menu "Edit setlist": opens already editing
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val qr by viewModel.qr.collectAsStateWithLifecycle()
@@ -157,6 +158,7 @@ fun SetlistDetailRoute(
         },
         openShare = openShare,
         toList = toList,
+        editOnOpen = startEditing,
     )
 }
 
@@ -193,6 +195,7 @@ fun SetlistDetailScreen(
     onClearPlayed: () -> Unit = {},   // the menu's "Clear played"
     onDuplicate: () -> Unit = {},   // the menu's "Duplicate": a copy of this setlist to build another show from
     startEditing: Boolean = false,   // opens in editing (tests, and a setlist just created)
+    editOnOpen: Boolean = false,   // the list's card menu "Edit setlist": editing begins once the setlist is loaded, with what it had kept for Discard
     onRestore: (songIds: List<String>, breaks: List<Int>) -> Unit = { _, _ -> },   // "Discard": the setlist as it was when editing began
     toList: Int = 0,   // a new number = the Setlists tab tapped again: go back to the list (as Back would)
     onRemoveMany: (List<Pair<Int, String>>) -> Unit = { picks -> picks.sortedByDescending { it.first }.forEach { (i, id) -> onRemove(i, id) } },   // the chosen songs out in one save
@@ -242,6 +245,8 @@ fun SetlistDetailScreen(
         openedOnce = true
         if (!editing && uiState.items.isEmpty() && uiState.breaks.isEmpty()) {
             beforeIds = ArrayList(); beforeBreaks = ArrayList(); externalAtStart = uiState.external; editing = true
+        } else if (!editing && editOnOpen) {
+            beforeIds = ArrayList(uiState.items.map { it.songId }); beforeBreaks = ArrayList(uiState.breaks); externalAtStart = uiState.external; editing = true
         }
     }
     val marks = remember(rows) { rowMarks(rows) }

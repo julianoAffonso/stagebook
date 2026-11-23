@@ -55,6 +55,7 @@ fun SetlistsRoute(
     onScan: () -> Unit = {},
     onReceiveCode: (String) -> Unit = {},
     onShare: (String) -> Unit = {},
+    onEditSongs: (String) -> Unit = onOpen,
     viewModel: SetlistsViewModel = hiltViewModel(),
     received: Int = 0,
     onReceived: () -> Unit = {},
@@ -69,6 +70,7 @@ fun SetlistsRoute(
     val conductButton by viewModel.conductButton.collectAsStateWithLifecycle()
     val message = br.app.stagebook.ui.components.LocalAppMessage.current
     val armHint = stringResource(R.string.conduct_arm_hint)
+    val duplicated = stringResource(R.string.set_duplicated)
     var query by rememberSaveable { mutableStateOf("") }
     androidx.compose.runtime.LaunchedEffect(query) { viewModel.onQueryChange(query) }
     if (nameLimit) InfoDialog(stringResource(R.string.qr_limit_title), stringResource(R.string.qr_limit_name), viewModel::dismissNameLimit)
@@ -98,6 +100,9 @@ fun SetlistsRoute(
         onDeleteMany = viewModel::deleteMany,
         onRename = viewModel::rename,
         onShare = onShare,
+        onEditSongs = { query = ""; onEditSongs(it) },
+        onLead = { query = ""; val at = viewModel.lead(it); onPlay(it, at.start, at.atBreak) },
+        onDuplicate = { id, name -> if (viewModel.duplicate(id, name) != null) message.show(duplicated) },
         conduct = conductButton,
         onConduct = { if (viewModel.toggleConduct()) message.show(armHint) },
         cloud = viewModel.cloud.collectAsStateWithLifecycle().value,
@@ -148,6 +153,10 @@ fun SetlistsScreen(
     // the new-setlist window also asks for the day, the edit window for name and day (the defaults keep a caller without a day working)
     onCreateAt: (name: String, date: String) -> Unit = { name, _ -> onCreate(name) },
     onEdit: (id: String, name: String, date: String) -> Unit = { id, name, _ -> onRename(id, name) },
+    // the card menu's three that used to be only inside the open setlist (user, 23/11)
+    onEditSongs: (String) -> Unit = onOpen,   // the setlist open, already editing its songs
+    onLead: (String) -> Unit = {},   // plays it and starts leading the band
+    onDuplicate: (id: String, name: String) -> Unit = { _, _ -> },
 ) {
     var creating by rememberSaveable { mutableStateOf(false) }
     // holding a setlist selects it, as in the song list (Google's pattern); rename lives inside the setlist
@@ -232,8 +241,15 @@ fun SetlistsScreen(
                                 titleStyle = MaterialTheme.typography.titleLarge,
                                 trailing = {
                                     // the ⋮ replaces the pencil: edit is its first option, as in the stage panel's menu (user, 14/11)
+                                    val copyName = stringResource(R.string.set_copy_name, set.name)
                                     if (!selecting) OverflowMenu(
-                                        setlistCardActions({ if (set.count > 0) onPlay(set.id) else onOpen(set.id) }, { onShare(set.id) }, { renamingId = set.id }, { deletingId = set.id }),
+                                        setlistCardActions(
+                                            { if (set.count > 0) onPlay(set.id) else onOpen(set.id) }, { onShare(set.id) }, { renamingId = set.id }, { deletingId = set.id },
+                                            onEditSongs = { onEditSongs(set.id) },
+                                            // leading needs a band to lead and songs to play
+                                            onLead = if (conduct.shown && set.count > 0) ({ onLead(set.id) }) else null,
+                                            onDuplicate = { onDuplicate(set.id, copyName) },
+                                        ),
                                     )
                                 },
                             )
@@ -306,12 +322,22 @@ fun SetlistsScreen(
     }
 }
 
-/** The card's ⋮ menu, in this order. "Lead the band" is not here: it belongs to the header button and the stage panel. */
+/**
+ * The card's ⋮ menu, in this order. Editing the songs, leading the band and duplicating are here too (user, 23/11): they
+ * were only inside the open setlist, a tap further. An action with nothing to do it is left out (leading with no band,
+ * or of an empty setlist).
+ */
 @Composable
-internal fun setlistCardActions(onPlay: () -> Unit, onShare: () -> Unit, onRename: () -> Unit, onDelete: () -> Unit) = listOf(
+internal fun setlistCardActions(
+    onPlay: () -> Unit, onShare: () -> Unit, onRename: () -> Unit, onDelete: () -> Unit,
+    onEditSongs: (() -> Unit)? = null, onLead: (() -> Unit)? = null, onDuplicate: (() -> Unit)? = null,
+) = listOfNotNull(
     MenuAction(stringResource(R.string.sets_play), AppIcons.Play, onPlay),
+    onEditSongs?.let { MenuAction(stringResource(R.string.set_edit), AppIcons.Edit, it) },
     MenuAction(stringResource(R.string.share_title), AppIcons.Share, onShare),
+    onLead?.let { MenuAction(stringResource(R.string.conduct_start), AppIcons.Group, it) },
     MenuAction(stringResource(R.string.sets_edit), AppIcons.Rename, onRename),
+    onDuplicate?.let { MenuAction(stringResource(R.string.set_duplicate), AppIcons.Copy, it) },
     MenuAction(stringResource(R.string.sets_delete), AppIcons.Delete, onDelete, danger = true),
 )
 

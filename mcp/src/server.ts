@@ -439,6 +439,19 @@ export function buildServer(client: StagebookClient): McpServer {
     }),
   );
 
+  server.registerTool(
+    "duplicate_setlist",
+    {
+      title: "Duplicate a setlist",
+      description: "Makes a copy of a setlist, with its songs and breaks, to build another show from. The copy comes first in the list and takes today as its day. Without a name it keeps the setlist's own.",
+      inputSchema: { id: z.string(), name: z.string().optional() },
+    },
+    safe(async ({ id, name }: { id: string; name?: string }) => {
+      const made = await client.send("POST", `/api/sets/${encodeURIComponent(id)}/duplicate`, { name: name ?? "" });
+      return text({ duplicated: id, id: made.id });
+    }),
+  );
+
   // ---------- receiving and the band ----------
 
   server.registerTool(

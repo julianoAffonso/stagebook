@@ -32,7 +32,7 @@ after(() => tablet.server.close());
 test("lists every tool, with deletes marked destructive", async () => {
   const { tools } = await mcp.listTools();
   const names = tools.map((t) => t.name);
-  for (const n of ["stagebook_connect", "list_songs", "get_song", "create_song", "update_song", "delete_song", "transpose_song", "set_capo", "import_song", "list_setlists", "create_setlist", "update_setlist", "delete_setlist", "receive_by_code", "band_inbox", "restore_backup", "set_backing_track"]) assert.ok(names.includes(n), n);
+  for (const n of ["stagebook_connect", "list_songs", "get_song", "create_song", "update_song", "delete_song", "transpose_song", "set_capo", "import_song", "list_setlists", "create_setlist", "update_setlist", "delete_setlist", "duplicate_setlist", "receive_by_code", "band_inbox", "restore_backup", "set_backing_track"]) assert.ok(names.includes(n), n);
   assert.equal(tools.find((t) => t.name === "delete_song").annotations.destructiveHint, true);
 });
 
@@ -95,6 +95,17 @@ test("deleting needs confirm=true", async () => {
   const yes = await call("delete_song", { id: "s2", confirm: true });
   assert.equal(yes.error, false);
   assert.ok(!tablet.songs.has("s2"));
+});
+
+test("duplicate_setlist copies the songs under the name given, or the setlist's own", async () => {
+  const made = (await call("duplicate_setlist", { id: "t1", name: "Saturday (copy)" })).json;
+  assert.equal(made.duplicated, "t1");
+  assert.equal(tablet.sets.get(made.id).name, "Saturday (copy)");
+  assert.deepEqual(tablet.sets.get(made.id).items, tablet.sets.get("t1").items);
+  const same = (await call("duplicate_setlist", { id: "t1" })).json;
+  assert.equal(tablet.sets.get(same.id).name, tablet.sets.get("t1").name);
+  assert.equal((await call("duplicate_setlist", { id: "nope" })).error, true);
+  tablet.sets.delete(made.id); tablet.sets.delete(same.id);
 });
 
 test("setlists: create, read, update keeps what wasn't passed", async () => {

@@ -203,6 +203,7 @@ class WebEditorApi(
             parts == listOf("band", "open") && req.method == "POST" -> bandOpen(req)
             parts == listOf("sets") && req.method == "GET" -> ok(json.encodeToString(setRows()))
             parts == listOf("sets") && req.method == "POST" -> setCreate(req)
+            parts.size == 3 && parts[0] == "sets" && parts[2] == "duplicate" && req.method == "POST" -> setDuplicate(parts[1], req)
             parts.size == 2 && parts[0] == "sets" -> when (req.method) {
                 "GET" -> repository.library.value.setlist(parts[1])?.let { ok(json.encodeToString(setData(it))) } ?: HttpResponse.status(404)
                 "PUT" -> setSave(parts[1], req)
@@ -547,6 +548,18 @@ class WebEditorApi(
         d.date?.let { repository.setSetlistDate(id, it) }
         if (d.items != null || d.breaks != null) saveItems(id, d)
         return ok(json.encodeToString(Saved(id)))
+    }
+
+    /**
+     * A copy of the setlist, with its songs and breaks, to build another show from, as the app's "Duplicate" (the copy
+     * comes first in the list and takes today as its day). The name is the one sent: the page writes it in its own
+     * language; with none, the copy takes the setlist's own name.
+     */
+    private fun setDuplicate(id: String, req: HttpRequest): HttpResponse {
+        val from = repository.library.value.setlist(id) ?: return HttpResponse.status(404)
+        val d = runCatching { json.decodeFromString<SetSave>(req.text().ifBlank { "{}" }) }.getOrNull() ?: return HttpResponse.status(400)
+        val copy = repository.duplicateSetlist(id, d.name.trim().ifEmpty { from.name }) ?: return HttpResponse.status(404)
+        return ok(json.encodeToString(Saved(copy)))
     }
 
     /** Breaks as sent are valid when they are what the app would keep: 1..n-1 of the sent songs, sorted, no repeats. */

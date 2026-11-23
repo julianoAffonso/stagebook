@@ -256,6 +256,7 @@
           <ul class="list" id="set-add" style="max-height: 30vh"></ul>
           <div class="actions">
             <button class="text" id="set-delete"></button>
+            <button class="text" id="set-duplicate"></button>
             <span id="set-status" class="muted"></span>
             <button id="set-save"></button>
           </div>
@@ -1067,6 +1068,8 @@ function showSet(set) {
   $("set-form").hidden = false;
   $("set-pick").hidden = true;
   $("set-delete").hidden = !set.id;
+  $("set-duplicate").hidden = !set.id;   // a setlist not saved yet has nothing to copy
+  $("set-duplicate").textContent = t.setDuplicate;
   say("set-status", "");
   dirty = false;
   breaksTouched = false;
@@ -1447,6 +1450,18 @@ $("set-date").oninput = () => (dirty = true);
 $("set-add-search").oninput = drawSetAdd;
 $("set-break-add").onclick = () => { breaksTouched = true; currentSet.breaks = breakAdd(currentSet.breaks, currentSet.songs.length); dirty = true; drawSet(); };
 $("set-save").onclick = saveSet;
+// a copy to build another show from, as the app's "Duplicate": what is saved is what is copied, so an edit under way asks
+// first (the same question as leaving it); the copy opens, first in the list
+$("set-duplicate").onclick = async () => {
+  if (!currentSet.id || !leaveOk()) return;
+  const r = await api(`/api/sets/${encodeURIComponent(currentSet.id)}/duplicate`, { method: "POST", body: JSON.stringify({ name: fill(t.setCopyName, currentSet.name) }) }).catch(() => null);
+  if (!r || r.status !== 200) return offline();
+  const made = await r.json();
+  dirty = false;
+  await loadSets();
+  await openSet(made.id);
+  say("set-status", t.setDuplicated);
+};
 $("set-delete").onclick = async () => {
   if (!currentSet.id || !confirm(fill(t.setDeleteConfirm, currentSet.name))) return;
   await api(`/api/sets/${encodeURIComponent(currentSet.id)}`, { method: "DELETE" }).catch(() => null);

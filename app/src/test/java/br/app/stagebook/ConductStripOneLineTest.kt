@@ -202,7 +202,7 @@ class ConductStripOneLineTest {
         show()
         // "Look for the band" is no longer a written action
         compose.onAllNodesWithText("Procurar a banda").assertCountEquals(0)
-        val first = bounds("conductTitleStart")
+        val first = bounds("conductTitleCut")   // the leader's sentence is one text (it may take two lines)
         val search = iconBounds("Procurar a banda")
         val touch = icon("Procurar a banda").fetchSemanticsNode().touchBoundsInRoot
         val least = with(compose.density) { Sizes.touch.toPx() } - 1f
@@ -246,12 +246,15 @@ class ConductStripOneLineTest {
 
     @Test fun `a long setlist name goes on a second line and the icon and End stay whole`() {
         val one = titleLine()
+        val columnStart = bounds("conductTitleStart").left   // where the strip's sentences begin
         ui = ConductUi.Conducting("Teste integrado do show de sábado", 1, emptyList(), emptyList())
         compose.waitForIdle()
         val name = bounds("conductTitleCut")
         val search = iconBounds("Procurar a banda")
         val end = text("Encerrar")
         assertTrue("the name takes two lines: ${(name.bottom - name.top).value} for $one", (name.bottom - name.top).value > one * 1.5f)
+        // the second line begins where the first does, not under the name (user on the S26, 23/11)
+        assertEquals("the sentence is one text from the strip's start", columnStart.value, name.left.value, 1f)
         assertTrue("the name ends before the icon: ${name.right} <= ${search.left}", name.right <= search.left + 1.dp)
         assertTrue("End is whole and on screen", end.right <= 360.dp && end.bottom - end.top < 24.dp)
         // a name longer than two lines is still cut, at the end of the second

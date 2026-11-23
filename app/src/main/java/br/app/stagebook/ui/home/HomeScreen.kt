@@ -146,7 +146,8 @@ fun HomeScreen(
                             setlistRequest, onRequestHandled, onPlay = { id, index -> onPlaySetlist(id, index, false) }, toList = setsToList,
                         ) { open ->
                             SetlistsRoute(
-                                { open(it, false) }, onPlaySetlist, onScanSetlist, onReceiveCode, onShare = { open(it, true) },
+                                { open(it, false, false) }, onPlaySetlist, onScanSetlist, onReceiveCode, onShare = { open(it, true, false) },
+                                onEditSongs = { open(it, false, true) },
                                 received = inbox.size, onReceived = { listOpen = true }, onSync = onSync,
                             )
                         }
