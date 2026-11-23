@@ -221,4 +221,19 @@ class LibraryTest {
         assertEquals(song.zooms, LibraryCodec.decodeSongs(LibraryCodec.encodeSongs(listOf(song))).single().zooms)
         assertEquals("no backup também", song.zooms, LibraryCodec.decode(LibraryCodec.encode(Library(songs = listOf(song)))) { "x" }.songs.single().zooms)
     }
+
+    // audit 22/11: a songs file carries no audio, and a matched song lost its own backing track to the file's
+    @Test fun `importing a songs file keeps this device's backing tracks and takes no file name from outside`() {
+        val lib = Library(songs = listOf(Song("1", "Hazard", "Richard Marx", track = "aqui.ogg", trackName = "Hazard.ogg")))
+        val incoming = listOf(
+            Song("x", "Hazard", "Richard Marx", text = "letra nova", track = "", trackName = ""),
+            Song("y", "Nova", "", track = "../../shared_prefs/band.xml", trackName = "Nova.ogg"),
+        )
+        val (merged, _) = lib.mergeSongs(incoming) { "novo" }
+        assertEquals("aqui.ogg", merged.songs[0].track)
+        assertEquals("Hazard.ogg", merged.songs[0].trackName)
+        assertEquals("letra nova", merged.songs[0].text)
+        assertEquals("", merged.songs[1].track)
+        assertEquals("Nova.ogg", merged.songs[1].trackName)   // shown as the audio that didn't come
+    }
 }

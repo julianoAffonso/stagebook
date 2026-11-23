@@ -20,7 +20,8 @@ import javax.inject.Singleton
 class TrackStore @Inject constructor(@ApplicationContext private val context: Context) {
     private val dir get() = File(context.filesDir, "tracks").apply { mkdirs() }
 
-    fun file(name: String): File = File(dir, name)
+    // only a plain file name the app made: a name from outside (a songs file, a backup) never reaches another folder
+    fun file(name: String): File = File(dir, PdfStore.safeName(name) ?: UNSAFE)
 
     /**
      * Copies the chosen track; returns the saved name, or null if it isn't really OGG/MP3/WAV (checked by its first
@@ -46,7 +47,7 @@ class TrackStore @Inject constructor(@ApplicationContext private val context: Co
         }
     }
 
-    fun remove(name: String) { if (name.isNotEmpty()) File(dir, name).delete() }
+    fun remove(name: String) { if (PdfStore.safeName(name) != null) File(dir, name).delete() }
 
     /**
      * Deletes the files no song points to (deleted songs, a restored backup) and copies left half done (`.part`), once
@@ -95,6 +96,8 @@ class TrackStore @Inject constructor(@ApplicationContext private val context: Co
     }
 
     companion object {
+        private const val UNSAFE = "unsafe-name.none"
+
         /**
          * Copies [input] into [to] in chunks (without closing [input]); returns the real format's extension from the
          * first bytes, or null when it isn't audio or passes [MAX_BYTES] (the caller deletes [to]). A track picked by

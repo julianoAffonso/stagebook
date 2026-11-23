@@ -72,7 +72,8 @@ data class ImportResult(val added: Int, val replaced: Int, val lyricsChanged: In
 
 /**
  * Importing a library without duplicating: the same song (title + artist, see SongMatch) is updated, the others come in
- * as new. The stage zooms the song already had are kept, and it learns the ones of other screens.
+ * as new. The stage zooms the song already had are kept, and it learns the ones of other screens. What belongs to this
+ * device stays as it is here: the song's PDF, its backing track and the track's mix.
  */
 fun Library.mergeSongs(incoming: List<Song>, newId: () -> String): Pair<Library, ImportResult> {
     val songs = songs.toMutableList()
@@ -85,10 +86,12 @@ fun Library.mergeSongs(incoming: List<Song>, newId: () -> String): Pair<Library,
         val i = index.find(song.title, song.author) ?: -1
         if (i >= 0) {
             if (songs[i].text != song.text) lyricsChanged++
-            songs[i] = song.copy(id = songs[i].id, zoom = songs[i].zoom, zooms = song.zooms + songs[i].zooms, author = song.author.ifBlank { songs[i].author }, year = song.year.ifBlank { songs[i].year }, midi = song.midi ?: songs[i].midi, pdf = songs[i].pdf, pdfName = songs[i].pdfName, pdfMarks = songs[i].pdfMarks, plays = songs[i].plays, lastPlayed = songs[i].lastPlayed)
+            songs[i] = song.copy(id = songs[i].id, zoom = songs[i].zoom, zooms = song.zooms + songs[i].zooms, author = song.author.ifBlank { songs[i].author }, year = song.year.ifBlank { songs[i].year }, midi = song.midi ?: songs[i].midi, pdf = songs[i].pdf, pdfName = songs[i].pdfName, pdfMarks = songs[i].pdfMarks, track = songs[i].track, trackName = songs[i].trackName, mix = songs[i].mix, plays = songs[i].plays, lastPlayed = songs[i].lastPlayed)
             replaced++
         } else {
-            songs += song.withoutPdf().copy(id = newId(), zoom = 1f, plays = 0, lastPlayed = "")   // an old file's single zoom came from some other screen
+            // a songs file carries no audio: the name of a file on another device is no file here (and, written by hand,
+            // could point outside the tracks folder; audit 22/11). The audio's name stays, shown as "didn't come"
+            songs += song.withoutPdf().copy(id = newId(), zoom = 1f, plays = 0, lastPlayed = "", track = "", mix = null)   // an old file's single zoom came from some other screen
             index.add(songs.lastIndex)
             added++
         }

@@ -219,6 +219,17 @@ class SetlistCloud @Inject constructor(
         read(messages(lines).mapNotNull { ShareCode.decrypt(keys.key, it) }) { url -> fetchAttachment(url, keys.key) }
     }
 
+    /**
+     * What one receive may download in attachments (audit 22/11). A download that fails or doesn't decrypt costs a whole
+     * attachment too, and an address is asked for once: before, only what decrypted was counted, so a send made by hand
+     * with 200 songs pointing at big files made the device download gigabytes.
+     */
+    internal class AttachBudget(private var left: Long) {
+        private val asked = HashSet<String>()
+        fun allows(url: String): Boolean = left > 0 && asked.add(url)
+        fun charged(bytes: ByteArray?): ByteArray? { left -= bytes?.size?.toLong() ?: MAX_ATTACHMENT.toLong(); return bytes }
+    }
+
     /** What a send's decrypted messages are: a setlist with its songs, an invite, or nothing readable. */
     internal fun read(plain: List<ByteArray>, fetch: (String) -> ByteArray? = { null }): Received {
         // only setlists and songs in plain text (BandContent): the rest is discarded
@@ -230,12 +241,12 @@ class SetlistCloud @Inject constructor(
         val songs = plain.mapNotNull { unpack(SONG_MARK, it) }.mapNotNull { runCatching { json.decodeFromString<SharedSong>(it) }.getOrNull() }
             .filter { it.allowed() }.take(br.app.stagebook.domain.BandContent.MAX_SONGS)
             // what the sender says about files on this device is never believed; the PDF is whatever came in chunks
-            .let { list -> var budget = br.app.stagebook.domain.BandContent.INTERNET_PDF_BYTES
+            .let { list -> val budget = AttachBudget(br.app.stagebook.domain.BandContent.INTERNET_PDF_BYTES)
                 list.map { s -> s.forWire().let { clean ->
                     when {
                         // an attachment: fetched, decrypted and checked like any PDF; gone from the server, the song comes without it
-                        s.pdfAt.isNotEmpty() -> if (budget <= 0) clean.copy(pdfProblem = br.app.stagebook.data.PdfProblem.TOO_BIG.name)
-                            else fetch(s.pdfAt)?.let { bytes -> budget -= bytes.size; takePdf(clean, bytes, s.pdfName) } ?: clean.copy(pdfProblem = br.app.stagebook.data.PdfProblem.EXPIRED.name)
+                        s.pdfAt.isNotEmpty() -> if (!budget.allows(s.pdfAt)) clean.copy(pdfProblem = br.app.stagebook.data.PdfProblem.TOO_BIG.name)
+                            else budget.charged(fetch(s.pdfAt))?.let { bytes -> takePdf(clean, bytes, s.pdfName) } ?: clean.copy(pdfProblem = br.app.stagebook.data.PdfProblem.EXPIRED.name)
                         // a send of version 4: the PDF came in chunks
                         else -> pdfsCame[songKey(s.title, s.author)]?.let { (bytes, name) -> takePdf(clean, bytes, name) } ?: clean
                     }
@@ -371,16 +382,15 @@ class SetlistCloud @Inject constructor(
         // what the sender says about files on this device is never believed: the PDF is whatever came as bytes, checked as any
         // (the PDFs of one package share the budget the sender keeps to: a package with more is not one of ours, and a file is not
         // kept for a song that will be turned away anyway)
-        var budget = br.app.stagebook.domain.BandContent.PAIR_PDF_BYTES
+        val budget = AttachBudget(br.app.stagebook.domain.BandContent.PAIR_PDF_BYTES)
         var inline = OLD_PAIR_PDF_BYTES   // a version-4 package carried its PDFs inside, 60 KB at most
         val songs = pkg.songs.take(br.app.stagebook.domain.BandContent.MAX_SONGS).map { s ->
             val clean = s.forWire()
             if (!s.allowed()) return@map clean
             // an attachment (version 5): fetched, decrypted with the pair key and checked; gone from the server, it says so
             if (s.pdfAt.isNotEmpty()) {
-                if (budget <= 0) return@map clean.copy(pdfProblem = br.app.stagebook.data.PdfProblem.TOO_BIG.name)
-                val got = fetch(s.pdfAt) ?: return@map clean.copy(pdfProblem = br.app.stagebook.data.PdfProblem.EXPIRED.name)
-                budget -= got.size
+                if (!budget.allows(s.pdfAt)) return@map clean.copy(pdfProblem = br.app.stagebook.data.PdfProblem.TOO_BIG.name)
+                val got = budget.charged(fetch(s.pdfAt)) ?: return@map clean.copy(pdfProblem = br.app.stagebook.data.PdfProblem.EXPIRED.name)
                 return@map takePdf(clean, got, s.pdfName)
             }
             if (s.pdf.isEmpty()) return@map clean
