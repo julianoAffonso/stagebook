@@ -200,7 +200,7 @@ class WebEditorMoreTest {
             br.app.stagebook.data.model.PlayEntry(today.toString(), "Tempo Perdido", "Legião Urbana"),
             br.app.stagebook.data.model.PlayEntry(today.toString(), "Hazard", "Richard Marx"),
         ))
-        withTimeout(5_000) { repo.library.first { it.history.size == 4 } }
+        withTimeout(TEST_WAIT_MS) { repo.library.first { it.history.size == 4 } }
         WebEditorApi(repo, locale = { java.util.Locale.forLanguageTag("pt-BR") })
     }
 

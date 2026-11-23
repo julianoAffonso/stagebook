@@ -55,7 +55,7 @@ class EssentialModeTest {
     @Test fun `turning on turns everything off - turning a part back on leaves the mode - turning off brings back band internet extras and the player`() = runBlocking {
         val repo = LibraryRepository(context, testScope())
         val vm = testSettingsVm(repo)
-        suspend fun until(ok: (Look) -> Boolean) = withTimeout(15_000) { repo.library.first { ok(it.look) } }.look
+        suspend fun until(ok: (Look) -> Boolean) = withTimeout(TEST_WAIT_MS) { repo.library.first { ok(it.look) } }.look
 
         vm.setPlayerMode(true)
         until { it.playerMode }
@@ -104,13 +104,13 @@ class EssentialModeTest {
         val repo = testRepo()
         // The library is saved between tests: one that left the band off would end the conducting as soon as it starts
         repo.updateLook { it.copy(bandOn = true) }
-        withTimeout(15_000) { repo.library.first { it.look.bandOn } }
+        withTimeout(TEST_WAIT_MS) { repo.library.first { it.look.bandOn } }
         val link = testLink(repo = repo)
         val conduct = testConduct(repo = repo, link = link)
         conduct.start("s1", "Ensaio", listOf(br.app.stagebook.domain.Conduct.Item("Música")))
         assertTrue(conduct.role.value is br.app.stagebook.data.BandConduct.Role.Conducting)
         repo.updateLook { it.copy(bandOn = false) }
-        withTimeout(15_000) { conduct.role.first { it == br.app.stagebook.data.BandConduct.Role.None } }
+        withTimeout(TEST_WAIT_MS) { conduct.role.first { it == br.app.stagebook.data.BandConduct.Role.None } }
         kotlinx.coroutines.delay(300)   // a send already on its way doesn't bring leading back
         assertEquals(br.app.stagebook.data.BandConduct.Role.None, conduct.role.value)
         assertFalse(link.running.value)
@@ -119,7 +119,7 @@ class EssentialModeTest {
     @Test fun `a send on its way never brings an ended Lead the band back`() = runBlocking {
         val repo = testRepo()
         repo.updateLook { it.copy(bandOn = true) }
-        withTimeout(15_000) { repo.library.first { it.look.bandOn } }
+        withTimeout(TEST_WAIT_MS) { repo.library.first { it.look.bandOn } }
         val link = testLink(repo = repo)
         val conduct = testConduct(repo = repo, link = link)
         repeat(1_000) {
@@ -134,7 +134,7 @@ class EssentialModeTest {
     @Test fun `internet off - nothing goes out to the band internet`() = runBlocking {
         val repo = testRepo()
         repo.updateLook { it.copy(internetOn = false) }
-        withTimeout(15_000) { repo.library.first { !it.look.internetOn } }
+        withTimeout(TEST_WAIT_MS) { repo.library.first { !it.look.internetOn } }
         val cloud = br.app.stagebook.data.SetlistCloud(repo, br.app.stagebook.data.DeviceIdentity(context))
         assertEquals(br.app.stagebook.data.SetlistCloud.Received.Offline, cloud.receive(br.app.stagebook.domain.ShareCode.generate()))
         assertTrue(cloud.acks(br.app.stagebook.domain.ShareCode.generate()).isEmpty())
@@ -155,7 +155,7 @@ class EssentialModeTest {
     @Test fun `alert on open - don't show again lasts until the mode is turned off`() = runBlocking {
         val repo = testRepo()
         val vm = testSettingsVm(repo)
-        suspend fun until(ok: (Look) -> Boolean) = withTimeout(15_000) { repo.library.first { ok(it.look) } }.look
+        suspend fun until(ok: (Look) -> Boolean) = withTimeout(TEST_WAIT_MS) { repo.library.first { ok(it.look) } }.look
         vm.setEssential(true)
         until { it.essential }
         repo.updateLook { it.copy(essentialAlertOff = true) }   // "Don't show again"

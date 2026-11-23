@@ -60,7 +60,7 @@ class EditorTypedLyricsTest {
         val scope = testScope()
         repo = testRepo(scope = scope)
         vm = SongEditorViewModel(repo, SongMetadata(repo, MusicBrainz(), scope), ImportDraft(), SavedStateHandle(mapOf("fromImport" to false)), br.app.stagebook.data.ImportQueue(repo), br.app.stagebook.data.TrackStore(context), br.app.stagebook.data.EditorQueue())
-        runBlocking { withTimeout(5_000) { while (vm.uiState.loading) kotlinx.coroutines.delay(10) } }
+        runBlocking { withTimeout(TEST_WAIT_MS) { while (vm.uiState.loading) kotlinx.coroutines.delay(10) } }
         compose.setContent {
             StagebookTheme {
                 SongEditorScreen(vm.uiState, vm::onTitle, vm::onAuthor, vm::onYear, vm::onText, vm::save, { left++ }, vm::delete, cursor = vm.cursor, look = look)

@@ -86,8 +86,8 @@ class FollowerBreakShownTest {
             link.conductHandler!!.invoke(voice, Conduct.Msg(Conduct.OPEN, "Voz", "Show", items, index, breakMs = breakMs, breakPaused = paused))
         }
 
-        fun open() = runBlocking { withTimeout(5_000) { vm.uiState.first { !it.loading && it.items.size == 5 } }.openBreaks }
-        fun await(what: (Map<Int, BreakTimer.Timer>) -> Boolean) = runBlocking { withTimeout(5_000) { vm.uiState.first { !it.loading && what(it.openBreaks) } }.openBreaks }
+        fun open() = runBlocking { withTimeout(TEST_WAIT_MS) { vm.uiState.first { !it.loading && it.items.size == 5 } }.openBreaks }
+        fun await(what: (Map<Int, BreakTimer.Timer>) -> Boolean) = runBlocking { withTimeout(TEST_WAIT_MS) { vm.uiState.first { !it.loading && what(it.openBreaks) } }.openBreaks }
     }
 
     @Test fun `the follower's setlist shows the leader's break time, running`() {

@@ -51,13 +51,13 @@ class UsbAwayPauseTest {
     /** A track playing on the interface, and then the cable falls: the stage waits for it, with the sign. */
     private fun droppedWhilePlaying(): StagePlayer {
         val repo = LibraryRepository(context, CoroutineScope(SupervisorJob() + Dispatchers.IO))
-        runBlocking { withTimeout(5_000) { repo.loaded.first { it } } }
+        runBlocking { withTimeout(br.app.stagebook.TEST_WAIT_MS) { repo.loaded.first { it } } }
         val player = StagePlayer(context, repo)
         PlayerService.running = true
         PlayerService.connected = true
         player.open(File(context.filesDir, "faixa.ogg"))
         player.play()
-        runBlocking { withTimeout(5_000) { player.ui.first { it.playing } } }
+        runBlocking { withTimeout(br.app.stagebook.TEST_WAIT_MS) { player.ui.first { it.playing } } }
         PlayerService.connected = false
         StagePlayer.onServiceChanged()
         assertEquals(PlayerUi(playing = false, waiting = true, away = true), player.ui.value)

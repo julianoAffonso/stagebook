@@ -51,7 +51,7 @@ class PlayHistoryTest {
         repo.countPlay("s1", "2026-11-20", "Sábado")
         repo.countPlay("s1", "2026-11-20", "Sábado")   // the same day: once
         repo.countPlay("s1", "2026-11-21")
-        withTimeout(5_000) { while (repo.library.value.history.size < 2) kotlinx.coroutines.delay(10) }
+        withTimeout(TEST_WAIT_MS) { while (repo.library.value.history.size < 2) kotlinx.coroutines.delay(10) }
         assertEquals(listOf(PlayEntry("2026-11-20", "Tempo", "Banda", "Sábado"), PlayEntry("2026-11-21", "Tempo", "Banda", "")), repo.library.value.history)
         assertEquals(2, repo.library.value.song("s1")!!.plays)
     }
@@ -77,13 +77,13 @@ class PlayHistoryTest {
         val repo = repo()
         repo.restore(listOf(Song("s1", "Tempo")), emptyList())
         repo.countPlay("s1", "2026-11-20", "Sábado")
-        withTimeout(5_000) { while (repo.library.value.history.isEmpty()) kotlinx.coroutines.delay(10) }
+        withTimeout(TEST_WAIT_MS) { while (repo.library.value.history.isEmpty()) kotlinx.coroutines.delay(10) }
         val backup = Backup(context, repo, br.app.stagebook.data.TrackStore(context))
         val out = java.io.ByteArrayOutputStream().also { backup.write(it, setOf(Backup.Part.LIBRARY)) }
         repo.joinHistory(emptyList())
         repo.restore(listOf(Song("s1", "Tempo")), emptyList())
         repo.countPlay("s1", "2026-11-21")
-        withTimeout(5_000) { while (repo.library.value.history.size < 2) kotlinx.coroutines.delay(10) }
+        withTimeout(TEST_WAIT_MS) { while (repo.library.value.history.size < 2) kotlinx.coroutines.delay(10) }
         backup.restore(out.toByteArray().inputStream(), setOf(Backup.Part.LIBRARY))
         assertEquals(listOf("2026-11-20", "2026-11-21"), repo.library.value.history.map { it.day })
     }

@@ -55,7 +55,7 @@ class PdfScrollTest {
         compose.setContent { StagebookTheme { PdfScrollView(PdfOpen.Ready(PdfPages(source)), step, invert = false, onStepCount = { steps = it }) } }
         compose.waitForIdle()
         // the pictures are drawn off the main thread
-        compose.waitUntil(5_000) { compose.onAllNodesWithContentDescription("Página 2 de 4 do PDF").fetchSemanticsNodes().isNotEmpty() }
+        compose.waitUntil(TEST_WAIT_MS) { compose.onAllNodesWithContentDescription("Página 2 de 4 do PDF").fetchSemanticsNodes().isNotEmpty() }
         val first = compose.onNodeWithContentDescription("Página 1 de 4 do PDF").getUnclippedBoundsInRoot()
         val second = compose.onNodeWithContentDescription("Página 2 de 4 do PDF").getUnclippedBoundsInRoot()
         assertEquals("page 2 starts where page 1 ends", first.bottom.value, second.top.value, 1f)
@@ -63,7 +63,7 @@ class PdfScrollTest {
         assertTrue("only the pages near the screen are drawn: ${source.rendered}", 3 !in source.rendered)
         step = 1
         compose.waitForIdle()
-        compose.waitUntil(5_000) { compose.onAllNodesWithContentDescription("Página 2 de 4 do PDF").fetchSemanticsNodes().isNotEmpty() }
+        compose.waitUntil(TEST_WAIT_MS) { compose.onAllNodesWithContentDescription("Página 2 de 4 do PDF").fetchSemanticsNodes().isNotEmpty() }
         val moved = compose.onNodeWithContentDescription("Página 2 de 4 do PDF").getUnclippedBoundsInRoot()
         assertTrue("the column went up: ${second.top} → ${moved.top}", moved.top < second.top)
     }

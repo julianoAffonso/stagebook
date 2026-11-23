@@ -63,7 +63,7 @@ class ApkInstallTest {
         allowInstalls()
         val said = async(start = CoroutineStart.UNDISPATCHED) { InstallResults.notices.first() }
         assertTrue(screen.installApk(updater, downloaded(), where))
-        assertEquals(InstallNotice.STARTED, withTimeout(5_000) { said.await() })
+        assertEquals(InstallNotice.STARTED, withTimeout(TEST_WAIT_MS) { said.await() })
         replaced()
         assertEquals(where, ResumeAfterUpdate.take(context))
     }
@@ -157,12 +157,12 @@ class ApkInstallTest {
         finish.countDown()
         tap.join()
         // the new screen starts listening only now
-        assertEquals(InstallNotice.STARTED, withTimeout(5_000) { InstallResults.notices.first() })
+        assertEquals(InstallNotice.STARTED, withTimeout(TEST_WAIT_MS) { InstallResults.notices.first() })
     }
 
     @Test fun `a notice already shown is not said again to the next screen`() = runBlocking {
         InstallResults.post(InstallNotice.STARTED)
-        assertEquals(InstallNotice.STARTED, withTimeout(5_000) { InstallResults.notices.first() })
+        assertEquals(InstallNotice.STARTED, withTimeout(TEST_WAIT_MS) { InstallResults.notices.first() })
         assertNull(withTimeoutOrNull(300) { InstallResults.notices.first() })
     }
 }

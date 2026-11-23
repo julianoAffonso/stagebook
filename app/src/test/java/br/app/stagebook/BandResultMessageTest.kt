@@ -35,9 +35,9 @@ class BandResultMessageTest {
         compose.waitForIdle()
         assertEquals("nothing came yet", 0, shown)
         runBlocking { results.send(2) }
-        compose.waitUntil(5_000) { shown == 1 }
+        compose.waitUntil(TEST_WAIT_MS) { shown == 1 }
         runBlocking { results.send(0) }
-        compose.waitUntil(5_000) { shown == 2 }
+        compose.waitUntil(TEST_WAIT_MS) { shown == 2 }
         assertEquals(2, shown)
     }
 }

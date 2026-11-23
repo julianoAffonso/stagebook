@@ -126,40 +126,40 @@ class ConductArmedTest {
 
     @Test fun `with the band off the button is not there`() {
         member(); repo.updateLook { it.copy(bandOn = false) }
-        runBlocking { withTimeout(15_000) { repo.library.first { !it.look.bandOn } } }
+        runBlocking { withTimeout(TEST_WAIT_MS) { repo.library.first { !it.look.bandOn } } }
         screen()
         compose.onAllNodesWithContentDescription("Conduzir a banda").assertCountEquals(0)
     }
 
     @Test fun `with the band on and someone in it the button is there, not lit`() {
         member(); screen()
-        compose.waitUntil(5_000) { compose.onAllNodesWithContentDescription("Conduzir a banda").fetchSemanticsNodes().isNotEmpty() }
+        compose.waitUntil(TEST_WAIT_MS) { compose.onAllNodesWithContentDescription("Conduzir a banda").fetchSemanticsNodes().isNotEmpty() }
         button().assertIsNotSelected()
         compose.onAllNodesWithText("Pronto para conduzir").assertCountEquals(0)
     }
 
     @Test fun `while leading the button is not there`() {
         member(); screen()
-        compose.waitUntil(5_000) { compose.onAllNodesWithContentDescription("Conduzir a banda").fetchSemanticsNodes().isNotEmpty() }
+        compose.waitUntil(TEST_WAIT_MS) { compose.onAllNodesWithContentDescription("Conduzir a banda").fetchSemanticsNodes().isNotEmpty() }
         compose.runOnIdle { conduct.start(setId, "Show de sábado", listOf(Conduct.Item("A")), 0) }
-        compose.waitUntil(5_000) { compose.onAllNodesWithContentDescription("Conduzir a banda").fetchSemanticsNodes().isEmpty() }
+        compose.waitUntil(TEST_WAIT_MS) { compose.onAllNodesWithContentDescription("Conduzir a banda").fetchSemanticsNodes().isEmpty() }
     }
 
     @Test fun `while following the button is not there`() {
         member(); screen()
-        compose.waitUntil(5_000) { compose.onAllNodesWithContentDescription("Conduzir a banda").fetchSemanticsNodes().isNotEmpty() }
+        compose.waitUntil(TEST_WAIT_MS) { compose.onAllNodesWithContentDescription("Conduzir a banda").fetchSemanticsNodes().isNotEmpty() }
         val msg = Conduct.Msg(Conduct.OPEN, from = "Voz", set = "Show", songs = listOf(Conduct.Item("A")), index = 0)
         compose.runOnIdle { link.conductHandler?.invoke(voice, Conduct.decode(Conduct.encode(msg))!!) }
-        compose.waitUntil(5_000) { compose.onAllNodesWithContentDescription("Conduzir a banda").fetchSemanticsNodes().isEmpty() }
+        compose.waitUntil(TEST_WAIT_MS) { compose.onAllNodesWithContentDescription("Conduzir a banda").fetchSemanticsNodes().isEmpty() }
     }
 
     // ---- arming ----
 
     @Test fun `a tap arms it, lights the button, says what it waits for and the strip offers Cancel`() {
         member(); screen()
-        compose.waitUntil(5_000) { compose.onAllNodesWithContentDescription("Conduzir a banda").fetchSemanticsNodes().isNotEmpty() }
+        compose.waitUntil(TEST_WAIT_MS) { compose.onAllNodesWithContentDescription("Conduzir a banda").fetchSemanticsNodes().isNotEmpty() }
         button().performClick()
-        compose.waitUntil(5_000) { compose.onAllNodesWithText("Pronto para conduzir").fetchSemanticsNodes().isNotEmpty() }
+        compose.waitUntil(TEST_WAIT_MS) { compose.onAllNodesWithText("Pronto para conduzir").fetchSemanticsNodes().isNotEmpty() }
         assertTrue(conduct.armed.value)
         button().assertIsSelected()
         compose.onNodeWithText("Escolha um setlist para começar a conduzir").assertExists()   // the short message
@@ -170,16 +170,16 @@ class ConductArmedTest {
 
     @Test fun `tapping a setlist while armed opens its stage and starts leading it`() {
         member(); screen()
-        compose.waitUntil(5_000) { compose.onAllNodesWithContentDescription("Conduzir a banda").fetchSemanticsNodes().isNotEmpty() }
+        compose.waitUntil(TEST_WAIT_MS) { compose.onAllNodesWithContentDescription("Conduzir a banda").fetchSemanticsNodes().isNotEmpty() }
         button().performClick()
-        compose.waitUntil(5_000) { conduct.armed.value }
+        compose.waitUntil(TEST_WAIT_MS) { conduct.armed.value }
         compose.onNodeWithText("Show de sábado").performClick()
         assertEquals(listOf(setId), played)
         val role = conduct.role.value as Role.Conducting
         assertEquals(setId, role.setId)
         assertEquals(listOf("A", "B", "C"), role.msg.songs.map { it.title })
         assertFalse(conduct.armed.value)
-        compose.waitUntil(5_000) { compose.onAllNodesWithText("Conduzindo · Show de sábado").fetchSemanticsNodes().isNotEmpty() }
+        compose.waitUntil(TEST_WAIT_MS) { compose.onAllNodesWithText("Conduzindo · Show de sábado").fetchSemanticsNodes().isNotEmpty() }
         compose.onAllNodesWithText("Cancelar").assertCountEquals(0)
     }
 
@@ -193,31 +193,31 @@ class ConductArmedTest {
 
     @Test fun `the icon again disarms`() {
         member(); screen()
-        compose.waitUntil(5_000) { compose.onAllNodesWithContentDescription("Conduzir a banda").fetchSemanticsNodes().isNotEmpty() }
+        compose.waitUntil(TEST_WAIT_MS) { compose.onAllNodesWithContentDescription("Conduzir a banda").fetchSemanticsNodes().isNotEmpty() }
         button().performClick()
-        compose.waitUntil(5_000) { conduct.armed.value }
+        compose.waitUntil(TEST_WAIT_MS) { conduct.armed.value }
         button().performClick()
-        compose.waitUntil(5_000) { !conduct.armed.value }
-        compose.waitUntil(5_000) { compose.onAllNodesWithText("Pronto para conduzir").fetchSemanticsNodes().isEmpty() }
+        compose.waitUntil(TEST_WAIT_MS) { !conduct.armed.value }
+        compose.waitUntil(TEST_WAIT_MS) { compose.onAllNodesWithText("Pronto para conduzir").fetchSemanticsNodes().isEmpty() }
         button().assertIsNotSelected()
     }
 
     @Test fun `Cancel on the strip disarms`() {
         member(); screen()
-        compose.waitUntil(5_000) { compose.onAllNodesWithContentDescription("Conduzir a banda").fetchSemanticsNodes().isNotEmpty() }
+        compose.waitUntil(TEST_WAIT_MS) { compose.onAllNodesWithContentDescription("Conduzir a banda").fetchSemanticsNodes().isNotEmpty() }
         button().performClick()
-        compose.waitUntil(5_000) { compose.onAllNodesWithText("Cancelar").fetchSemanticsNodes().isNotEmpty() }
+        compose.waitUntil(TEST_WAIT_MS) { compose.onAllNodesWithText("Cancelar").fetchSemanticsNodes().isNotEmpty() }
         compose.onNodeWithText("Cancelar").performClick()
-        compose.waitUntil(5_000) { !conduct.armed.value }
-        compose.waitUntil(5_000) { compose.onAllNodesWithText("Pronto para conduzir").fetchSemanticsNodes().isEmpty() }
+        compose.waitUntil(TEST_WAIT_MS) { !conduct.armed.value }
+        compose.waitUntil(TEST_WAIT_MS) { compose.onAllNodesWithText("Pronto para conduzir").fetchSemanticsNodes().isEmpty() }
         button().assertIsNotSelected()
     }
 
     @Test fun `it stays armed with no time limit until a setlist is opened, also when opening another way`() {
         member(); screen()
-        compose.waitUntil(5_000) { compose.onAllNodesWithContentDescription("Conduzir a banda").fetchSemanticsNodes().isNotEmpty() }
+        compose.waitUntil(TEST_WAIT_MS) { compose.onAllNodesWithContentDescription("Conduzir a banda").fetchSemanticsNodes().isNotEmpty() }
         button().performClick()
-        compose.waitUntil(5_000) { conduct.armed.value }
+        compose.waitUntil(TEST_WAIT_MS) { conduct.armed.value }
         // sharing from the card menu (or a setlist reached by import, receive or create) does not start leading
         compose.onAllNodesWithContentDescription("Mais opções")[0].performClick()
         compose.onNodeWithText("Compartilhar").performClick()
@@ -231,7 +231,7 @@ class ConductArmedTest {
         assertTrue(first.toggleConduct())
         val second = viewModel()   // a new screen, as after turning the device or changing tab
         screen(second)
-        compose.waitUntil(5_000) { compose.onAllNodesWithText("Pronto para conduzir").fetchSemanticsNodes().isNotEmpty() }
+        compose.waitUntil(TEST_WAIT_MS) { compose.onAllNodesWithText("Pronto para conduzir").fetchSemanticsNodes().isNotEmpty() }
         button().assertIsSelected()
     }
 

@@ -74,7 +74,7 @@ class LibraryEnricherTest {
         val e = enricher(repo, asked)
         assertEquals(2, e.missingCount(repo.library.value.songs))
         e.start()
-        withTimeout(5_000) { e.progress.first { !it.running && it.done == 2 } }
+        withTimeout(TEST_WAIT_MS) { e.progress.first { !it.running && it.done == 2 } }
         assertEquals(2, e.progress.value.filled)
         val a = repo.song("a")!!
         assertEquals("Found Artist", a.author)
@@ -97,7 +97,7 @@ class LibraryEnricherTest {
             artistYear = { t, _ -> calls++; if (calls == 1) { busy++; null } else MusicBrainz.Info(t, "Found Artist", "1999") }
         }
         e.start()
-        withTimeout(5_000) { e.progress.first { !it.running && it.done > 0 } }
+        withTimeout(TEST_WAIT_MS) { e.progress.first { !it.running && it.done > 0 } }
         assertEquals("Found Artist", repo.song("a")!!.author)
         assertEquals(2, calls)
         assertEquals(0, e.missingCount(repo.library.value.songs))
@@ -116,7 +116,7 @@ class LibraryEnricherTest {
         val seen = java.util.Collections.synchronizedList(mutableListOf<LibraryEnricher.Progress>())
         val watch = launch(Dispatchers.IO) { e.progress.collect { seen += it } }
         e.start()
-        withTimeout(5_000) { e.progress.first { !it.running && it.done > 0 } }
+        withTimeout(TEST_WAIT_MS) { e.progress.first { !it.running && it.done > 0 } }
         watch.cancel()
         val running = seen.filter { it.running }
         assertTrue(running.filter { !it.again }.all { it.total == 3 })
@@ -131,7 +131,7 @@ class LibraryEnricherTest {
         val e = enricher(repo, asked).apply { facts = { t, _ -> asked += "dz:$t"; null } }
         assertEquals(1, e.missingCount(repo.library.value.songs))
         e.start()
-        withTimeout(5_000) { e.progress.first { !it.running && it.done > 0 } }
+        withTimeout(TEST_WAIT_MS) { e.progress.first { !it.running && it.done > 0 } }
         assertEquals(0, e.missingCount(repo.library.value.songs))
         assertEquals(1, e.triedCount(repo.library.value.songs))
         // a press now finds nothing to look up; Look again does
@@ -140,12 +140,12 @@ class LibraryEnricherTest {
         assertEquals(emptyList<String>(), asked)
         // (pressed until it takes: the round before may still be closing on its own thread, and a press meanwhile does
         // nothing; reading the progress here found the old round's "done" and no lookup yet, on a slow runner, 23/11)
-        withTimeout(5_000) { while (asked.isEmpty()) { e.start(again = true); kotlinx.coroutines.delay(10) } }
-        withTimeout(5_000) { e.progress.first { !it.running && it.done > 0 } }
+        withTimeout(TEST_WAIT_MS) { while (asked.isEmpty()) { e.start(again = true); kotlinx.coroutines.delay(10) } }
+        withTimeout(TEST_WAIT_MS) { e.progress.first { !it.running && it.done > 0 } }
         assertTrue(asked.isNotEmpty())
         // a song renamed is another lookup: it counts again
         repo.updateSong("a") { it.copy(title = "Rara (versão)") }
-        withTimeout(5_000) { while (repo.song("a")!!.title != "Rara (versão)") kotlinx.coroutines.delay(10) }
+        withTimeout(TEST_WAIT_MS) { while (repo.song("a")!!.title != "Rara (versão)") kotlinx.coroutines.delay(10) }
         assertEquals(1, e.missingCount(repo.library.value.songs))
     }
 
@@ -157,7 +157,7 @@ class LibraryEnricherTest {
             facts = { _, _ -> DeezerBpm.Facts(bpm = 100, seconds = 999) }
         }
         e.start()
-        withTimeout(5_000) { e.progress.first { !it.running && it.done > 0 } }
+        withTimeout(TEST_WAIT_MS) { e.progress.first { !it.running && it.done > 0 } }
         assertEquals(200, Chords.duration(repo.song("a")!!.text))
         assertEquals(100, Chords.tempo(repo.song("a")!!.text))
     }
@@ -170,7 +170,7 @@ class LibraryEnricherTest {
         e.start()
         assertTrue(e.progress.value.offline)
         repo.updateLook { it.copy(internetOn = false) }
-        withTimeout(5_000) { while (repo.library.value.look.internetOn) kotlinx.coroutines.delay(10) }
+        withTimeout(TEST_WAIT_MS) { while (repo.library.value.look.internetOn) kotlinx.coroutines.delay(10) }
         e.online = { true }
         e.start()
         assertFalse(e.progress.value.running)
@@ -210,7 +210,7 @@ class LibraryEnricherTest {
         }
         val before = writes
         e.start()
-        withTimeout(10_000) { e.progress.first { !it.running && it.done > 0 } }
+        withTimeout(TEST_WAIT_MS) { e.progress.first { !it.running && it.done > 0 } }
         watch.cancel()
         assertEquals("each song asked once: the ones not found are not asked again", 25, asked)
         assertTrue("written in batches, not once a song: ${writes - before}", writes - before <= 6)
@@ -219,7 +219,7 @@ class LibraryEnricherTest {
         // a deleted song leaves the list of the ones looked up
         repo.deleteSong("s5")
         e.start(again = true)
-        withTimeout(10_000) { e.progress.first { !it.running && it.done > 0 } }
+        withTimeout(TEST_WAIT_MS) { e.progress.first { !it.running && it.done > 0 } }
         assertEquals(2, e.triedCount(repo.library.value.songs))
     }
 

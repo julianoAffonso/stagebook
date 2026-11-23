@@ -52,7 +52,7 @@ class PedalForgetTest {
     @Test fun `forgetting takes the button off the list with its command, and pressing it lists it again`() = runBlocking {
         val repo = testRepo()
         val vm = testSettingsVm(repo)
-        suspend fun until(ok: (Look) -> Boolean) = withTimeout(15_000) { repo.library.first { ok(it.look) } }.look
+        suspend fun until(ok: (Look) -> Boolean) = withTimeout(TEST_WAIT_MS) { repo.library.first { ok(it.look) } }.look
 
         vm.onKey(PedalPress(a, down = true))
         vm.onKey(PedalPress(b, down = true))

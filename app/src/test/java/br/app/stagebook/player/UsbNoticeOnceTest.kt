@@ -49,7 +49,7 @@ class UsbNoticeOnceTest {
 
     @Test fun `a new stage doesn't show the same USB notice again`() {
         val repo = LibraryRepository(context, CoroutineScope(SupervisorJob() + Dispatchers.IO))
-        runBlocking { withTimeout(5_000) { repo.loaded.first { it } } }
+        runBlocking { withTimeout(br.app.stagebook.TEST_WAIT_MS) { repo.loaded.first { it } } }
         val player = StagePlayer(context, repo)
         val host = SnackbarHostState()
         var stage by mutableIntStateOf(0)
@@ -70,7 +70,7 @@ class UsbNoticeOnceTest {
         fun shown() = host.currentSnackbarData?.visuals?.message
 
         service(lost)
-        compose.waitUntil(5_000) { shown() == lost }
+        compose.waitUntil(br.app.stagebook.TEST_WAIT_MS) { shown() == lost }
         compose.runOnIdle { host.currentSnackbarData?.dismiss() }
 
         stage = 1   // the next song: a new stage, the interface still away
@@ -80,15 +80,15 @@ class UsbNoticeOnceTest {
 
         val ready = context.getString(R.string.player_usb_ready, "Interface")
         service(ready)   // it came back (a short note on the footer)…
-        compose.waitUntil(5_000) { note == ready }
+        compose.waitUntil(br.app.stagebook.TEST_WAIT_MS) { note == ready }
         service(lost)    // …and dropped again: the notice shows again
-        compose.waitUntil(5_000) { shown() == lost }
+        compose.waitUntil(br.app.stagebook.TEST_WAIT_MS) { shown() == lost }
     }
 
     // audit 07/11: the note's own timer is cancelled when the notice changes; nothing then took the note off the footer
     @Test fun `a short note leaves when the notice goes away, not ten seconds later`() {
         val repo = LibraryRepository(context, CoroutineScope(SupervisorJob() + Dispatchers.IO))
-        runBlocking { withTimeout(5_000) { repo.loaded.first { it } } }
+        runBlocking { withTimeout(br.app.stagebook.TEST_WAIT_MS) { repo.loaded.first { it } } }
         val player = StagePlayer(context, repo)
         val host = SnackbarHostState()
         var note = ""
@@ -106,16 +106,16 @@ class UsbNoticeOnceTest {
         }
         val ready = context.getString(R.string.player_usb_ready, "Interface")
         service(ready)
-        compose.waitUntil(5_000) { note == ready }
+        compose.waitUntil(br.app.stagebook.TEST_WAIT_MS) { note == ready }
         service("")   // the notice is gone a moment later: the footer must not keep the old one
-        compose.waitUntil(5_000) { note == "" }
+        compose.waitUntil(br.app.stagebook.TEST_WAIT_MS) { note == "" }
     }
 
     // user, 08/11: the stream closes after 10 s idle and the service clears the notice; on play the same "USB output" note
     // must show again, not be taken for the one already shown
     @Test fun `the ready note shows again when the stream opens after sleeping`() {
         val repo = LibraryRepository(context, CoroutineScope(SupervisorJob() + Dispatchers.IO))
-        runBlocking { withTimeout(5_000) { repo.loaded.first { it } } }
+        runBlocking { withTimeout(br.app.stagebook.TEST_WAIT_MS) { repo.loaded.first { it } } }
         val player = StagePlayer(context, repo)
         val host = SnackbarHostState()
         var note = ""
@@ -133,17 +133,17 @@ class UsbNoticeOnceTest {
         }
         val ready = context.getString(R.string.player_usb_ready, "Interface")
         service(ready)
-        compose.waitUntil(5_000) { note == ready }
+        compose.waitUntil(br.app.stagebook.TEST_WAIT_MS) { note == ready }
         service("")      // the stream went to sleep
-        compose.waitUntil(5_000) { note == "" }
+        compose.waitUntil(br.app.stagebook.TEST_WAIT_MS) { note == "" }
         service(ready)   // and opened again on play
-        compose.waitUntil(5_000) { note == ready }
+        compose.waitUntil(br.app.stagebook.TEST_WAIT_MS) { note == ready }
     }
 
     // the permission wait used to reach only the notification: now the stage says it as a short note, never a snackbar
     @Test fun `waiting for the USB permission shows a short note on the stage`() {
         val repo = LibraryRepository(context, CoroutineScope(SupervisorJob() + Dispatchers.IO))
-        runBlocking { withTimeout(5_000) { repo.loaded.first { it } } }
+        runBlocking { withTimeout(br.app.stagebook.TEST_WAIT_MS) { repo.loaded.first { it } } }
         val player = StagePlayer(context, repo)
         val host = SnackbarHostState()
         var note = ""
@@ -160,7 +160,7 @@ class UsbNoticeOnceTest {
             PlayerService.status = wait
             StagePlayer.onServiceChanged()
         }
-        compose.waitUntil(5_000) { note == wait }
+        compose.waitUntil(br.app.stagebook.TEST_WAIT_MS) { note == wait }
         assertNull(host.currentSnackbarData)
     }
 }

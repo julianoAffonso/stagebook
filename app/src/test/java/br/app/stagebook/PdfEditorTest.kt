@@ -80,13 +80,13 @@ class PdfEditorTest {
     private fun open(songId: String? = null, repoSongs: (LibraryRepository) -> String? = { null }): Triple<SongEditorViewModel, LibraryRepository, PdfStore> {
         val scope = testScope()
         val repo = LibraryRepository(context, scope)
-        runBlocking { withTimeout(5_000) { repo.loaded.first { it } }; repo.restore(emptyList(), emptyList()) }
+        runBlocking { withTimeout(TEST_WAIT_MS) { repo.loaded.first { it } }; repo.restore(emptyList(), emptyList()) }
         val id = repoSongs(repo)
         val pdfs = PdfStore(context)
         val args = mutableMapOf<String, Any?>("fromImport" to false)
         id?.let { args["songId"] = it }
         val vm = SongEditorViewModel(repo, SongMetadata(repo, MusicBrainz(), scope), ImportDraft(), SavedStateHandle(args), ImportQueue(repo), TrackStore(context), EditorQueue(), pdfs, PdfInspector(Pages()))
-        runBlocking { withTimeout(5_000) { while (vm.uiState.loading) kotlinx.coroutines.delay(10) } }
+        runBlocking { withTimeout(TEST_WAIT_MS) { while (vm.uiState.loading) kotlinx.coroutines.delay(10) } }
         return Triple(vm, repo, pdfs)
     }
 
@@ -265,7 +265,7 @@ class PdfEditorTest {
         try {
             val scope = testScope()
             val repo = LibraryRepository(context, scope)
-            withTimeout(5_000) { repo.loaded.first { it } }; repo.restore(emptyList(), emptyList())
+            withTimeout(TEST_WAIT_MS) { repo.loaded.first { it } }; repo.restore(emptyList(), emptyList())
             val handle = SavedStateHandle(mapOf("fromImport" to false))
             fun editor() = SongEditorViewModel(repo, SongMetadata(repo, MusicBrainz(), scope), ImportDraft(), handle, ImportQueue(repo), TrackStore(context), EditorQueue(), PdfStore(context), PdfInspector(Pages()))
             val first = editor()

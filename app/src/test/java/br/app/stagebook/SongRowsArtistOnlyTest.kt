@@ -95,7 +95,7 @@ class SongRowsArtistOnlyTest {
         Dispatchers.setMain(main)
         try {
             val parts = library(extra)
-            return parts to runBlocking { withTimeout(10_000) { read(parts) } }
+            return parts to runBlocking { withTimeout(TEST_WAIT_MS) { read(parts) } }
         } finally {
             Dispatchers.resetMain()
         }

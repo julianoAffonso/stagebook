@@ -97,9 +97,9 @@ class PdfCropDragTest {
         }
         compose.onNodeWithText("Automático").performClick()
         // the pages are read off the main thread: the frame arrives a moment later, and the button is free again
-        compose.waitUntil(5_000) { compose.onAllNodesWithText("Automático").fetchSemanticsNodes().isNotEmpty() && runCatching { compose.onNodeWithText("Automático").assertIsEnabled() }.isSuccess }
+        compose.waitUntil(TEST_WAIT_MS) { compose.onAllNodesWithText("Automático").fetchSemanticsNodes().isNotEmpty() && runCatching { compose.onNodeWithText("Automático").assertIsEnabled() }.isSuccess }
         compose.onNode(androidx.compose.ui.test.hasContentDescription("Salvar") and androidx.compose.ui.test.hasAnyAncestor(androidx.compose.ui.test.hasTestTag("pdf_crop_save"))).performClick()
-        compose.waitUntil(5_000) { set != null }
+        compose.waitUntil(TEST_WAIT_MS) { set != null }
         return set!!
     }
 

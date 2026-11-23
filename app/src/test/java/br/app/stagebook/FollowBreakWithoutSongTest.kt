@@ -56,7 +56,7 @@ class FollowBreakWithoutSongTest {
     private fun band(vararg have: String): Pair<Band, Map<String, String>> = runBlocking {
         val repo = testRepo()
         repo.updateLook { it.copy(bandOn = true) }
-        withTimeout(15_000) { repo.library.first { it.look.bandOn } }
+        withTimeout(TEST_WAIT_MS) { repo.library.first { it.look.bandOn } }
         val ids = have.associateWith { title ->
             repo.saveSong(Song(title = title, author = songs.first { it.title == title }.artist, text = "{key: G}\n[G]La"))
         }
@@ -178,14 +178,14 @@ class FollowBreakWithoutSongTest {
         assertTrue(stage.breakOnly)
         b.started()
         b.told { b.leader.rest("s1", 65_000) }
-        val shown = withTimeout(10_000) { stage.uiState.first { !it.loading && it.followBreak != null } }
+        val shown = withTimeout(TEST_WAIT_MS) { stage.uiState.first { !it.loading && it.followBreak != null } }
         assertEquals(FollowBreak(b.followerClock - 65_000, "Segunda", "G"), shown.followBreak)
         assertFalse(shown.breakOver)
         assertTrue("leaving asks first, as on any show", shown.live)
         assertEquals(emptyList<Any>(), shown.songs)
         // back to the song that isn't here: nothing left to show
         b.told { b.leader.rest("s1", null) }
-        val over = withTimeout(10_000) { stage.uiState.first { it.breakOver } }
+        val over = withTimeout(TEST_WAIT_MS) { stage.uiState.first { it.breakOver } }
         assertNull(over.followBreak)
     }
 
@@ -196,11 +196,11 @@ class FollowBreakWithoutSongTest {
         b.started()
         b.told { b.leader.rest("s1", 0) }
         // the strip tells the break; the stage keeps its song and nothing covers it
-        val shown = withTimeout(10_000) { stage.uiState.first { !it.loading } }
+        val shown = withTimeout(TEST_WAIT_MS) { stage.uiState.first { !it.loading } }
         assertNull(shown.followBreak)
         assertFalse(shown.breakOver)
         b.told { b.leader.end() }
-        assertFalse(withTimeout(10_000) { stage.uiState.first { !it.loading } }.breakOver)
+        assertFalse(withTimeout(TEST_WAIT_MS) { stage.uiState.first { !it.loading } }.breakOver)
     }
 
     // ---- a follower who is editing, picking songs, receiving or importing isn't taken off that screen ----

@@ -40,7 +40,7 @@ class BandInternetLockTest {
         Thread.sleep(300)
         assertEquals(emptyList<String>(), codes())   // waits for the sync
         lock.unlock()
-        withTimeout(5_000) { while (codes().isEmpty()) kotlinx.coroutines.delay(20) }
+        withTimeout(TEST_WAIT_MS) { while (codes().isEmpty()) kotlinx.coroutines.delay(20) }
         assertTrue(codes().single().contains("47-violao-lua"))
     }
 

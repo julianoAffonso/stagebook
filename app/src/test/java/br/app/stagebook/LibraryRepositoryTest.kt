@@ -35,7 +35,7 @@ class LibraryRepositoryTest {
     private fun waitWrites() = Thread.sleep(400)
 
     private fun waitSaved(name: String, text: String) = runBlocking {
-        withTimeout(10_000) { while (File(dir, name).takeIf { it.exists() }?.readText()?.contains(text) != true) delay(20) }
+        withTimeout(TEST_WAIT_MS) { while (File(dir, name).takeIf { it.exists() }?.readText()?.contains(text) != true) delay(20) }
     }
 
     @Test

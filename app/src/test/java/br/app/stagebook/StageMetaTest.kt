@@ -40,9 +40,9 @@ class StageMetaTest {
         val repo = testRepo()
         val id = repo.saveSong(Song(title = "Música", author = "Banda", year = "1985", text = "linha"))
         val vm = stage(repo, id)
-        assertEquals("Banda · 1985", withTimeout(5_000) { vm.uiState.first { it.songs.isNotEmpty() && !it.loading } }.songs.single().meta)
+        assertEquals("Banda · 1985", withTimeout(TEST_WAIT_MS) { vm.uiState.first { it.songs.isNotEmpty() && !it.loading } }.songs.single().meta)
         repo.updateSong(id) { it.copy(author = "Banda ao vivo") }
-        assertEquals("Banda ao vivo · 1985", withTimeout(5_000) { vm.uiState.first { it.songs.single().meta.startsWith("Banda ao vivo") } }.songs.single().meta)
+        assertEquals("Banda ao vivo · 1985", withTimeout(TEST_WAIT_MS) { vm.uiState.first { it.songs.single().meta.startsWith("Banda ao vivo") } }.songs.single().meta)
     }
 
     @Test fun `key and capo changed on stage are saved in the song`() = runBlocking {
@@ -61,7 +61,7 @@ class StageMetaTest {
         val repo = testRepo()
         val id = repo.saveSong(Song(title = "Sem o áudio", text = "[G]linha", trackName = "Ao vivo"))
         val vm = stage(repo, id)
-        assertEquals("Ao vivo", withTimeout(5_000) { vm.uiState.first { it.songs.isNotEmpty() && !it.loading } }.songs.single().lostTrack)
+        assertEquals("Ao vivo", withTimeout(TEST_WAIT_MS) { vm.uiState.first { it.songs.isNotEmpty() && !it.loading } }.songs.single().lostTrack)
     }
 
     // a setlist's break (see StageBreakTest for the screen): the stage knows where the breaks are, and the time the
@@ -72,7 +72,7 @@ class StageMetaTest {
         val set = repo.createSetlist("Show").also { repo.addToSetlist(it, ids); repo.addBreak(it) }
         val saved = SavedStateHandle(mapOf("setId" to set, "start" to 0))
         val vm = stage(repo, "", saved)
-        assertEquals(listOf(2), withTimeout(5_000) { vm.uiState.first { it.songs.size == 3 && !it.loading } }.breaks)
+        assertEquals(listOf(2), withTimeout(TEST_WAIT_MS) { vm.uiState.first { it.songs.size == 3 && !it.loading } }.breaks)
         assertEquals(null, vm.breakSince.value)
         vm.setBreak(true)
         val since = vm.breakSince.value!!
@@ -90,7 +90,7 @@ class StageMetaTest {
         val ids = listOf("{key: G}\n{tempo: 120}\n{capo: 2}\nlinha", "linha", "{key: Em}\nlinha").mapIndexed { i, text -> repo.saveSong(Song(title = "Painel $i", text = text, track = if (i == 0) "a.ogg" else "")) }
         val set = repo.createSetlist("Show do painel").also { repo.addToSetlist(it, ids) }
         val vm = stage(repo, "", SavedStateHandle(mapOf("setId" to set, "start" to 0)))
-        val opened = withTimeout(5_000) { vm.uiState.first { it.songs.size == 3 && !it.loading } }.setlist!!
+        val opened = withTimeout(TEST_WAIT_MS) { vm.uiState.first { it.songs.size == 3 && !it.loading } }.setlist!!
         assertEquals("Show do painel", opened.name)
         assertEquals(listOf("G", "", "Em"), opened.facts.map { it.key })
         // the tempo, the capo and the backing track come to the panel's rows too
@@ -98,10 +98,10 @@ class StageMetaTest {
         assertEquals(listOf(2, 0, 0), opened.facts.map { it.capo })
         assertEquals(listOf(true, false, false), opened.facts.map { it.hasTrack })
         vm.songShown(1)
-        assertEquals(listOf(State.NONE, State.NOW, State.NEXT), withTimeout(5_000) { vm.uiState.first { it.setlist?.states?.contains(State.NOW) == true } }.setlist!!.states)
+        assertEquals(listOf(State.NONE, State.NOW, State.NEXT), withTimeout(TEST_WAIT_MS) { vm.uiState.first { it.setlist?.states?.contains(State.NOW) == true } }.setlist!!.states)
 
         val single = stage(repo, ids[0])
-        assertEquals(null, withTimeout(5_000) { single.uiState.first { it.songs.isNotEmpty() && !it.loading } }.setlist)
+        assertEquals(null, withTimeout(TEST_WAIT_MS) { single.uiState.first { it.songs.isNotEmpty() && !it.loading } }.setlist)
     }
 
     // back to the song to check something and on to the break again: the break goes on counting (user, 13/11)
@@ -111,7 +111,7 @@ class StageMetaTest {
         val set = repo.createSetlist("Show").also { repo.addToSetlist(it, ids); repo.addBreak(it); repo.addBreak(it) }   // breaks before B and C: the counter belongs to a real break
         val saved = SavedStateHandle(mapOf("setId" to set, "start" to 0))
         val vm = stage(repo, "", saved)
-        withTimeout(5_000) { vm.uiState.first { it.songs.size == 3 && !it.loading } }
+        withTimeout(TEST_WAIT_MS) { vm.uiState.first { it.songs.size == 3 && !it.loading } }
         vm.songShown(0)
         vm.setBreak(true)
         val since = vm.breakSince.value!!

@@ -55,7 +55,7 @@ class EditorTapOutsideTest {
         val repo = testRepo(scope = scope)
         val id = repo.saveSong(Song(title = "Hazard", author = "Richard Marx", text = "[G]linha 1\n[D]linha 2"))
         val vm = SongEditorViewModel(repo, SongMetadata(repo, MusicBrainz(), scope), ImportDraft(), SavedStateHandle(mapOf("songId" to id, "fromImport" to false, "cursor" to -1)), ImportQueue(repo), TrackStore(context), EditorQueue())
-        runBlocking { withTimeout(5_000) { while (vm.uiState.loading) kotlinx.coroutines.delay(10) } }
+        runBlocking { withTimeout(TEST_WAIT_MS) { while (vm.uiState.loading) kotlinx.coroutines.delay(10) } }
         compose.setContent { StagebookTheme { SongEditorScreen(vm.uiState, vm::onTitle, vm::onAuthor, vm::onYear, vm::onText, vm::save, {}, vm::delete) } }
         compose.waitForIdle()
         val field = compose.onNode(hasSetTextAction())

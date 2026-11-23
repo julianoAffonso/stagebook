@@ -59,7 +59,7 @@ class ImportChordsTest {
         val draft = ImportDraft()
         val vm = ImportViewModel(repo, br.app.stagebook.data.PageImporter(repo, MusicBrainz(), br.app.stagebook.data.DeezerBpm(), br.app.stagebook.data.Connectivity(androidx.test.core.app.ApplicationProvider.getApplicationContext())), draft, SavedStateHandle(mapOf("query" to "")), br.app.stagebook.data.ImportQueue(repo))
         vm.onExtracted(raw())
-        withTimeout(5_000) { vm.openEditor.first() }
+        withTimeout(TEST_WAIT_MS) { vm.openEditor.first() }
         draft.take()!!.text
     }
 
@@ -69,8 +69,8 @@ class ImportChordsTest {
         // the test device has no validated internet: the lookups can't run
         val vm = ImportViewModel(repo, br.app.stagebook.data.PageImporter(repo, MusicBrainz(), br.app.stagebook.data.DeezerBpm(), br.app.stagebook.data.Connectivity(context)), ImportDraft(), SavedStateHandle(mapOf("query" to "")), br.app.stagebook.data.ImportQueue(repo))
         vm.onExtracted(raw())
-        withTimeout(5_000) { vm.offlineImport.first() }
-        withTimeout(5_000) { vm.openEditor.first() }
+        withTimeout(TEST_WAIT_MS) { vm.offlineImport.first() }
+        withTimeout(TEST_WAIT_MS) { vm.openEditor.first() }
         Unit
     }
 
@@ -193,9 +193,9 @@ class ImportChordsTest {
         val draft = ImportDraft()
         val vm = ImportViewModel(repo, br.app.stagebook.data.PageImporter(repo, MusicBrainz(), br.app.stagebook.data.DeezerBpm(), br.app.stagebook.data.Connectivity(androidx.test.core.app.ApplicationProvider.getApplicationContext())), draft, SavedStateHandle(mapOf("query" to "")), br.app.stagebook.data.ImportQueue(repo))
         vm.onExtracted(rawWithTab())
-        withTimeout(5_000) { vm.uiState.first { it.askTab } }
+        withTimeout(TEST_WAIT_MS) { vm.uiState.first { it.askTab } }
         vm.answerTab(include)
-        withTimeout(5_000) { vm.openEditor.first() }
+        withTimeout(TEST_WAIT_MS) { vm.openEditor.first() }
         draft.take()!!.text
     }
 
@@ -224,7 +224,7 @@ class ImportChordsTest {
         val atOnce = java.util.concurrent.Executor { it.run() }.asCoroutineDispatcher()
         val answering = launch(atOnce) { vm.uiState.first { it.askTab }; vm.answerTab(false) }
         vm.onExtracted(rawWithTab())
-        withTimeout(5_000) { vm.openEditor.first() }
+        withTimeout(TEST_WAIT_MS) { vm.openEditor.first() }
         answering.join()
         assertFalse(draft.take()!!.text.contains("|---"))
     }

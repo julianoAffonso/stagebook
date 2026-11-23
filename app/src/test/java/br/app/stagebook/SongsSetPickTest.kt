@@ -44,9 +44,9 @@ class SongsSetPickTest {
                 br.app.stagebook.data.PdfImporter(repo, br.app.stagebook.data.PdfStore(context), br.app.stagebook.data.PdfInspector()),
             )
             val job = kotlinx.coroutines.CoroutineScope(Dispatchers.Main).launch { vm.uiState.collect {} }
-            withTimeout(5_000) { vm.uiState.first { !it.loading } }
+            withTimeout(TEST_WAIT_MS) { vm.uiState.first { !it.loading } }
             val id = repo.createSetlist("Sexta")
-            withTimeout(5_000) { vm.uiState.first { s -> s.sets.any { it.id == id } } }
+            withTimeout(TEST_WAIT_MS) { vm.uiState.first { s -> s.sets.any { it.id == id } } }
             repo.deleteSetlist(id)
             assertEquals(AddResult.Gone, vm.addToSetlist(listOf(song), id, ""))
             job.cancel()

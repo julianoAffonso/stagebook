@@ -59,7 +59,7 @@ class PickSongsRowsTest {
                 val set = repo.createSetlist("Show").also { repo.addToSetlist(it, listOf(ids[2])) }
                 val vm = PickSongsViewModel(repo, SavedStateHandle(mapOf("setId" to set)))
                 val job = CoroutineScope(Dispatchers.Main).launch { vm.uiState.collect {} }
-                suspend fun state(ready: (PickSongsUiState) -> Boolean) = withTimeout(10_000) { vm.uiState.first(ready) }
+                suspend fun state(ready: (PickSongsUiState) -> Boolean) = withTimeout(TEST_WAIT_MS) { vm.uiState.first(ready) }
 
                 val rows = state { s -> s.rows.size == 3 && s.rows.any { it.songKey == "Em" } }.rows
                 val first = rows.first { it.title == "Primeira" }
@@ -108,7 +108,7 @@ class PickSongsRowsTest {
                 assertEquals(listOf(ids[0], ids[2], ids[1]), repo.library.value.setlist(set)!!.items)
                 vm.confirmPending()   // the checks are gone: nothing more to add
                 assertEquals(listOf(ids[0], ids[2], ids[1]), repo.library.value.setlist(set)!!.items)
-                assertEquals(0, withTimeout(5_000) { vm.uiState.first { it.selectedCount == 0 } }.selectedCount)
+                assertEquals(0, withTimeout(TEST_WAIT_MS) { vm.uiState.first { it.selectedCount == 0 } }.selectedCount)
                 job.cancel()
             }
         } finally {
@@ -151,7 +151,7 @@ class PickSongsRowsTest {
                 ) { StagebookTheme { br.app.stagebook.ui.setlists.PickSongsRoute({}, vm) } }
             }
             // the checked song comes through the view model's flow: the screen knows it once the count arrives
-            compose.waitUntil(5_000) { vm.uiState.value.selectedCount == 1 }
+            compose.waitUntil(TEST_WAIT_MS) { vm.uiState.value.selectedCount == 1 }
             compose.waitForIdle()
             var asked: Boolean? = null
             compose.runOnUiThread { asked = guard.asks?.invoke() }
@@ -181,7 +181,7 @@ class PickSongsRowsTest {
                 ) { StagebookTheme { br.app.stagebook.ui.setlists.PickSongsRoute({}, vm) } }
             }
             // the checked song comes through the view model's flow: the screen knows it once the count arrives
-            compose.waitUntil(5_000) { vm.uiState.value.selectedCount == 1 }
+            compose.waitUntil(TEST_WAIT_MS) { vm.uiState.value.selectedCount == 1 }
             compose.waitForIdle()
             var asked: Boolean? = null
             compose.runOnUiThread { asked = guard.asks?.invoke() }
@@ -199,7 +199,7 @@ class PickSongsRowsTest {
     @Test fun `with nothing checked the menu closes without a question`() {
         Dispatchers.setMain(UnconfinedTestDispatcher())
         try {
-            val repo = runBlocking { LibraryRepository(context, testScope()).also { withTimeout(5_000) { it.loaded.first { l -> l } } } }
+            val repo = runBlocking { LibraryRepository(context, testScope()).also { withTimeout(TEST_WAIT_MS) { it.loaded.first { l -> l } } } }
             val set = repo.createSetlist("Show")
             val vm = PickSongsViewModel(repo, SavedStateHandle(mapOf("setId" to set)))
             val guard = br.app.stagebook.ui.drawer.DrawerGuard()

@@ -112,7 +112,7 @@ class PdfAuditFixesTest {
         var cancelled = false
         try { pages.bitmap(1, 200) } catch (e: CancellationException) { cancelled = true }
         assertTrue(cancelled)
-        withTimeout(5_000) { while (!source.closed) kotlinx.coroutines.delay(10) }
+        withTimeout(TEST_WAIT_MS) { while (!source.closed) kotlinx.coroutines.delay(10) }
     }
 
     @Test fun `changing the song to another PDF shows the new one and closes the old one, with no crash`() {
@@ -126,11 +126,11 @@ class PdfAuditFixesTest {
                 PdfStageView(open, 0, invert = false, onPageCount = { count = it })
             }
         }
-        compose.waitUntil(5_000) { count == 2 }
+        compose.waitUntil(TEST_WAIT_MS) { count == 2 }
         file = File("b.pdf")
         compose.waitForIdle()
-        compose.waitUntil(5_000) { count == 5 }
-        compose.waitUntil(5_000) { first.closed }
+        compose.waitUntil(TEST_WAIT_MS) { count == 5 }
+        compose.waitUntil(TEST_WAIT_MS) { first.closed }
         assertFalse(second.closed)
     }
 
@@ -154,7 +154,7 @@ class PdfAuditFixesTest {
         shown = false   // the song left while its PDF was still opening
         compose.waitForIdle()
         gate.countDown()
-        compose.waitUntil(5_000) { source.closed }
+        compose.waitUntil(TEST_WAIT_MS) { source.closed }
     }
 
     @Test fun `a page that cannot be drawn says so and does not close the app`() {
@@ -162,16 +162,16 @@ class PdfAuditFixesTest {
         compose.setContent {
             StagebookTheme { PdfStageView(br.app.stagebook.ui.stage.PdfOpen.Ready(PdfPages(Source(failRender = true))), 0, invert = false, onPageCount = { count = it }) }
         }
-        compose.waitUntil(5_000) { count > 0 }
+        compose.waitUntil(TEST_WAIT_MS) { count > 0 }
         // the count comes before the page fails to draw: wait for the notice itself
-        compose.waitUntil(5_000) { compose.onAllNodesWithText("Não consigo abrir este PDF", substring = true).fetchSemanticsNodes().isNotEmpty() }
+        compose.waitUntil(TEST_WAIT_MS) { compose.onAllNodesWithText("Não consigo abrir este PDF", substring = true).fetchSemanticsNodes().isNotEmpty() }
         compose.onNodeWithText("Não consigo abrir este PDF", substring = true).assertIsDisplayed()
     }
 
     @Test fun `a PDF that failed to open gives the stage one page, not the count of the song before`() {
         var count = 7
         compose.setContent { StagebookTheme { PdfStageView(br.app.stagebook.ui.stage.PdfOpen.Failed, 0, invert = false, onPageCount = { count = it }) } }
-        compose.waitUntil(5_000) { count == 1 }
+        compose.waitUntil(TEST_WAIT_MS) { count == 1 }
     }
 
     @Test fun `a PDF comes up on the page it was left on, but one played to the end starts from the first`() {

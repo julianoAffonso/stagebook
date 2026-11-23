@@ -53,7 +53,7 @@ class EditorQueueTest {
 
     private fun Rig.editor(at: Int, fromImport: Boolean = false): SongEditorViewModel {
         val vm = SongEditorViewModel(repo, SongMetadata(repo, MusicBrainz(), scope), ImportDraft(), SavedStateHandle(mapOf("songId" to ids[at], "fromImport" to fromImport, "cursor" to -1)), ImportQueue(repo), TrackStore(context), queue)
-        runBlocking { withTimeout(5_000) { while (vm.uiState.loading) kotlinx.coroutines.delay(10) } }
+        runBlocking { withTimeout(TEST_WAIT_MS) { while (vm.uiState.loading) kotlinx.coroutines.delay(10) } }
         return vm
     }
 

@@ -81,7 +81,7 @@ class ConductBreakLiveTest {
         fun told(messages: Int = 1, act: () -> Unit) {
             val before = arrived.get()
             act()
-            runBlocking { withTimeout(10_000) { while (arrived.get() < before + messages) delay(10) } }
+            runBlocking { withTimeout(TEST_WAIT_MS) { while (arrived.get() < before + messages) delay(10) } }
         }
 
         fun onBreak(): Pair2 {
@@ -150,7 +150,7 @@ class ConductBreakLiveTest {
         try {
             p.vm.conductBand()
             // what goes out says there is a break (the message itself, not the follower's reading of it)
-            runBlocking { withTimeout(10_000) { while (p.sent.none { it.type == Conduct.OPEN && it.breakMs >= 0 }) delay(10) } }
+            runBlocking { withTimeout(TEST_WAIT_MS) { while (p.sent.none { it.type == Conduct.OPEN && it.breakMs >= 0 }) delay(10) } }
         } finally {
             trust.remove("baixo")
         }

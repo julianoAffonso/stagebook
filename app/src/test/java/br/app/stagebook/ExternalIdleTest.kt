@@ -55,7 +55,7 @@ class ExternalIdleTest {
         compose.onNodeWithTag(LOGO_TAG).assertDoesNotExist()
         compose.onNodeWithTag(EXTERNAL_IMAGE_TAG).assertDoesNotExist()
         compose.runOnUiThread { look = look.copy(externalIdle = ExternalIdle.IMAGE) }
-        compose.waitUntil(5_000) { compose.onAllNodes(androidx.compose.ui.test.hasTestTag(EXTERNAL_IMAGE_TAG)).fetchSemanticsNodes().isNotEmpty() }
+        compose.waitUntil(TEST_WAIT_MS) { compose.onAllNodes(androidx.compose.ui.test.hasTestTag(EXTERNAL_IMAGE_TAG)).fetchSemanticsNodes().isNotEmpty() }
     }
 
     @Test fun `an image that is gone leaves the screen black`() {

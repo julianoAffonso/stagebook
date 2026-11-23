@@ -104,7 +104,7 @@ class AndroidBackupRulesTest {
         first.saveSong(Song(title = "Here", author = "x", text = "l", track = "here.ogg", trackName = "Here"))
         first.saveSong(Song(title = "Gone", author = "x", text = "l", track = "gone.ogg", trackName = "Gone live"))
         val file = File(context.filesDir, "stagebook.json")
-        withTimeout(5_000) { while (!file.exists() || !file.readText().contains("gone.ogg")) delay(20) }
+        withTimeout(TEST_WAIT_MS) { while (!file.exists() || !file.readText().contains("gone.ogg")) delay(20) }
 
         val second = testRepo()
         val songs = second.library.value.songs.associateBy { it.title }
@@ -116,6 +116,6 @@ class AndroidBackupRulesTest {
         second.lostAudioSeen()
         assertEquals(emptyList<br.app.stagebook.data.model.LostAudio>(), second.lostAudio.value)
         // the swap moves the old file to the backup first: for an instant there is no file to read
-        withTimeout(5_000) { while (runCatching { file.readText() }.getOrDefault("gone.ogg").contains("gone.ogg")) delay(20) }
+        withTimeout(TEST_WAIT_MS) { while (runCatching { file.readText() }.getOrDefault("gone.ogg").contains("gone.ogg")) delay(20) }
     }
 }
