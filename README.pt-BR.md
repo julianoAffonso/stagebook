@@ -11,7 +11,7 @@
 
 Letra, cifra e backing track num app só, para tocar ao vivo no Android. Sozinho ou com a banda.
 
-**Ajuda, com imagens de cada tela:** [docs/ajuda](docs/ajuda/index.html)
+**Ajuda, com imagens de cada tela:** [stagebook.app.br/ajuda](https://stagebook.app.br/ajuda/)
 
 ## O que ele faz
 - **Menu lateral:** a biblioteca fica num menu que abre por uma alça pequena na borda do palco (arraste para cima ou para baixo;

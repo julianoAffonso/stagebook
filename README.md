@@ -11,7 +11,7 @@
 
 Lyrics, chords and backing tracks in one app, to play live on Android. Solo or with the band.
 
-**Help, with a picture of every screen:** [docs/help](docs/help/index.html)
+**Help, with a picture of every screen:** [stagebook.app.br/help](https://stagebook.app.br/help/)
 
 ## What it does
 - **Side menu:** the library lives in a menu you open from a small handle on the stage's edge (drag it up or down; hold it to take it
