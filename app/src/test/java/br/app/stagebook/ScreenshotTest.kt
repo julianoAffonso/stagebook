@@ -1085,6 +1085,28 @@ class ScreenshotTest {
         missingData = 7,   // songs lacking artist, year, BPM or length (user, 22/11)
     )
 
+    // the report of what was played (user, 23/11): the period's songs day by day, and the spreadsheet from there
+    private val playedLines = listOf(
+        br.app.stagebook.data.model.PlayEntry("2026-11-07", "Hazard", "Richard Marx", s("Show de sábado")),
+        br.app.stagebook.data.model.PlayEntry("2026-11-07", s("Malandragem"), s("Cássia Eller"), s("Show de sábado")),
+        br.app.stagebook.data.model.PlayEntry("2026-11-07", "Wild Horses", "The Rolling Stones", s("Show de sábado")),
+        br.app.stagebook.data.model.PlayEntry("2026-11-14", s("Tempo Perdido"), s("Legião Urbana"), s("Show de sábado")),
+        br.app.stagebook.data.model.PlayEntry("2026-11-14", "Hazard", "Richard Marx", s("Show de sábado")),
+        br.app.stagebook.data.model.PlayEntry("2026-11-14", s("Por Enquanto"), s("Legião Urbana"), s("Show de sábado")),
+        br.app.stagebook.data.model.PlayEntry("2026-11-21", s("Malandragem"), s("Cássia Eller")),
+        br.app.stagebook.data.model.PlayEntry("2026-11-21", "Wild Horses", "The Rolling Stones"),
+    )
+
+    @Composable
+    private fun PlayReport() = br.app.stagebook.ui.settings.PlayReportScreen(
+        playedLines, br.app.stagebook.domain.PlayHistory.Period.MONTH, {}, {}, {}, today = java.time.LocalDate.parse("2026-11-23"),
+    )
+
+    @Test @Config(qualifiers = PHONE)
+    fun settingsPhonePlayed() = shoot("celular_5_ajustes_tocadas") { PlayReport() }
+
+    @Test fun settingsTabletPlayed() = shoot("tablet_5_ajustes_tocadas") { PlayReport() }
+
     @Test @Config(qualifiers = PHONE)
     fun settingsPhoneList() = shoot("celular_5_ajustes") { DrawerShot(HomeTab.SETTINGS) { br.app.stagebook.ui.settings.SettingsMenu(settings, { _, _ -> }, it) } }
 

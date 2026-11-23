@@ -52,6 +52,7 @@ import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
 
 @Immutable
@@ -180,6 +181,10 @@ class SettingsViewModel @Inject constructor(
     fun enrich() = enricher.start()
     fun enrichAgain() = enricher.start(again = true)
     fun stopEnrich() = enricher.stop()
+
+    /** What was played, for the report: read from the library only while the report is on screen. */
+    val history: StateFlow<List<br.app.stagebook.data.model.PlayEntry>> = repository.library.map { it.history }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     /** The history of [period] as a spreadsheet at [uri], with the column names in the app's language (user, 22/11). */
     fun historyTo(uri: Uri, period: br.app.stagebook.domain.PlayHistory.Period, header: List<String>, separator: Char) = viewModelScope.launch {

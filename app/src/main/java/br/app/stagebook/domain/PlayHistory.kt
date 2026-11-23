@@ -27,6 +27,10 @@ object PlayHistory {
         return history.filter { it.day >= from }.sortedBy { it.day }
     }
 
+    /** [lines] as the report shows them: each show day with its songs in the order played, the latest day first. */
+    fun byDay(lines: List<PlayEntry>): List<Pair<String, List<PlayEntry>>> =
+        lines.groupBy { it.day }.toList().sortedByDescending { it.first }
+
     /** How many songs were played and on how many show days. */
     fun summary(history: List<PlayEntry>): Pair<Int, Int> = history.size to history.map { it.day }.distinct().size
 

@@ -209,7 +209,8 @@ fun SettingsRoute(
         }
     }
     // the history of what was played, as a spreadsheet (user, 22/11): the period picked, then where to save it
-    var historyPeriod by remember { mutableStateOf(br.app.stagebook.domain.PlayHistory.Period.MONTH) }
+    var historyPeriod by rememberSaveable { mutableStateOf(br.app.stagebook.domain.PlayHistory.Period.MONTH) }
+    var reportOpen by rememberSaveable { mutableStateOf(false) }   // the report, over Settings (user, 23/11)
     val historyHeader = listOf(stringResource(R.string.history_col_date), stringResource(R.string.history_col_song), stringResource(R.string.history_col_artist), stringResource(R.string.history_col_setlist))
     // a spreadsheet where the comma is the decimal mark wants ';' between columns (it opened in one column otherwise)
     val historySeparator = if (java.text.DecimalFormatSymbols.getInstance(androidx.compose.ui.platform.LocalConfiguration.current.locales[0]).decimalSeparator == ',') ';' else ','
@@ -432,10 +433,7 @@ fun SettingsRoute(
                     backupSaver.launch("stagebook-backup-${java.time.LocalDate.now()}.${br.app.stagebook.data.Backup.EXTENSION}")
                 },
                 onRestore = { restorePicker.launch(arrayOf("*/*")) },
-                onExportHistory = { period ->
-                    historyPeriod = period
-                    historySaver.launch("stagebook-${resources.getString(R.string.history_file)}-${java.time.LocalDate.now()}.csv")
-                },
+                onOpenHistory = { reportOpen = true },
                 onEnrich = viewModel::enrich,
                 onEnrichAgain = viewModel::enrichAgain,
                 onStopEnrich = viewModel::stopEnrich,
@@ -463,6 +461,18 @@ fun SettingsRoute(
                 installWaiting = installWaiting,
             ),
         )
+        // the report covers Settings, which stays as it was left under it; the history is read only while it shows
+        if (reportOpen) {
+            val history by viewModel.history.collectAsStateWithLifecycle()
+            BackHandler { reportOpen = false }
+            androidx.compose.material3.Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
+                PlayReportScreen(
+                    history, historyPeriod, { historyPeriod = it },
+                    onExport = { historySaver.launch("stagebook-${resources.getString(R.string.history_file)}-${java.time.LocalDate.now()}.csv") },
+                    onBack = { reportOpen = false },
+                )
+            }
+        }
         SnackbarHost(snackbar, Modifier.align(Alignment.BottomCenter))
     }
     val pending by viewModel.pendingImport.collectAsStateWithLifecycle()
@@ -546,7 +556,7 @@ data class SettingsActions(
     val onInternetOn: (Boolean) -> Unit = {},
     val onExtrasOn: (Boolean) -> Unit = {},
     val onBackup: (Set<br.app.stagebook.data.Backup.Part>) -> Unit = {},
-    val onExportHistory: (br.app.stagebook.domain.PlayHistory.Period) -> Unit = {},
+    val onOpenHistory: () -> Unit = {},
     val onEnrich: () -> Unit = {},
     val onEnrichAgain: () -> Unit = {},   // the songs looked up before with no luck, once more
     val onStopEnrich: () -> Unit = {},
@@ -1926,28 +1936,19 @@ private fun ExternalScreenCard(look: Look, actions: SettingsActions) {
 }
 
 /**
- * What was played, to export (user, 22/11: "an option in Options, in the library"): how much there is, the period, and a
- * spreadsheet with date, song, artist and setlist, e.g. to report the songs played for royalties.
+ * What was played (user, 22/11: "an option in Options, in the library"): how much there is, and the way into the report,
+ * a screen of its own with the period and the spreadsheet (user, 23/11).
  */
 @Composable
 private fun HistoryCard(uiState: SettingsUiState, actions: SettingsActions) {
     SettingsCard(stringResource(R.string.history_title)) {
-        var period by rememberSaveable { mutableStateOf(br.app.stagebook.domain.PlayHistory.Period.MONTH) }
         InfoText(
             if (uiState.playedSongs == 0) stringResource(R.string.history_empty)
             else pluralStringResource(R.plurals.history_summary, uiState.playedSongs, uiState.playedSongs) + " " +
                 pluralStringResource(R.plurals.history_days, uiState.playedDays, uiState.playedDays),
         )
         if (uiState.playedSongs > 0) {
-            br.app.stagebook.ui.components.SegmentedChoice(
-                listOf(
-                    br.app.stagebook.ui.components.Choice(br.app.stagebook.domain.PlayHistory.Period.MONTH, R.string.history_month),
-                    br.app.stagebook.ui.components.Choice(br.app.stagebook.domain.PlayHistory.Period.YEAR, R.string.history_year),
-                    br.app.stagebook.ui.components.Choice(br.app.stagebook.domain.PlayHistory.Period.ALL, R.string.history_all),
-                ),
-                period, { period = it }, Modifier.fillMaxWidth(),
-            )
-            ActionButton(stringResource(R.string.history_export), { actions.onExportHistory(period) }, Modifier.fillMaxWidth().settingsItem("history"), icon = AppIcons.Download, tone = ButtonTone.Tonal)
+            ActionButton(stringResource(R.string.history_open), actions.onOpenHistory, Modifier.settingsItem("history"), icon = AppIcons.QueueMusic, tone = ButtonTone.Tonal)
         }
     }
 }

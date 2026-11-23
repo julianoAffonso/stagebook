@@ -167,6 +167,8 @@
     <string name="history_month">This month</string>
     <string name="history_year">12 months</string>
     <string name="history_all">All</string>
+    <string name="history_open">See the report</string>
+    <string name="history_none_period">Nothing played in this period.</string>
     <string name="history_export">Export spreadsheet (CSV)</string>
     <string name="history_failed">Couldn\'t save the spreadsheet.</string>
     <string name="history_file">played</string>

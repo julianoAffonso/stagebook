@@ -3,9 +3,13 @@ package br.app.stagebook
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.test.junit4.v2.createComposeRule
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.test.performScrollToNode
 import androidx.test.core.app.ApplicationProvider
 import br.app.stagebook.data.Backup
 import br.app.stagebook.data.LibraryRepository
@@ -84,16 +88,67 @@ class PlayHistoryTest {
         assertEquals(listOf("2026-11-20", "2026-11-21"), repo.library.value.history.map { it.day })
     }
 
-    @Test fun `Settings shows what was played and exports the period picked`() {
-        var asked: PlayHistory.Period? = null
+    @Test fun `Settings shows how much was played and opens the report`() {
+        var opened = 0
         compose.setContent {
             StagebookTheme {
-                SettingsScreen(SettingsUiState(loading = false, songCount = 3, playedSongs = 12, playedDays = 2), SettingsActions(onExportHistory = { asked = it }), Modifier.fillMaxSize(), section = SettingsSection.LIBRARY, onLeave = {}, onMenu = {})
+                SettingsScreen(SettingsUiState(loading = false, songCount = 3, playedSongs = 12, playedDays = 2), SettingsActions(onOpenHistory = { opened++ }), Modifier.fillMaxSize(), section = SettingsSection.LIBRARY, onLeave = {}, onMenu = {})
             }
         }
         compose.onNodeWithText("12 músicas tocadas em 2 dias de show.").performScrollTo().assertExists()
-        compose.onNodeWithText("12 meses").performScrollTo().performClick()
-        compose.onNodeWithText("Exportar planilha (CSV)").performScrollTo().performClick()
-        assertEquals(PlayHistory.Period.YEAR, asked)
+        compose.onNodeWithText("Ver o relatório").performScrollTo().performClick()
+        assertEquals(1, opened)
+    }
+
+    private val played = listOf(
+        PlayEntry("2025-03-02", "Antiga", "Banda Velha"),
+        PlayEntry("2026-11-07", "Tempo Perdido", "Legião Urbana", "Bar do Zé"),
+        PlayEntry("2026-11-21", "Anunciação", "Alceu Valença", "Casamento"),
+        PlayEntry("2026-11-21", "Sem Artista"),
+    )
+
+    @Test fun `the report lists the period's songs day by day, the latest show first, and exports what it shows`() {
+        var period by androidx.compose.runtime.mutableStateOf(PlayHistory.Period.MONTH)
+        var exported: PlayHistory.Period? = null
+        var left = 0
+        compose.setContent {
+            StagebookTheme {
+                br.app.stagebook.ui.settings.PlayReportScreen(played, period, { period = it }, { exported = it }, { left++ }, today = java.time.LocalDate.parse("2026-11-23"))
+            }
+        }
+        compose.onNodeWithText("3 músicas tocadas em 2 dias de show.").assertExists()
+        // each day by its name, the latest above
+        val late = compose.onNodeWithText("Sábado, 21 de novembro de 2026").fetchSemanticsNode().positionInRoot.y
+        val early = compose.onNodeWithText("Sábado, 7 de novembro de 2026").fetchSemanticsNode().positionInRoot.y
+        org.junit.Assert.assertTrue("$late < $early", late < early)
+        compose.onNodeWithText("Anunciação").assertExists()
+        compose.onNodeWithText("Alceu Valença · Casamento").assertExists()
+        compose.onNodeWithText("Sem Artista").assertExists()
+        compose.onNodeWithText("Antiga").assertDoesNotExist()   // last year: not this month's
+        compose.onNodeWithText("Tudo").performClick()
+        // the oldest day is at the end of the list
+        compose.onNode(androidx.compose.ui.test.hasScrollToNodeAction()).performScrollToNode(androidx.compose.ui.test.hasText("Antiga"))
+        compose.onNodeWithText("Antiga").assertExists()
+        compose.onNodeWithText("4 músicas tocadas em 3 dias de show.").assertExists()
+        compose.onNodeWithText("Exportar planilha (CSV)").performClick()
+        assertEquals(PlayHistory.Period.ALL, exported)
+        compose.onNodeWithContentDescription("Voltar").performClick()
+        assertEquals(1, left)
+    }
+
+    @Test fun `a period with nothing played says so and offers no spreadsheet`() {
+        compose.setContent {
+            StagebookTheme {
+                br.app.stagebook.ui.settings.PlayReportScreen(played.take(1), PlayHistory.Period.MONTH, {}, {}, {}, today = java.time.LocalDate.parse("2026-11-23"))
+            }
+        }
+        compose.onNodeWithText("Nada tocado neste período.").assertExists()
+        compose.onNodeWithText("Exportar planilha (CSV)").assertDoesNotExist()
+    }
+
+    @Test fun `the days of the report come latest first, each with its songs in the order played`() {
+        val days = PlayHistory.byDay(played)
+        assertEquals(listOf("2026-11-21", "2026-11-07", "2025-03-02"), days.map { it.first })
+        assertEquals(listOf("Anunciação", "Sem Artista"), days.first().second.map { it.title })
     }
 }
