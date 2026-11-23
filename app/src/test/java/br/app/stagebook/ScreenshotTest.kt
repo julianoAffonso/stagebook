@@ -1,3 +1,5 @@
+@file:OptIn(com.github.takahirom.roborazzi.ExperimentalRoborazziApi::class)
+
 package br.app.stagebook
 
 import br.app.stagebook.R
@@ -11,7 +13,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.foundation.layout.padding
 import br.app.stagebook.ui.theme.Spacing
-import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.pinch
@@ -97,10 +99,10 @@ class ScreenshotTest {
         loading = false,
         songs = listOf(
             SongRowUi("1", "Hazard", "Richard Marx", songKey = "A", bpm = 76),
-            SongRowUi("2", "Malandragem", "Cássia Eller", songKey = "G", bpm = 96, capo = 2),
-            SongRowUi("3", "Tempo Perdido", "Legião Urbana", songKey = "C", bpm = 118, hasTrack = true),
+            SongRowUi("2", s("Malandragem"), s("Cássia Eller"), songKey = "G", bpm = 96, capo = 2),
+            SongRowUi("3", s("Tempo Perdido"), s("Legião Urbana"), songKey = "C", bpm = 118, hasTrack = true),
             SongRowUi("4", "Wild Horses", "The Rolling Stones", songKey = "G", bpm = 70),
-            SongRowUi("5", "Por Enquanto", "Legião Urbana", songKey = "D"),
+            SongRowUi("5", s("Por Enquanto"), s("Legião Urbana"), songKey = "D"),
         ),
         total = 5,
         tags = listOf(s("Internacional"), s("Nacional")),
@@ -108,7 +110,8 @@ class ScreenshotTest {
     private val set = SetlistDetailUiState(
         loading = false,
         name = s("Show de sábado"),
-        items = songs.songs.map { SetItemUi(it.id, it.id, it.title, it.subtitle, false, it.songKey, it.bpm, it.capo, it.hasTrack) },
+        // lengths for the sets' minutes (user, 22/11); the last one has none, to show how that reads
+        items = songs.songs.mapIndexed { i, it -> SetItemUi(it.id, it.id, it.title, it.subtitle, false, it.songKey, it.bpm, it.capo, it.hasTrack, seconds = listOf(321, 264, 300, 341, 0)[i]) },
     )
     // mid show: two songs played, the third on stage and the fourth next
     private val setShow = set.copy(
@@ -199,7 +202,7 @@ class ScreenshotTest {
     // a library long enough for the A to Z index (made-up songs): grouped as the view model groups them
     private val manySongs = run {
         val english = SHOTS_LANG?.startsWith("en") == true
-        val artists = if (english) listOf("The Made-Ups", "Imaginary Trio", "Nobody's Band", "Pretend Duo", "") else listOf("Banda Fictícia", "Trio Imaginário", "Os Inventados", "Duo de Mentira", "")
+        val artists = if (english) listOf("The Made-Ups", "Imaginary Trio", "Nobody's Band", "Pretend Duo", "") else listOf(s("Banda Fictícia"), "Trio Imaginário", "Os Inventados", "Duo de Mentira", "")
         val keys = listOf("G", "Em", "C", "A", "D", "F#m", "")
         val titles = if (english) listOf(
             "7 Days of Rain", "Above the Hills", "All the Way Back", "Autumn Window", "Back Porch Light", "Blue Sunflower", "Bridge by the Mill",
@@ -297,7 +300,7 @@ class ScreenshotTest {
     private fun StageBreak() {
         val since = androidx.compose.runtime.remember { System.currentTimeMillis() - 750_000L }
         StageScreen(
-            stage.copy(songs = listOf(stage.songs[0], StageSong("Malandragem", s("Cássia Eller · 1994"), "{key: G}\n$lyrics", false)), live = true, breaks = listOf(1)),
+            stage.copy(songs = listOf(stage.songs[0], StageSong(s("Malandragem"), s("Cássia Eller · 1994"), "{key: G}\n$lyrics", false)), live = true, breaks = listOf(1)),
             0, 0, { _, _ -> }, onBack = {}, breakSince = since,
         )
     }
@@ -421,7 +424,7 @@ class ScreenshotTest {
                         SettingsScreen(
                             settings.copy(look = settings.look.copy(midiOut = "2:WIDI Master", midiOutName = "WIDI Master"), midi = br.app.stagebook.data.MidiState(supported = true)),
                             SettingsActions(midiOutputs = listOf(br.app.stagebook.data.MidiOutput("2:WIDI Master", "WIDI Master", true))),
-                            it, section = SettingsSection.PAGE, onLeave = {}, onMenu = {},
+                            it, section = SettingsSection.BAND, onLeave = {}, onMenu = {},
                         )
                     }
                 }
@@ -439,7 +442,7 @@ class ScreenshotTest {
                         SettingsScreen(
                             settings.copy(look = settings.look.copy(midiOut = "2:WIDI Master", midiOutName = "WIDI Master"), midi = br.app.stagebook.data.MidiState(supported = true)),
                             SettingsActions(midiOutputs = listOf(br.app.stagebook.data.MidiOutput("2:WIDI Master", "WIDI Master", true))),
-                            it, section = SettingsSection.PAGE, onLeave = {}, onMenu = {},
+                            it, section = SettingsSection.BAND, onLeave = {}, onMenu = {},
                         )
                     }
                 }
@@ -483,7 +486,7 @@ class ScreenshotTest {
             StagebookTheme {
                 SongEditorScreen(
                     editorSong, {}, {}, {}, {}, {}, {}, {}, cursor = 0, look = Look(playerMode = true),
-                    pdf = br.app.stagebook.ui.editor.EditorPdf(s("Canção de teste - cifra.pdf"), pages = 3, bytes = 412_000),
+                    pdf = br.app.stagebook.ui.editor.EditorPdf(s("Canção de teste - cifra.pdf"), pages = 3, bytes = 412_000, hidden = listOf(1)),
                     position = br.app.stagebook.ui.editor.EditorPosition(2, 12),
                 )
             }
@@ -592,6 +595,10 @@ class ScreenshotTest {
         compose.setContent { StagebookTheme { br.app.stagebook.ui.settings.FactoryResetDialog({}, {}, {}, code = "4827") } }
         com.github.takahirom.roborazzi.captureScreenRoboImage("$SHOTS_DIR/tablet_5_apagar_tudo.png")
     }
+
+    // no phone capture: a text field inside a dialog never settles in Robolectric (even a bare BasicTextField in a
+    // Dialog, at any size; probed 22/11, with the clock running or still). The tablet one passes only because
+    // captureScreenRoboImage doesn't wait. The phone picture is a device photo (tools/device-shots)
 
     // T33c: the metronome next to the clock and its small window
     @OptIn(com.github.takahirom.roborazzi.ExperimentalRoborazziApi::class)
@@ -986,7 +993,7 @@ class ScreenshotTest {
         androidx.compose.foundation.layout.Column {
             androidx.compose.foundation.layout.Box(Modifier.weight(1f)) { StageScreen(stage, 0, 0, { _, _ -> }, onBack = {}, onMenu = {}) }
             br.app.stagebook.ui.band.ConductBar(
-                br.app.stagebook.ui.band.ConductUi.Following("Voz", "Garota de Ipanema", false, false, listOf(s("Baixo")), emptyList()),
+                br.app.stagebook.ui.band.ConductUi.Following(s("Voz"), s("Garota de Ipanema"), false, false, listOf(s("Baixo")), emptyList()),
                 {}, {}, {}, {},
             )
         }
@@ -1013,7 +1020,7 @@ class ScreenshotTest {
                     androidx.compose.foundation.layout.Column {
                         androidx.compose.foundation.layout.Box(Modifier.weight(1f)) { StageScreen(stage, 0, 0, { _, _ -> }, onBack = {}, onMenu = {}) }
                         br.app.stagebook.ui.band.ConductBar(
-                            br.app.stagebook.ui.band.ConductUi.Following(s("Voz"), "Garota de Ipanema", false, false, emptyList(), listOf("Wave", "Corcovado")),
+                            br.app.stagebook.ui.band.ConductUi.Following(s("Voz"), s("Garota de Ipanema"), false, false, emptyList(), listOf("Wave", "Corcovado")),
                             {}, {}, {}, {}, options = br.app.stagebook.ui.band.AskOptions(bandDevices = 2, internetFrom = s("Voz")),
                         )
                     }
@@ -1033,7 +1040,7 @@ class ScreenshotTest {
                     androidx.compose.foundation.layout.Column {
                         androidx.compose.foundation.layout.Box(Modifier.weight(1f)) { StageScreen(stage, 0, 0, { _, _ -> }, onBack = {}, onMenu = {}) }
                         br.app.stagebook.ui.band.ConductBar(
-                            br.app.stagebook.ui.band.ConductUi.Following(s("Voz"), "Garota de Ipanema", false, false, emptyList(), listOf("Wave", "Corcovado")),
+                            br.app.stagebook.ui.band.ConductUi.Following(s("Voz"), s("Garota de Ipanema"), false, false, emptyList(), listOf("Wave", "Corcovado")),
                             {}, {}, {}, {}, notice = str(R.string.scan_internet_sent, s("Voz")),
                         )
                     }
@@ -1074,6 +1081,8 @@ class ScreenshotTest {
 
     private val settings = SettingsUiState(
         false, Look(pedalName = "PageFlip Firefly", pedalKeys = mapOf(android.view.KeyEvent.KEYCODE_PAGE_UP to PedalAction.PREVIOUS_SONG, br.app.stagebook.domain.MidiCode.of(0xB0, 64) to PedalAction.NEXT)), 42, 3, PedalKeyUi("PAGE_DOWN", PedalAction.NEXT, "PageFlip Firefly", android.view.KeyEvent.KEYCODE_PAGE_DOWN), "0.1.1200", pedalConnected = true,
+        playedSongs = 128, playedDays = 14,   // the history of what was played (user, 22/11)
+        missingData = 7,   // songs lacking artist, year, BPM or length (user, 22/11)
     )
 
     @Test @Config(qualifiers = PHONE)
@@ -1141,6 +1150,16 @@ class ScreenshotTest {
                 it, section = SettingsSection.BAND, onLeave = {}, onMenu = {},
             )
         }
+    }
+
+    // L13: what a TV or projector shows, the part the stage has in view (1080p, on its side)
+    @Test @Config(qualifiers = "pt-rBR-w960dp-h540dp-land-xhdpi")
+    fun externalScreen() = shoot("tela_externa") {
+        br.app.stagebook.ui.stage.ExternalStageContent(
+            // the first verse, as the stage's first page holds it
+            br.app.stagebook.ui.stage.MirrorFrame("c", s("Canção de teste"), s("Banda Fictícia"), chordSong, lines = 5..9),
+            stage.look, { java.io.File(it) },
+        )
     }
 
     @Test @Config(qualifiers = "pt-rBR-w412dp-h1240dp-port-xxhdpi")   // tall enough for both pedals' buttons
@@ -1216,10 +1235,10 @@ class ScreenshotTest {
     }
 
     @Test @Config(qualifiers = PHONE)
-    fun settingsPhoneChords() = shootLyricsAt("celular_5_ajustes_cifras", settings, str(R.string.settings_chords_card), extraUp = 900f)
+    fun settingsPhoneChords() = shoot("celular_5_ajustes_cifras") { SettingsPage { SettingsScreen(settings, SettingsActions(), it, onLeave = {}, onMenu = {}, section = SettingsSection.CHORDS) } }
 
     // the tablet shows more of Lyrics at once: scroll the Chords in the lyrics card into view, down to its color
-    @Test fun settingsTabletChords() = shootLyricsAt("tablet_5_ajustes_cifras", settings, str(R.string.settings_chords_color), extraUp = 100f)
+    @Test fun settingsTabletChords() = shoot("tablet_5_ajustes_cifras") { SettingsPage { SettingsScreen(settings, SettingsActions(), it, onLeave = {}, onMenu = {}, section = SettingsSection.CHORDS) } }
 
     // the whole Settings → Chords screen (tall, no scrolling): instrument, diagram on tap and chord list
     @Test @Config(qualifiers = "pt-rBR-w412dp-h2200dp-port-xxhdpi")
@@ -1322,7 +1341,7 @@ class ScreenshotTest {
 
     private val stage = StageUiState(
         false,
-        listOf(StageSong("Hazard", "Richard Marx · 1991", (1..4).joinToString("\n\n") { lyrics }, false), StageSong("Malandragem", "", "", false)),
+        listOf(StageSong("Hazard", "Richard Marx · 1991", (1..4).joinToString("\n\n") { lyrics }, false), StageSong(s("Malandragem"), "", "", false)),
         look = Look(fontSp = 34f),
     )
 
@@ -1546,6 +1565,11 @@ class ScreenshotTest {
         StageScreen(stage.copy(songs = listOf(StageSong(s("Canção de teste"), s("Banda Fictícia"), chordSong, false, id = "1", track = "1.ogg")), look = playerLook), 0, 0, { _, _ -> }, onBack = {}, onMenu = {})
     }
 
+    // the help's "Playing" figure: the tablet one showed the stopped track's play button (user, 16/11)
+    @Test fun stagePlayerPlayingTablet() = shoot("tablet_11_player_tocando") {
+        StageScreen(stage.copy(songs = listOf(StageSong(s("Canção de teste"), s("Banda Fictícia"), chordSong, false, id = "1", track = "1.ogg")), look = playerLook), 0, 0, { _, _ -> }, onBack = {}, onMenu = {}, playing = true)
+    }
+
     @Test @Config(qualifiers = PHONE)
     fun stagePlayerPlayingPhone() = shoot("celular_11_player_tocando") {
         StageScreen(stage.copy(songs = listOf(StageSong(s("Canção de teste"), s("Banda Fictícia"), chordSong, false, id = "1", track = "1.ogg")), look = playerLook), 0, 0, { _, _ -> }, onBack = {}, onMenu = {}, playing = true)
@@ -1667,11 +1691,11 @@ class ScreenshotTest {
         s("Show de sábado"),
         listOf(
             br.app.stagebook.ui.setlists.ScanRow(s("Canção de teste"), s("Banda Fictícia"), true, listOf(br.app.stagebook.ui.setlists.SongRef("1", s("Canção de teste"), s("Banda Fictícia"), "G", 72, 2, true)), "1"),
-            br.app.stagebook.ui.setlists.ScanRow(s("Noite clara"), "Banda A", false, listOf(
-                br.app.stagebook.ui.setlists.SongRef("2", s("Noite Clara"), "Banda A", "Em", 96), br.app.stagebook.ui.setlists.SongRef("3", s("Noite Clara"), "Banda B", "A", 110, 0, true),
+            br.app.stagebook.ui.setlists.ScanRow(s("Noite clara"), s("Banda A"), false, listOf(
+                br.app.stagebook.ui.setlists.SongRef("2", s("Noite Clara"), s("Banda A"), "Em", 96), br.app.stagebook.ui.setlists.SongRef("3", s("Noite Clara"), s("Banda B"), "A", 110, 0, true),
             ), null),
-            br.app.stagebook.ui.setlists.ScanRow(s("Estrada longa"), "Banda C", true, listOf(br.app.stagebook.ui.setlists.SongRef("4", s("Estrada Longa"), "Banda C", "D", 84)), "4"),
-            br.app.stagebook.ui.setlists.ScanRow(s("Música que não tenho"), "Banda D", false, emptyList(), null),
+            br.app.stagebook.ui.setlists.ScanRow(s("Estrada longa"), s("Banda C"), true, listOf(br.app.stagebook.ui.setlists.SongRef("4", s("Estrada Longa"), s("Banda C"), "D", 84)), "4"),
+            br.app.stagebook.ui.setlists.ScanRow(s("Música que não tenho"), s("Banda D"), false, emptyList(), null),
         ),
     )
 
@@ -1907,7 +1931,7 @@ class ScreenshotTest {
     @Test @Config(qualifiers = PHONE)
     fun scanAskBandPhone() = shoot("jornada_banda_5_pedir") {
         br.app.stagebook.ui.setlists.ScanSetlistScreen(
-            scanReview.copy(rows = scanReview.rows + br.app.stagebook.ui.setlists.ScanRow(s("Outra que faltava"), "Banda F", false, emptyList(), null, carried = true, fromBand = true)),
+            scanReview.copy(rows = scanReview.rows + br.app.stagebook.ui.setlists.ScanRow(s("Outra que faltava"), s("Banda F"), false, emptyList(), null, carried = true, fromBand = true)),
             true, {}, {}, {}, { _, _ -> }, {}, { null }, {}, {}, band = 2,
         )
     }
@@ -1918,10 +1942,10 @@ class ScreenshotTest {
             scanReview.copy(
                 name = "", songsOnly = true,
                 rows = listOf(
-                    br.app.stagebook.ui.setlists.ScanRow(s("Canção de teste"), "Banda Fictícia", true, listOf(br.app.stagebook.ui.setlists.SongRef("1", s("Canção de teste"), "Banda Fictícia", "G", 72, 2, true)), "1", differs = true),
-                    br.app.stagebook.ui.setlists.ScanRow(s("Estrada longa"), "Banda C", true, listOf(br.app.stagebook.ui.setlists.SongRef("4", s("Estrada longa"), "Banda C", "D", 84)), "4", differs = true, useIncoming = true),
-                    br.app.stagebook.ui.setlists.ScanRow(s("Noite clara"), "Banda A", true, listOf(br.app.stagebook.ui.setlists.SongRef("2", s("Noite clara"), "Banda A", "Em", 96)), "2"),
-                    br.app.stagebook.ui.setlists.ScanRow(s("Música nova"), "Banda E", false, emptyList(), null, carried = true, fromBand = true),
+                    br.app.stagebook.ui.setlists.ScanRow(s("Canção de teste"), s("Banda Fictícia"), true, listOf(br.app.stagebook.ui.setlists.SongRef("1", s("Canção de teste"), s("Banda Fictícia"), "G", 72, 2, true)), "1", differs = true),
+                    br.app.stagebook.ui.setlists.ScanRow(s("Estrada longa"), s("Banda C"), true, listOf(br.app.stagebook.ui.setlists.SongRef("4", s("Estrada longa"), s("Banda C"), "D", 84)), "4", differs = true, useIncoming = true),
+                    br.app.stagebook.ui.setlists.ScanRow(s("Noite clara"), s("Banda A"), true, listOf(br.app.stagebook.ui.setlists.SongRef("2", s("Noite clara"), s("Banda A"), "Em", 96)), "2"),
+                    br.app.stagebook.ui.setlists.ScanRow(s("Música nova"), s("Banda E"), false, emptyList(), null, carried = true, fromBand = true),
                 ),
             ),
             true, {}, {}, {}, { _, _ -> }, {}, { null }, {}, {}, fromName = s("Celular da Ana"),
@@ -1933,10 +1957,10 @@ class ScreenshotTest {
             scanReview.copy(
                 name = "", songsOnly = true,
                 rows = listOf(
-                    br.app.stagebook.ui.setlists.ScanRow(s("Canção de teste"), "Banda Fictícia", true, listOf(br.app.stagebook.ui.setlists.SongRef("1", s("Canção de teste"), "Banda Fictícia", "G", 72, 2, true)), "1", differs = true),
-                    br.app.stagebook.ui.setlists.ScanRow(s("Estrada longa"), "Banda C", true, listOf(br.app.stagebook.ui.setlists.SongRef("4", s("Estrada longa"), "Banda C", "D", 84)), "4", differs = true, useIncoming = true),
-                    br.app.stagebook.ui.setlists.ScanRow(s("Noite clara"), "Banda A", true, listOf(br.app.stagebook.ui.setlists.SongRef("2", s("Noite clara"), "Banda A", "Em", 96)), "2"),
-                    br.app.stagebook.ui.setlists.ScanRow(s("Música nova"), "Banda E", false, emptyList(), null, carried = true, fromBand = true),
+                    br.app.stagebook.ui.setlists.ScanRow(s("Canção de teste"), s("Banda Fictícia"), true, listOf(br.app.stagebook.ui.setlists.SongRef("1", s("Canção de teste"), s("Banda Fictícia"), "G", 72, 2, true)), "1", differs = true),
+                    br.app.stagebook.ui.setlists.ScanRow(s("Estrada longa"), s("Banda C"), true, listOf(br.app.stagebook.ui.setlists.SongRef("4", s("Estrada longa"), s("Banda C"), "D", 84)), "4", differs = true, useIncoming = true),
+                    br.app.stagebook.ui.setlists.ScanRow(s("Noite clara"), s("Banda A"), true, listOf(br.app.stagebook.ui.setlists.SongRef("2", s("Noite clara"), s("Banda A"), "Em", 96)), "2"),
+                    br.app.stagebook.ui.setlists.ScanRow(s("Música nova"), s("Banda E"), false, emptyList(), null, carried = true, fromBand = true),
                 ),
             ),
             true, {}, {}, {}, { _, _ -> }, {}, { null }, {}, {}, fromName = s("Celular da Ana"),
@@ -1948,9 +1972,9 @@ class ScreenshotTest {
         br.app.stagebook.ui.setlists.ScanSetlistScreen(
             scanReview.copy(
                 rows = listOf(
-                    br.app.stagebook.ui.setlists.ScanRow(s("Canção de teste"), "Banda Fictícia", true, listOf(br.app.stagebook.ui.setlists.SongRef("1", s("Canção de teste"), "Banda Fictícia", "G", 72, 2, true)), "1"),
-                    br.app.stagebook.ui.setlists.ScanRow(s("Canção de exemplo"), "Banda G", false, emptyList(), null, carried = true, fromBand = true, lyricsOnly = true),
-                    br.app.stagebook.ui.setlists.ScanRow(s("Outra canção"), "Banda H", false, emptyList(), null, wantChords = true),
+                    br.app.stagebook.ui.setlists.ScanRow(s("Canção de teste"), s("Banda Fictícia"), true, listOf(br.app.stagebook.ui.setlists.SongRef("1", s("Canção de teste"), s("Banda Fictícia"), "G", 72, 2, true)), "1"),
+                    br.app.stagebook.ui.setlists.ScanRow(s("Canção de exemplo"), s("Banda G"), false, emptyList(), null, carried = true, fromBand = true, lyricsOnly = true),
+                    br.app.stagebook.ui.setlists.ScanRow(s("Outra canção"), s("Banda H"), false, emptyList(), null, wantChords = true),
                 ),
             ),
             true, {}, {}, {}, { _, _ -> }, {}, { null }, {}, {}, fromName = s("Celular da Ana"),
@@ -2252,6 +2276,16 @@ private val SAMPLES_EN = listOf(
     "Lenta" to "Slow",
     "Baixo" to "Bass",
     "Guia" to "Guide",
+    // real Brazilian songs in the lists: English ones in the English help (user, 22/11)
+    "Garota de Ipanema" to "The Girl from Ipanema",
+    "Tempo Perdido" to "Creep",
+    "Legião Urbana" to "Radiohead",
+    "Por Enquanto" to "High and Dry",
+    "Malandragem" to "Wonderwall",
+    "Cássia Eller" to "Oasis",
+    "Voz" to "Vocals",
+    // last: "Banda Fictícia" above is already done by now
+    "Banda " to "Band ",
 )
 
 /** Sample data in the language of the capture: the English help shows no Portuguese songs. */

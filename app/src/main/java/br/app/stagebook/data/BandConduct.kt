@@ -407,8 +407,8 @@ class BandConduct internal constructor(
             // the call says nothing about the break: the one already known stays until the song that follows it says
             val kept = msg.type == Conduct.CHECK && known?.first?.songs == msg.songs
             val running = known?.takeIf { it.third == null }
-            val since = if (kept) known?.second else breakSince(msg, running?.second, running?.first?.rest)
-            val now = Role.Following(from.id, msg, song?.id, breakSince = since, breakFrozen = if (kept) known?.third else frozenOf(msg))
+            val since = if (kept) known.second else breakSince(msg, running?.second, running?.first?.rest)
+            val now = Role.Following(from.id, msg, song?.id, breakSince = since, breakFrozen = if (kept) known.third else frozenOf(msg))
             beforeCommit?.invoke()
             if (!_role.compareAndSet(before, now)) continue
             _armed.value = false   // someone else leads: nothing to wait for

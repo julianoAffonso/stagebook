@@ -1,8 +1,6 @@
 package br.app.stagebook
 
-import android.content.pm.ActivityInfo
-import android.content.pm.ResolveInfo
-import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.test.core.app.ApplicationProvider
@@ -32,8 +30,11 @@ class AutoBlockerTest {
     @Test fun `another maker doesn't have it`() = assertFalse(AutoBlocker.available(app))
 
     @Test fun `a Samsung has it`() {
-        val screen = ResolveInfo().apply { activityInfo = ActivityInfo().apply { packageName = "com.samsung.android.rampart"; name = "Screen" } }
-        shadowOf(app.packageManager).addResolveInfoForIntent(AutoBlocker.screen, screen)
+        val screen = android.content.ComponentName("com.samsung.android.rampart", "Screen")
+        shadowOf(app.packageManager).apply {
+            addActivityIfNotPresent(screen)
+            addIntentFilterForActivity(screen, android.content.IntentFilter(AutoBlocker.screen.action).apply { addCategory(android.content.Intent.CATEGORY_DEFAULT) })
+        }
         assertTrue(AutoBlocker.available(app))
     }
 

@@ -5,7 +5,7 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsNotDisplayed
-import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.click
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
@@ -97,6 +97,6 @@ class StageScrollHitTest {
         compose.waitForIdle()
         compose.onNodeWithContentDescription("Esconder os acordes desta música").performClick()
         compose.waitForIdle()
-        org.junit.Assert.assertTrue("escondidos: $hidden", hidden != null && "G" in hidden!!)
+        org.junit.Assert.assertTrue("escondidos: $hidden", hidden != null && "G" in hidden)
     }
 }

@@ -87,10 +87,6 @@ private val allItems: List<SettingsItem> by lazy {
         item("text_color", L, R.string.settings_lyrics_card, R.string.settings_text_color, kw = R.string.kw_color),
         item("highlight_color", L, R.string.settings_lyrics_card, R.string.settings_highlight_color, kw = R.string.kw_color),
         item("background", L, R.string.settings_lyrics_card, R.string.settings_background, kw = R.string.kw_background),
-        item("profile", L, R.string.settings_chords_card, R.string.settings_chords_show, R.string.settings_chords_show_help, R.string.kw_profile),
-        item("chords_size", L, R.string.settings_chords_card, R.string.settings_chords_size, kw = R.string.kw_size, kind = sl, hide = noChords),
-        item("font_chords", L, R.string.settings_chords_card, R.string.settings_font_chords, kw = R.string.kw_font, hide = noChords),
-        item("chords_color", L, R.string.settings_chords_card, R.string.settings_chords_color, kw = R.string.kw_color, hide = noChords),
         item("show_sections", L, R.string.settings_sections_look, R.string.settings_show_sections, R.string.settings_sections_help, R.string.kw_sections, sw),
         item("sections_size", L, R.string.settings_sections_look, R.string.settings_sections_size, kw = R.string.kw_size, kind = sl, hide = noSections),
         item("font_sections", L, R.string.settings_sections_look, R.string.settings_font_sections, kw = R.string.kw_font, hide = noSections),
@@ -111,12 +107,14 @@ private val allItems: List<SettingsItem> by lazy {
         item("pedal_midi", P, R.string.settings_pedal, R.string.settings_pedal_add_midi, R.string.settings_pedal_kinds_help, R.string.kw_midi, hide = noMidi),
         item("midi_usb", P, R.string.settings_pedal, R.string.settings_midi_usb_switch, R.string.settings_midi_usb_help, R.string.kw_midi, sw, noMidi),
         item("pedal_buttons", P, R.string.settings_pedal, R.string.settings_pedal_buttons, R.string.settings_pedal_press, R.string.kw_pedal),
-        item("midi_out", P, R.string.settings_midi_out, R.string.settings_midi_out_device, R.string.settings_midi_out_help, R.string.kw_midi) { noMidi(it) ?: noExtras(it) },
         item("keep_screen_on", P, R.string.settings_during_show, R.string.settings_keep_screen_on, R.string.settings_keep_screen_on_help, R.string.kw_screen, sw),
         item("stage_dnd", P, R.string.settings_during_show, R.string.settings_stage_dnd, R.string.settings_stage_dnd_detail, R.string.kw_dnd, sw),
-        item("track_stops", P, R.string.settings_during_show, R.string.settings_track_stops, R.string.settings_track_stops_detail, R.string.kw_track, sw, noPlayer),
 
         // Chords
+        item("profile", C, R.string.settings_chords_card, R.string.settings_chords_show, R.string.settings_chords_show_help, R.string.kw_profile),
+        item("chords_size", C, R.string.settings_chords_card, R.string.settings_chords_size, kw = R.string.kw_size, kind = sl, hide = noChords),
+        item("font_chords", C, R.string.settings_chords_card, R.string.settings_font_chords, kw = R.string.kw_font, hide = noChords),
+        item("chords_color", C, R.string.settings_chords_card, R.string.settings_chords_color, kw = R.string.kw_color, hide = noChords),
         item("instrument", C, R.string.settings_chord_shapes, R.string.settings_instrument, R.string.settings_instrument_help, R.string.kw_instrument, hide = noChords),
         item("chord_tap", C, R.string.settings_chord_shapes, R.string.settings_chord_tap, kw = R.string.kw_diagram, kind = sw, hide = noChords),
         item("chord_play", C, R.string.settings_chord_shapes, R.string.settings_chord_play, kw = R.string.kw_sound) { noChords(it) ?: noExtras(it) },
@@ -134,6 +132,9 @@ private val allItems: List<SettingsItem> by lazy {
             noMetro(it) ?: if (!it.look.metroGlow) Hide(R.string.hide_metro_glow, "metro_glow") else null
         },
         item("usb_via_android", M, R.string.settings_usb_card, R.string.usb_via_android, R.string.usb_via_android_detail, R.string.kw_usb, sw, noPlayer),
+        item("stop_fade", M, R.string.track_ends_title, R.string.stop_fade, R.string.stop_fade_detail, R.string.kw_fade, hide = noPlayer),
+        item("trim_silence", M, R.string.track_ends_title, R.string.trim_silence, R.string.trim_silence_detail, R.string.kw_fade, sw, noPlayer),
+        item("track_stops", M, R.string.track_ends_title, R.string.settings_track_stops, R.string.settings_track_stops_detail, R.string.kw_track, sw, noPlayer),
         item("battery_allow", M, R.string.advanced_play, R.string.advanced_battery_allow, R.string.advanced_play_help, R.string.kw_battery) {
             noPlayer(it) ?: if (it.advanced.batteryFree) Hide(R.string.hide_battery_free) else null
         },
@@ -165,6 +166,11 @@ private val allItems: List<SettingsItem> by lazy {
         item("band_members", N, R.string.band_members, R.string.band_members, kw = R.string.kw_band, hide = noBandOrNet),
         item("band_invite", N, R.string.band_members, R.string.band_invite, R.string.band_invite_detail, R.string.kw_internet, hide = noInternet),
         item("announce", N, R.string.announce_title, R.string.announce_switch, R.string.announce_help, R.string.kw_announce, sw, noExtras),
+        item("midi_out", N, R.string.settings_midi_out, R.string.settings_midi_out_device, R.string.settings_midi_out_help, R.string.kw_midi) { noMidi(it) ?: noExtras(it) },
+        item("external_show", N, R.string.external_title, R.string.external_show, R.string.external_help, R.string.kw_external, hide = noExtras),
+        item("external_idle", N, R.string.external_title, R.string.external_idle, kw = R.string.kw_external) {
+            noExtras(it) ?: if (it.look.externalShow == br.app.stagebook.data.model.ExternalShow.OFF) Hide(R.string.hide_external_off, "external_show") else null
+        },
         item("web_editor", N, R.string.settings_web_editor_card, R.string.settings_web_editor_switch, R.string.settings_web_editor_switch_detail, R.string.kw_computer, sw) {
             if (it.look.essential) Hide(R.string.hide_essential, "essential") else null
         },
@@ -187,6 +193,7 @@ private val allItems: List<SettingsItem> by lazy {
         item("about_help", A, R.string.about_help, R.string.about_help_open, R.string.about_help_text, R.string.kw_help),
         item("about_update", A, R.string.settings_update, R.string.settings_update, R.string.settings_update_help, R.string.kw_update, hide = noInternet),
         item("about_privacy", A, R.string.about_privacy, R.string.about_privacy, R.string.about_privacy_text, R.string.kw_privacy),
+        item("about_credits", A, R.string.about_credits, R.string.about_credits, R.string.about_services_text, R.string.kw_credits),
         item("about_code", A, R.string.about_open_source, R.string.about_see_code, R.string.about_open_source_text, R.string.kw_code),
         item("about_support", A, R.string.about_support, R.string.about_support, R.string.about_support_text, R.string.kw_support),
     )
@@ -214,10 +221,28 @@ private val tweakItems: List<SettingsItem> by lazy {
 /** The id a tweak's switch carries on the screen and in the index. */
 internal fun tweakId(t: DeviceTweak) = "tweak_${t.name.lowercase()}"
 
+/**
+ * The subtitle over each card inside its section (user, 22/11), as the screen draws them: the search shows
+ * "Section › Subtitle › Card". Cards with no subtitle aren't here.
+ */
+internal val subgroupOf: Map<Int, Int> = mapOf(
+    R.string.library_card to R.string.sub_songs, R.string.enrich_title to R.string.sub_songs, R.string.tags_title to R.string.sub_songs,
+    R.string.settings_normalize_card to R.string.sub_songs, R.string.history_title to R.string.sub_songs,
+    R.string.settings_chord_sites to R.string.sub_import, R.string.settings_lyric_sites to R.string.sub_import, R.string.settings_pdf_sites to R.string.sub_import,
+    R.string.backup_save_card to R.string.sub_copies, R.string.backup_open_card to R.string.sub_copies, R.string.backup_share_card to R.string.sub_copies,
+    R.string.band_this_device to R.string.sub_band, R.string.band_nearby to R.string.sub_band, R.string.band_members to R.string.sub_band,
+    R.string.announce_title to R.string.sub_broadcast, R.string.external_title to R.string.sub_broadcast,
+    R.string.settings_web_editor_card to R.string.sub_computer, R.string.settings_web_editor_devices to R.string.sub_computer,
+    R.string.settings_usb_card to R.string.sub_player, R.string.track_ends_title to R.string.sub_player, R.string.advanced_play to R.string.sub_player,
+    R.string.settings_page_mode to R.string.sub_page, R.string.settings_pedal to R.string.sub_pedal, R.string.settings_midi_out to R.string.sub_broadcast,
+    R.string.advanced_permission to R.string.sub_android, R.string.advanced_battery to R.string.sub_android, R.string.advanced_computer to R.string.sub_android,
+    R.string.settings_during_show to R.string.sub_show,
+)
+
 /** An item as the person reads it, in the language the app is showing now. */
 internal class SettingsHit(
     val item: SettingsItem, val title: String, val card: String, val groupName: String, val detail: String?, val score: Int,
-    val hide: Hide? = null, val reason: String? = null,
+    val hide: Hide? = null, val reason: String? = null, val subgroup: String? = null,
 ) {
     /** Only the explanation matched: the result says so. */
     val inHelp get() = score == HELP
@@ -230,7 +255,7 @@ private const val HELP = 3
 private fun Resources.read(item: SettingsItem): SettingsHit {
     val raw = if (item.kind.slider) getString(item.title, SENTINEL) else getString(item.title)
     val title = raw.substringBefore(SENTINEL.toString()).trim().trimEnd(':', ' ').ifEmpty { raw }
-    return SettingsHit(item, title, getString(item.card), getString(item.group.title), item.detail?.let(::getString), 0)
+    return SettingsHit(item, title, getString(item.card), getString(item.group.title), item.detail?.let(::getString), 0, subgroup = subgroupOf[item.card]?.let(::getString))
 }
 
 /** What a search reads of one item, normalized once per language: a keystroke only compares against it. */
@@ -277,7 +302,7 @@ internal class SettingsSearchIndex(private val resources: Resources) {
             val item = e.read.item
             val hide = item.hide(ctx)
             val r = e.read
-            SettingsHit(item, r.title, r.card, r.groupName, r.detail, score, hide, hide?.let { reasons.getOrPut(it.reason) { resources.getString(it.reason) } })
+            SettingsHit(item, r.title, r.card, r.groupName, r.detail, score, hide, hide?.let { reasons.getOrPut(it.reason) { resources.getString(it.reason) } }, r.subgroup)
         }.sortedWith(compareBy({ it.score }, { it.hide != null }))
     }
 }

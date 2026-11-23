@@ -37,8 +37,7 @@ class IncomingFilesEdgesTest {
     private val context = ApplicationProvider.getApplicationContext<android.app.Application>()
 
     private fun incoming(): IncomingFiles = runBlocking {
-        val repo = LibraryRepository(context, CoroutineScope(SupervisorJob() + Dispatchers.IO))
-        withTimeout(5_000) { repo.loaded.first { it } }
+        val repo = testRepo()
         IncomingFiles(context, Backup(context, repo, TrackStore(context)))
     }
 

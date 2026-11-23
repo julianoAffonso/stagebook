@@ -61,7 +61,10 @@ class ImportViewModel @Inject constructor(
     /** Where the importer opens: the profile's default site (chords or lyrics), and what the search looks for. */
     private val look get() = repository.library.value.look
     // what is being imported: what the automatic profile asked for, otherwise the profile's own kind
-    private val kind: SiteKind get() = SiteKind.entries.firstOrNull { it.name == route.kind } ?: look.siteKind
+    // a page shared from a browser carries no kind: a PDF address or one of the PDF sites opens the PDF browser
+    private val kind: SiteKind get() = SiteKind.entries.firstOrNull { it.name == route.kind }
+        ?: SiteKind.PDF.takeIf { pdfAddress(route.query, look.sites(SiteKind.PDF)) }
+        ?: look.siteKind
     val home: String get() = look.sites(kind).firstOrNull()?.url ?: HOME
     /** Browsing for PDF scores: a tapped PDF becomes a song, and there is no "import this page". */
     val pdfMode: Boolean get() = kind == SiteKind.PDF
@@ -139,12 +142,51 @@ class ImportViewModel @Inject constructor(
     companion object {
         /** Address, domain or a Google search for "<word> <text>" (lyrics or chords, depending on the profile). */
         fun urlFor(q: String, word: String = "letra"): String {
-            val s = q.trim()
+            val s = asAddress(q.trim())
             return when {
-                s.matches(Regex("(?i)^https?://.*")) -> s
-                s.matches(Regex("(?i)^[\\w.-]+\\.[a-z]{2,}(/.*)?$")) -> "https://$s"
-                else -> "https://www.google.com/search?q=" + Uri.encode("$word $s")
+                s.matches(Regex("(?i)^https?://\\S*$")) -> lowerSite(s)
+                isWebAddress(s) -> lowerSite("https://$s")
+                else -> "https://www.google.com/search?q=" + Uri.encode("$word ${q.trim()}")
             }
+        }
+
+        /**
+         * Whether the whole text is a web address, as Android's own link finder sees it (the list of real site endings:
+         * "imslp.org" and "stagebook.app.br" are, "ac.dc" and "Sr.Brasil" aren't), like a browser's bar (user, 22/11).
+         */
+        fun isWebAddress(s: String): Boolean {
+            if (s.isEmpty() || s.any(Char::isWhitespace)) return false
+            // judged in lower case: the finder knows "org", not the keyboard's "Org" (only for judging; the path keeps its case)
+            val text = android.text.SpannableString(s.lowercase())
+            if (!android.text.util.Linkify.addLinks(text, android.text.util.Linkify.WEB_URLS)) return false
+            val links = text.getSpans(0, text.length, android.text.style.URLSpan::class.java)
+            return links.size == 1 && text.getSpanStart(links[0]) == 0 && text.getSpanEnd(links[0]) == text.length
+        }
+
+        /**
+         * A phone's keyboard may put a space after each period and capitals at the start ("HTTPS://clara. Imslp. Org/…",
+         * user 22/11). The bar is also a search ("Sr. Brasil", "ac. dc" must stay words, user 22/11): the spaces right
+         * after . / : go only when what is left starts with http(s):// or is a web address.
+         */
+        private fun asAddress(s: String): String {
+            if (!s.contains(' ')) return s
+            val joined = s.replace(Regex("(?<=[./:])\\s+"), "")
+            if (joined.contains(' ')) return s
+            return if (joined.matches(Regex("(?i)^https?://\\S*$")) || isWebAddress(joined)) joined else s
+        }
+
+        /** An address that is a PDF or is on one of the PDF score sites (a page shared from a browser, 22/11). */
+        fun pdfAddress(query: String, pdfSites: List<br.app.stagebook.data.model.ImportSite>): Boolean {
+            val uri = runCatching { query.trim().toUri() }.getOrNull() ?: return false
+            if (uri.scheme?.lowercase() !in setOf("http", "https")) return false
+            if (uri.path.orEmpty().lowercase().endsWith(".pdf")) return true
+            val host = uri.host?.lowercase()?.removePrefix("www.") ?: return false
+            return pdfSites.any { site -> site.url.toUri().host?.lowercase()?.removePrefix("www.")?.let { host == it || host.endsWith(".$it") } == true }
+        }
+
+        private fun lowerSite(url: String): String {
+            val m = Regex("^([^:]+://)([^/?#]*)(.*)$").find(url) ?: return url
+            return m.groupValues[1].lowercase() + m.groupValues[2].lowercase() + m.groupValues[3]
         }
 
         const val HOME = "https://www.letras.mus.br/"

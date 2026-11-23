@@ -40,12 +40,7 @@ fun SearchField(value: String, onValueChange: (String) -> Unit, placeholder: Str
         singleLine = true,
         keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
         shape = MaterialTheme.shapes.medium,
-        colors = TextFieldDefaults.colors(
-            focusedContainerColor = MaterialTheme.colorScheme.surface,
-            unfocusedContainerColor = MaterialTheme.colorScheme.surface,
-            focusedIndicatorColor = Color.Transparent,
-            unfocusedIndicatorColor = Color.Transparent,
-        ),
+        colors = searchFieldColors(),
     )
 }
 
@@ -107,12 +102,7 @@ private fun LabeledSearchField(value: String, onValueChange: (String) -> Unit, p
         lineLimits = androidx.compose.foundation.text.input.TextFieldLineLimits.SingleLine,
         keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
         shape = MaterialTheme.shapes.medium,
-        colors = TextFieldDefaults.colors(
-            focusedContainerColor = MaterialTheme.colorScheme.surface,
-            unfocusedContainerColor = MaterialTheme.colorScheme.surface,
-            focusedIndicatorColor = Color.Transparent,
-            unfocusedIndicatorColor = Color.Transparent,
-        ),
+        colors = searchFieldColors(),
     )
 }
 
@@ -148,3 +138,12 @@ private fun FittingHint(text: String) {
 
 private const val MIN_HINT_SCALE = 0.6f
 private const val HINT_STEP = 0.05f
+
+/** The filled, lineless field of every search and address box (audit 22/11: the same four colours in three places). */
+@Composable
+fun searchFieldColors() = TextFieldDefaults.colors(
+    focusedContainerColor = MaterialTheme.colorScheme.surface,
+    unfocusedContainerColor = MaterialTheme.colorScheme.surface,
+    focusedIndicatorColor = Color.Transparent,
+    unfocusedIndicatorColor = Color.Transparent,
+)

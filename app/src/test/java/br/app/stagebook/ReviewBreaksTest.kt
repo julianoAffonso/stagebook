@@ -1,7 +1,7 @@
 package br.app.stagebook
 
 import androidx.compose.ui.test.assertCountEquals
-import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithText
 import androidx.test.core.app.ApplicationProvider
@@ -44,13 +44,12 @@ class ReviewBreaksTest {
     private val context = ApplicationProvider.getApplicationContext<android.app.Application>()
     private val identity = DeviceIdentity(context)
 
-    private fun repo() = LibraryRepository(context, CoroutineScope(SupervisorJob() + Dispatchers.IO))
-        .also { r -> runBlocking { withTimeout(5_000) { r.loaded.first { it } }; r.restore(emptyList(), emptyList()) } }
+    private fun repo() = testRepo(empty = true)
 
     private fun LibraryRepository.songs(vararg titles: String) = titles.map { saveSong(Song(title = it, author = "x", text = it)) }
 
     private fun scan(repo: LibraryRepository, inbox: BandInbox = BandInbox(context), from: String = ""): ScanSetlistViewModel {
-        val link = BandLink(context, identity, br.app.stagebook.data.BandTrust(context), br.app.stagebook.data.StageGate(), inbox, repo)
+        val link = testLink(repo = repo, identity = identity, inbox = inbox)
         val cloud = SetlistCloud(repo, identity)
         val internet = br.app.stagebook.data.BandInternet(
             context, cloud, br.app.stagebook.data.BandTrust(context), identity, inbox, br.app.stagebook.data.Connectivity(context), link,

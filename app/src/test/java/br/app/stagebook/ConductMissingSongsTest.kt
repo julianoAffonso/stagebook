@@ -49,7 +49,7 @@ import java.util.concurrent.CopyOnWriteArrayList
 class ConductMissingSongsTest {
     private val context = ApplicationProvider.getApplicationContext<android.app.Application>()
     private val songs = listOf(Conduct.Item("Primeira"), Conduct.Item("Segunda", "Banda"), Conduct.Item("Terceira"))
-    private val voice = BandProtocol.Hello("voz", "Voz", "key")
+    private val voice = VOICE
     private val chords = "{key: G}\n[G]La la [D]la\n[C]La la la"
     private val lyrics = "La la la\nLa la la\nLa la la"
 
@@ -59,11 +59,10 @@ class ConductMissingSongsTest {
         override fun getApplicationContext() = this
     }
 
-    private fun await(what: () -> Boolean) = runBlocking { withTimeout(10_000) { while (!what()) delay(10) } }
+    private fun await(what: () -> Boolean) = awaitTrue(10_000, what)
 
     private fun repo(on: android.content.Context, vararg have: Pair<String, String>): LibraryRepository = runBlocking {
-        val repo = LibraryRepository(on, CoroutineScope(Dispatchers.IO))
-        withTimeout(15_000) { repo.loaded.first { it } }
+        val repo = testRepo(on)
         repo.updateLook { it.copy(bandOn = true, chords = true) }
         have.forEach { (title, text) -> repo.saveSong(Song(title = title, author = songs.firstOrNull { it.title == title }?.artist.orEmpty(), text = text)) }
         repo
@@ -74,10 +73,10 @@ class ConductMissingSongsTest {
         val leaderRepo = repo(device("leader"), *leaderHas.map { it to chords }.toTypedArray())
         val repo = repo(followerDevice, *followerHas)
         val inbox = BandInbox(followerDevice)
-        val leaderLink = BandLink(context, DeviceIdentity(context), br.app.stagebook.data.BandTrust(context), br.app.stagebook.data.StageGate(), BandInbox(device("leader")), leaderRepo)
-        val link = BandLink(context, DeviceIdentity(context), br.app.stagebook.data.BandTrust(context), br.app.stagebook.data.StageGate(), inbox, repo)
-        val leader = BandConduct(leaderLink, leaderRepo, DeviceIdentity(context))
-        val follower = BandConduct(link, repo, DeviceIdentity(context))
+        val leaderLink = testLink(repo = leaderRepo, inbox = BandInbox(device("leader")))
+        val link = testLink(repo = repo, inbox = inbox)
+        val leader = testConduct(repo = leaderRepo, link = leaderLink)
+        val follower = testConduct(repo = repo, link = link)
 
         /** Another following device, known only by what it answers. */
         var guitar: Conduct.Lack? = Conduct.Lack("Guitarra", listOf("Segunda"))
@@ -303,8 +302,7 @@ class ConductMissingSongsTest {
 
     @Test fun `the messages are the ones the published app reads`() {
         val b = Band()
-        val json = Json { ignoreUnknownKeys = true }
-        org.junit.Assert.assertTrue("the version was raised for these fields", BandProtocol.VERSION >= BandProtocol.BREAKS_VERSION)
+        val json = lenientJson
         // what the leader sends: a band package as before, with a list that has no name (loose songs)
         val (packed, shared) = SetlistCloud.looseSongs(b.leaderRepo.library.value.songs)!!
         val wire = json.parseToJsonElement(b.leaderLink.packageBytes(packed, shared).decodeToString()).jsonObject

@@ -23,10 +23,9 @@ import org.robolectric.annotation.Config
 @Config(sdk = [35], application = android.app.Application::class)
 class SetlistRestoreTest {
     private val context = ApplicationProvider.getApplicationContext<android.app.Application>()
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private val scope = testScope()
     @After fun stop() { scope.cancel() }
-    private val repo = LibraryRepository(context, scope)
-        .also { r -> runBlocking { withTimeout(5_000) { r.loaded.first { it } }; r.restore(emptyList(), emptyList()) } }
+    private val repo = testRepo(scope = scope, empty = true)
 
     @Test fun `Discard doesn't bring back a song deleted meanwhile, and the break moves to the next song that stays`() {
         val (a, b, c) = listOf("A", "B", "C").map { repo.saveSong(Song(title = it)) }

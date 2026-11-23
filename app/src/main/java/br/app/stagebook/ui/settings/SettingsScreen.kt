@@ -200,6 +200,22 @@ fun SettingsRoute(
         uri?.let { viewModel.backupTo(it, backupParts) }
     }
     val restorePicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri -> uri?.let(viewModel::inspectBackup) }
+    // the external screen's own image (user, 22/11): copied to this device; a file that isn't an image is refused
+    val externalRefused = stringResource(R.string.external_image_refused)
+    val appMessage = br.app.stagebook.ui.components.LocalAppMessage.current
+    val externalPicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
+        if (uri != null) scope.launch {
+            if (viewModel.saveExternalImage(uri)) viewModel.setExternalIdle(br.app.stagebook.data.model.ExternalIdle.IMAGE) else appMessage.show(externalRefused)
+        }
+    }
+    // the history of what was played, as a spreadsheet (user, 22/11): the period picked, then where to save it
+    var historyPeriod by remember { mutableStateOf(br.app.stagebook.domain.PlayHistory.Period.MONTH) }
+    val historyHeader = listOf(stringResource(R.string.history_col_date), stringResource(R.string.history_col_song), stringResource(R.string.history_col_artist), stringResource(R.string.history_col_setlist))
+    // a spreadsheet where the comma is the decimal mark wants ';' between columns (it opened in one column otherwise)
+    val historySeparator = if (java.text.DecimalFormatSymbols.getInstance(androidx.compose.ui.platform.LocalConfiguration.current.locales[0]).decimalSeparator == ',') ';' else ','
+    val historySaver = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("text/csv")) { uri ->
+        uri?.let { viewModel.historyTo(it, historyPeriod, historyHeader, historySeparator) }
+    }
     val pendingRestore by viewModel.pendingRestore.collectAsStateWithLifecycle()
     // a file tapped outside the app takes the same path as one picked with Open file
     val linkedFile by SettingsLinks.file.collectAsStateWithLifecycle()
@@ -232,6 +248,8 @@ fun SettingsRoute(
                     SettingsMessage.ImportNewer -> r.getString(R.string.scan_newer)
                     SettingsMessage.BackupDone -> r.getString(R.string.backup_done)
                     SettingsMessage.BackupFailed -> r.getString(R.string.backup_failed)
+                    is SettingsMessage.HistoryDone -> r.getQuantityString(R.plurals.history_done, m.lines, m.lines)
+                    SettingsMessage.HistoryFailed -> r.getString(R.string.history_failed)
                     SettingsMessage.NotBackup -> r.getString(R.string.backup_not_backup)
                     SettingsMessage.RestoreFailed -> r.getString(R.string.backup_restore_failed)
                     is SettingsMessage.Restored -> {
@@ -392,11 +410,18 @@ fun SettingsRoute(
                 },
                 onDndAllow = ::openDndAccess,
                 onTrackStops = viewModel::setTrackStops,
+                onStopFade = viewModel::setStopFade,
+                onTrimSilence = viewModel::setTrimSilence,
                 onColumns = viewModel::setColumns,
                 onStageMode = viewModel::setStageMode,
                 onAutoScroll = viewModel::setAutoScroll,
                 onChordPlay = viewModel::setChordPlay,
                 onAnnounce = viewModel::setAnnounce,
+                onExternalShow = viewModel::setExternalShow,
+                onExternalIdle = { idle ->
+                    if (idle == br.app.stagebook.data.model.ExternalIdle.IMAGE) externalPicker.launch("image/*")
+                    else { viewModel.forgetExternalImage(); viewModel.setExternalIdle(idle) }
+                },
                 onEssential = viewModel::setEssential,
                 onBandOn = viewModel::setBandOn,
                 onInternetOn = viewModel::setInternetOn,
@@ -407,6 +432,13 @@ fun SettingsRoute(
                     backupSaver.launch("stagebook-backup-${java.time.LocalDate.now()}.${br.app.stagebook.data.Backup.EXTENSION}")
                 },
                 onRestore = { restorePicker.launch(arrayOf("*/*")) },
+                onExportHistory = { period ->
+                    historyPeriod = period
+                    historySaver.launch("stagebook-${resources.getString(R.string.history_file)}-${java.time.LocalDate.now()}.csv")
+                },
+                onEnrich = viewModel::enrich,
+                onEnrichAgain = viewModel::enrichAgain,
+                onStopEnrich = viewModel::stopEnrich,
                 onFactoryReset = viewModel::factoryReset,
                 onMetronome = viewModel::setMetronome,
                 onMetronomeVolume = viewModel::setMetronomeVolume,
@@ -500,16 +532,24 @@ data class SettingsActions(
     val onStageDnd: (Boolean) -> Unit = {},
     val onDndAllow: () -> Unit = {},
     val onTrackStops: (Boolean) -> Unit = {},
+    val onStopFade: (Int) -> Unit = {},
+    val onTrimSilence: (Boolean) -> Unit = {},
     val onColumns: (StageColumns) -> Unit = {},
     val onStageMode: (br.app.stagebook.data.model.StageMode) -> Unit = {},
     val onAutoScroll: (Int) -> Unit = {},
     val onChordPlay: (br.app.stagebook.data.model.ChordPlayMode) -> Unit = {},
     val onAnnounce: (Boolean) -> Unit = {},
+    val onExternalShow: (br.app.stagebook.data.model.ExternalShow) -> Unit = {},
+    val onExternalIdle: (br.app.stagebook.data.model.ExternalIdle) -> Unit = {},   // IMAGE: picks the image first
     val onEssential: (Boolean) -> Unit = {},
     val onBandOn: (Boolean) -> Unit = {},
     val onInternetOn: (Boolean) -> Unit = {},
     val onExtrasOn: (Boolean) -> Unit = {},
     val onBackup: (Set<br.app.stagebook.data.Backup.Part>) -> Unit = {},
+    val onExportHistory: (br.app.stagebook.domain.PlayHistory.Period) -> Unit = {},
+    val onEnrich: () -> Unit = {},
+    val onEnrichAgain: () -> Unit = {},   // the songs looked up before with no luck, once more
+    val onStopEnrich: () -> Unit = {},
     val onAutoTags: (national: String, international: String, language: String, preview: Boolean) -> Pair<Int, Int> = { _, _, _, _ -> 0 to 0 },
     val onRestore: () -> Unit = {},
     val onFactoryReset: () -> Unit = {},
@@ -574,9 +614,9 @@ private fun SectionPage(open: SettingsSection, uiState: SettingsUiState, actions
     Box(Modifier.fillMaxSize()) {
         Column(Modifier.fillMaxHeight().padding(horizontal = Spacing.m)) {
             ScreenHeader(stringResource(open.titleOf(uiState.look)), Modifier.padding(top = Spacing.s, bottom = Spacing.m), onBack = onBack)
-            SectionPinned(open, uiState.look, draft)
-            Column(Modifier.weight(1f).verticalScroll(rememberScrollState())) {
-                SectionDetail(open, uiState, actions, draft)
+            val scroll = rememberScrollState()
+            Column(Modifier.weight(1f).verticalScroll(scroll)) {
+                SectionDetail(open, uiState, actions, draft, scroll)
                 Spacer(Modifier.height(Spacing.l))
             }
         }
@@ -602,7 +642,6 @@ fun SettingsSection.iconOf(@Suppress("UNUSED_PARAMETER") look: Look): ImageVecto
  * internet, telling OBS (extras) or the editor on the computer (everything but essential mode).
  */
 fun SettingsSection.shown(look: Look): Boolean = when (this) {
-    SettingsSection.CHORDS -> look.chords
     SettingsSection.PLAYER -> look.extrasOn || look.playerMode
     SettingsSection.BAND -> look.bandOn || look.internetOn || look.extrasOn || !look.essential
     else -> true
@@ -683,9 +722,9 @@ fun SettingsScreen(
                     ) {
                         // fixed header; only the content scrolls
                         ScreenHeader(stringResource(open.titleOf(uiState.look)), Modifier.padding(top = Spacing.s, bottom = Spacing.m))
-                        SectionPinned(open, uiState.look, draft)
-                        Column(Modifier.weight(1f).verticalScroll(rememberScrollState())) {
-                            SectionDetail(open, uiState, actions, draft)
+                        val scroll = androidx.compose.runtime.key(open) { rememberScrollState() }   // each group opens at its top
+                        Column(Modifier.weight(1f).verticalScroll(scroll)) {
+                            SectionDetail(open, uiState, actions, draft, scroll)
                             Spacer(Modifier.height(Spacing.l))
                         }
                     }
@@ -794,7 +833,7 @@ private fun SectionList(
 /** One result: the group's icon, the name, "Group › Card" in the accent color and a line of explanation. */
 @Composable
 private fun SearchResultRow(hit: SettingsHit, onClick: () -> Unit) {
-    val path = hit.groupName + " › " + hit.card + if (hit.inHelp) " · " + stringResource(R.string.search_in_help) else ""
+    val path = hit.groupName + " › " + (hit.subgroup?.let { "$it › " } ?: "") + hit.card + if (hit.inHelp) " · " + stringResource(R.string.search_in_help) else ""
     // hidden by the mode or the profile: dimmed, with the reason; tapping opens where it is turned on
     Row(
         Modifier.fillMaxWidth().clip(MaterialTheme.shapes.medium).alpha(if (hit.hide != null) 0.6f else 1f).clickable(onClick = onClick)
@@ -839,25 +878,48 @@ private fun summary(s: SettingsSection, ui: SettingsUiState, band: BandUi): Stri
 }
 
 @Composable
-private fun SectionDetail(section: SettingsSection, uiState: SettingsUiState, actions: SettingsActions, draft: StageDraft) {
+private fun SectionDetail(section: SettingsSection, uiState: SettingsUiState, actions: SettingsActions, draft: StageDraft, scroll: androidx.compose.foundation.ScrollState) {
     Column(verticalArrangement = Arrangement.spacedBy(Spacing.m)) {
         when (section) {
-            SettingsSection.LYRICS -> LyricsDetail(uiState.look, actions, draft)
+            SettingsSection.LYRICS -> LyricsDetail(uiState.look, actions, draft, scroll)
             SettingsSection.PAGE -> PageDetail(uiState, actions)
-            SettingsSection.CHORDS -> ChordShapesCard(uiState.look, actions)
+            SettingsSection.CHORDS -> {
+                // how the chords look on the lyrics, with their own preview held on top while their card passes (user, 22/11)
+                br.app.stagebook.ui.components.StickyPreview(scroll, { StagePreviewBox(uiState.look, draft, "chordsPreview") }) {
+                    ChordsLookCard(uiState.look, actions, draft)
+                }
+                ChordShapesCard(uiState.look, actions)
+            }
             SettingsSection.PLAYER -> {
+                // the metronome card leads (its own name says what it is); the backing track's cards under their subtitle
                 if (uiState.look.extrasOn) MetronomeDetail(uiState.look, actions)
-                if (uiState.look.playerMode) PlayerDetail(uiState.look, actions)
+                if (uiState.look.playerMode) {
+                    if (uiState.look.extrasOn) br.app.stagebook.ui.components.SettingsSubheader(stringResource(R.string.sub_player))
+                    PlayerDetail(uiState.look, actions)
+                }
             }
             SettingsSection.LIBRARY -> LibraryDetail(uiState, actions)
             SettingsSection.BAND -> {
-                if (uiState.look.bandOn || uiState.look.internetOn) BandDetail(actions.band, actions.bandActions, lan = uiState.look.bandOn, internet = uiState.look.internetOn)
+                // subtitles (user, 22/11): playing together, what goes out to other screens and apps, editing on the computer
+                if (uiState.look.bandOn || uiState.look.internetOn) {
+                    br.app.stagebook.ui.components.SettingsSubheader(stringResource(R.string.sub_band))
+                    BandDetail(actions.band, actions.bandActions, lan = uiState.look.bandOn, internet = uiState.look.internetOn)
+                }
+                // what goes out of the app to other screens, apps and gear (user, 22/11: the songs' MIDI with them)
+                if (uiState.look.extrasOn) br.app.stagebook.ui.components.SettingsSubheader(stringResource(R.string.sub_broadcast))
                 AnnounceCard(uiState.look, actions)
-                if (!uiState.look.essential) WebEditorDetail(uiState.look.webEditorOn, actions.web, actions.onWebEditorOn, actions.onWebRemove)
+                ExternalScreenCard(uiState.look, actions)
+                if (uiState.midi.supported && uiState.look.extrasOn) MidiOutCard(uiState.look, actions)
+                if (!uiState.look.essential) {
+                    br.app.stagebook.ui.components.SettingsSubheader(stringResource(R.string.sub_computer))
+                    WebEditorDetail(uiState.look.webEditorOn, actions.web, actions.onWebEditorOn, actions.onWebRemove)
+                }
             }
             SettingsSection.DEVICE -> {
                 EssentialDetail(uiState.look, actions)
                 LanguageDetail(uiState.language, actions)
+                // Android's own settings, with the permission that unlocks them first (user, 22/11)
+                br.app.stagebook.ui.components.SettingsSubheader(stringResource(R.string.sub_android))
                 AdvancedDetail(actions.advanced, actions.onTweak)
             }
             SettingsSection.ABOUT -> AboutDetail(uiState, actions)
@@ -874,19 +936,18 @@ internal class StageDraft(fontSp: Float, sectionScale: Float, chordScale: Float)
 }
 
 /**
- * Pinned above the scrolling content: on Stage look, the stage preview, so every change (lyrics, section titles,
- * chords) shows right away while scrolling through the options (user, 01/11).
+ * The stage preview with the look being set, so every change shows right away (user, 01/11). It stays on top while its
+ * cards scroll under it and goes up with the page after them ([br.app.stagebook.ui.components.StickyPreview], 22/11).
  */
 @Composable
-private fun SectionPinned(section: SettingsSection, look: Look, draft: StageDraft) {
-    if (section != SettingsSection.LYRICS) return
+private fun StagePreviewBox(look: Look, draft: StageDraft, tag: String) {
     // fixed height: changing the size doesn't move the screen; on a wide screen the box is taller, so the miniature
     // (sized so 72 fits) stays close to the real size (30/10)
-    BoxWithConstraints(Modifier.fillMaxWidth().padding(bottom = Spacing.m)) {
+    BoxWithConstraints(Modifier.fillMaxWidth()) {
         Surface(
             color = Color(look.bg),
             shape = MaterialTheme.shapes.small,
-            modifier = Modifier.fillMaxWidth().height(if (maxWidth >= Sizes.wideScreen) Sizes.fontPreviewWide else Sizes.fontPreview).testTag("lyricsPreview"),
+            modifier = Modifier.fillMaxWidth().height(if (maxWidth >= Sizes.wideScreen) Sizes.fontPreviewWide else Sizes.fontPreview).testTag(tag),
         ) {
             StagePreview(look.copy(sectionScale = draft.sectionScale, chordScale = draft.chordScale), draft.font, Modifier.padding(Spacing.m).clipToBounds().stageMiniature(draft.font), R.string.settings_preview_size_text)
         }
@@ -894,9 +955,10 @@ private fun SectionPinned(section: SettingsSection, look: Look, draft: StageDraf
 }
 
 @Composable
-private fun LyricsDetail(look: Look, actions: SettingsActions, draft: StageDraft) {
+private fun LyricsDetail(look: Look, actions: SettingsActions, draft: StageDraft, scroll: androidx.compose.foundation.ScrollState) {
     // everything about how the lyrics look in one card (user, 01/11: the size was far from the colors and the font);
-    // the preview is pinned above
+    // the preview stays on top while the lyrics and section title cards pass, then goes up with the page (user, 22/11)
+    br.app.stagebook.ui.components.StickyPreview(scroll, { StagePreviewBox(look, draft, "lyricsPreview") }) {
     SettingsCard(stringResource(R.string.settings_lyrics_card), help = stringResource(R.string.settings_font_help)) {
         Text(stringResource(R.string.settings_font_size, draft.font.roundToInt()), style = MaterialTheme.typography.bodyLarge)
         Slider(
@@ -919,9 +981,9 @@ private fun LyricsDetail(look: Look, actions: SettingsActions, draft: StageDraft
         ColorSwatchRow(StagePalette.background, look.bg, actions.onBackground, Modifier.settingsItem("background"))
         LegibilityWarnings(look)
     }
-    // chords and section titles live with the rest of the stage look too, under the same preview (user, 01/11)
-    ChordsLookCard(look, actions, draft)
+    // section titles under the same preview; the chords' look moved to Chords, with its own preview (user, 22/11)
     SectionsDetail(look, actions, draft)
+    }
     // the handle's side has no switch: held and dragged to the other edge, it moves there (user, 19/11)
     // a song that is a PDF: its colours turned over (the song's own switch is in its editor)
     SettingsCard(stringResource(R.string.settings_pdf_card), help = stringResource(R.string.settings_pdf_invert_help)) {
@@ -936,6 +998,8 @@ private fun LyricsDetail(look: Look, actions: SettingsActions, draft: StageDraft
 @Composable
 private fun PageDetail(uiState: SettingsUiState, actions: SettingsActions) {
     val look = uiState.look
+    // subtitles (user, 22/11): how the page moves, the pedal, what the device does during the show
+    br.app.stagebook.ui.components.SettingsSubheader(stringResource(R.string.sub_page))
     SettingsCard(stringResource(R.string.settings_page_mode), help = stringResource(R.string.settings_stage_mode_help)) {
         Text(stringResource(R.string.settings_stage_mode), style = MaterialTheme.typography.bodyLarge)
         br.app.stagebook.ui.components.SegmentedChoice(
@@ -960,7 +1024,9 @@ private fun PageDetail(uiState: SettingsUiState, actions: SettingsActions) {
             InfoText(stringResource(R.string.settings_columns_help))
         }
     }
+    br.app.stagebook.ui.components.SettingsSubheader(stringResource(R.string.sub_pedal))
     PedalDetail(uiState, actions)
+    br.app.stagebook.ui.components.SettingsSubheader(stringResource(R.string.sub_show))
     // the screen stays on with the app open (it was in its own Screen item)
     SettingsCard(stringResource(R.string.settings_during_show), help = stringResource(R.string.settings_keep_screen_on_help)) {
         SwitchRow(stringResource(R.string.settings_keep_screen_on), look.keepScreenOn, actions.onKeepScreenOn, Modifier.settingsItem("keep_screen_on"))
@@ -970,8 +1036,6 @@ private fun PageDetail(uiState: SettingsUiState, actions: SettingsActions) {
             detail = stringResource(if (missing) R.string.settings_stage_dnd_missing else R.string.settings_stage_dnd_detail),
         )
         if (missing) ActionButton(stringResource(R.string.stage_dnd_allow), actions.onDndAllow, Modifier.settingsItem("stage_dnd"), icon = AppIcons.VolumeOff, tone = ButtonTone.Tonal)
-        // the stage's track button: stop (back to the start) by default; pausing is a choice (user, 31/10); player only
-        if (look.playerMode) SwitchRow(stringResource(R.string.settings_track_stops), look.trackStops, actions.onTrackStops, Modifier.settingsItem("track_stops"), detail = stringResource(R.string.settings_track_stops_detail))
         // Android's own screen timeout sits next to keeping the screen on (user, 14/11); only where the device has it
         Tweaks(actions.advanced, DeviceTweak.Group.BATTERY, actions.onTweak, only = DeviceTweak.SCREEN_TIMEOUT)
     }
@@ -994,14 +1058,7 @@ private fun PageColumns(look: Look, actions: SettingsActions) {
 /** Stage preview with the chosen look (lyrics, section and chords), at size [font]. */
 @Composable
 private fun StagePreview(look: Look, font: Float, modifier: Modifier = Modifier, @StringRes sample: Int = R.string.settings_preview_text) {
-    val style = TextStyle(
-        color = Color(look.fg),
-        fontSize = font.sp,
-        lineHeight = (font * 1.25f).sp,
-        fontWeight = if (look.bold) FontWeight.Bold else FontWeight.Normal,
-        fontFamily = look.font.family,
-        lineHeightStyle = LineHeightStyle(LineHeightStyle.Alignment.Center, LineHeightStyle.Trim.None),
-    )
+    val style = br.app.stagebook.ui.stage.stageTextStyle(look, font)
     ChordText(
         lyricsAnnotated(
             stringResource(sample),
@@ -1014,7 +1071,7 @@ private fun StagePreview(look: Look, font: Float, modifier: Modifier = Modifier,
             Color(look.highlightColor),
         ),
         style = style,
-        chordStyle = style.copy(color = Color(look.chordColor), fontSize = (font * look.chordScale).sp, fontWeight = FontWeight.Bold, fontFamily = look.chordFont.family, lineHeight = TextUnit.Unspecified),
+        chordStyle = br.app.stagebook.ui.stage.stageChordStyle(style, look),
         modifier = modifier,
     )
 }
@@ -1196,7 +1253,7 @@ private fun PedalDetail(uiState: SettingsUiState, actions: SettingsActions) {
         PedalButtonsContent(uiState, actions)
     }
     // the songs' MIDI is one of the extras (essential mode, T19): off, the card leaves too
-    if (uiState.midi.supported && uiState.look.extrasOn) MidiOutCard(uiState.look, actions)
+
 }
 
 /** Where the songs' MIDI goes (user, 07/11): one output for the whole app, USB or Bluetooth. */
@@ -1211,13 +1268,14 @@ private fun MidiOutCard(look: Look, actions: SettingsActions) {
         val none = stringResource(R.string.settings_midi_out_none)
         OptionDropdown(
             stringResource(R.string.settings_midi_out_device), options, options.firstOrNull { it?.key == look.midiOut }, actions.onMidiOut,
-            { o -> when { o == null -> none; away && o.key == saved?.key -> awayName; else -> o.name } },
+            { o -> when { o == null -> none; away && o.key == saved.key -> awayName; else -> o.name } },
             Modifier.fillMaxWidth().settingsItem("midi_out"),
             onOpen = actions.onMidiOutputsOpen,
         )
         // a Bluetooth device only shows up once connected, in the card above: say where, when none is listed
         if (actions.midiOutputs.none { it.bluetooth }) {
-            Text(stringResource(R.string.settings_midi_out_find_bt), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            // the pedal and MIDI connection lives in Turn the page: a link takes there (user, 22/11, the output moved out of it)
+            br.app.stagebook.ui.components.SettingsLinkText(stringResource(R.string.settings_midi_out_find_bt), stringResource(R.string.settings_pedal_connect), SettingsSection.PAGE, Modifier.settingsItem("midi_out"), style = MaterialTheme.typography.bodySmall)
         }
     }
 }
@@ -1560,11 +1618,32 @@ private fun PlayerDetail(look: Look, actions: SettingsActions) {
         // the interface charges the device: some behave worse on the engine that way (user, 06/11)
         if (usb.powered) StatusNote(stringResource(R.string.usb_power_warning), StatusTone.PROBLEM)
     }
+    TrackEndsCard(look, actions)
     // the play card of the Android settings (battery, USB routing) is the player's too
     AdvancedPlayCard(actions.advanced, actions.onTweak, actions.onBatteryFree)
     // no mixer here (user, 02/11): nothing plays in Settings (leaving the stage stops the song), so it could never be
     // adjusted by ear; the mixer and EQ are on the stage, over the playing song
     Text(stringResource(R.string.mixer_listen_on_stage), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+}
+
+/** How the backing track starts and stops (user, 22/11): its silence at the start skipped, and a fade when it stops. */
+@Composable
+private fun TrackEndsCard(look: Look, actions: SettingsActions) {
+    SettingsCard(stringResource(R.string.track_ends_title)) {
+        val locale = androidx.compose.ui.platform.LocalConfiguration.current.locales[0]
+        val seconds = remember(locale) { java.text.NumberFormat.getNumberInstance(locale).apply { maximumFractionDigits = 1 } }
+        val choices = br.app.stagebook.domain.TrackEnds.FADES_MS
+        OptionDropdown(
+            stringResource(R.string.stop_fade), choices, look.stopFadeMs.takeIf { it in choices } ?: 0, actions.onStopFade,
+            nameOf = { if (it == 0) stringResource(R.string.stop_fade_none) else stringResource(R.string.stop_fade_seconds, seconds.format(it / 1000.0)) },
+            modifier = Modifier.settingsItem("stop_fade"),
+        )
+        InfoText(stringResource(R.string.stop_fade_detail))
+        SwitchRow(stringResource(R.string.trim_silence), look.trimSilence, actions.onTrimSilence, Modifier.settingsItem("trim_silence"), detail = stringResource(R.string.trim_silence_detail))
+        // the stage's track button: stop (back to the start) by default; pausing is a choice (user, 31/10). With the
+        // track's start and stop, not with the show (user, 22/11)
+        SwitchRow(stringResource(R.string.settings_track_stops), look.trackStops, actions.onTrackStops, Modifier.settingsItem("track_stops"), detail = stringResource(R.string.settings_track_stops_detail))
+    }
 }
 
 @Composable
@@ -1809,8 +1888,123 @@ private fun AnnounceCard(look: Look, actions: SettingsActions) {
     }
 }
 
+/**
+ * A second screen (HDMI, wireless display) beside Now Playing (user, 22/11): what it shows while the stage is open. It
+ * follows the stage's page; the stage stays on the tablet. A stage extra (T19).
+ */
+@Composable
+private fun ExternalScreenCard(look: Look, actions: SettingsActions) {
+    if (!look.extrasOn) return
+    val names = mapOf(
+        br.app.stagebook.data.model.ExternalShow.OFF to R.string.external_off,
+        br.app.stagebook.data.model.ExternalShow.LYRICS to R.string.external_lyrics,
+        br.app.stagebook.data.model.ExternalShow.CHORDS to R.string.external_chords,
+        br.app.stagebook.data.model.ExternalShow.PDF to R.string.external_pdf,
+    )
+    SettingsCard(stringResource(R.string.external_title), help = stringResource(R.string.external_help)) {
+        OptionDropdown(
+            stringResource(R.string.external_show), br.app.stagebook.data.model.ExternalShow.entries, look.externalShow, actions.onExternalShow,
+            nameOf = { stringResource(names.getValue(it)) }, modifier = Modifier.settingsItem("external_show"),
+        )
+        // Nothing: Android mirrors the tablet, so what the TV shows (the PDF, the stage closed) isn't the app's to choose
+        if (look.externalShow != br.app.stagebook.data.model.ExternalShow.OFF) {
+            InfoText(stringResource(R.string.external_detail))
+            val idleNames = mapOf(
+                br.app.stagebook.data.model.ExternalIdle.LOGO to R.string.external_idle_logo,
+                br.app.stagebook.data.model.ExternalIdle.BLACK to R.string.external_idle_black,
+                br.app.stagebook.data.model.ExternalIdle.IMAGE to R.string.external_idle_image,
+            )
+            OptionDropdown(
+                stringResource(R.string.external_idle), br.app.stagebook.data.model.ExternalIdle.entries, look.externalIdle, actions.onExternalIdle,
+                nameOf = { stringResource(idleNames.getValue(it)) }, modifier = Modifier.settingsItem("external_idle"),
+            )
+            if (look.externalIdle == br.app.stagebook.data.model.ExternalIdle.IMAGE) {
+                ActionButton(stringResource(R.string.external_image_change), { actions.onExternalIdle(br.app.stagebook.data.model.ExternalIdle.IMAGE) }, icon = AppIcons.Image, tone = ButtonTone.Tonal)
+            }
+        }
+    }
+}
+
+/**
+ * What was played, to export (user, 22/11: "an option in Options, in the library"): how much there is, the period, and a
+ * spreadsheet with date, song, artist and setlist, e.g. to report the songs played for royalties.
+ */
+@Composable
+private fun HistoryCard(uiState: SettingsUiState, actions: SettingsActions) {
+    SettingsCard(stringResource(R.string.history_title)) {
+        var period by rememberSaveable { mutableStateOf(br.app.stagebook.domain.PlayHistory.Period.MONTH) }
+        InfoText(
+            if (uiState.playedSongs == 0) stringResource(R.string.history_empty)
+            else pluralStringResource(R.plurals.history_summary, uiState.playedSongs, uiState.playedSongs) + " " +
+                pluralStringResource(R.plurals.history_days, uiState.playedDays, uiState.playedDays),
+        )
+        if (uiState.playedSongs > 0) {
+            br.app.stagebook.ui.components.SegmentedChoice(
+                listOf(
+                    br.app.stagebook.ui.components.Choice(br.app.stagebook.domain.PlayHistory.Period.MONTH, R.string.history_month),
+                    br.app.stagebook.ui.components.Choice(br.app.stagebook.domain.PlayHistory.Period.YEAR, R.string.history_year),
+                    br.app.stagebook.ui.components.Choice(br.app.stagebook.domain.PlayHistory.Period.ALL, R.string.history_all),
+                ),
+                period, { period = it }, Modifier.fillMaxWidth(),
+            )
+            ActionButton(stringResource(R.string.history_export), { actions.onExportHistory(period) }, Modifier.fillMaxWidth().settingsItem("history"), icon = AppIcons.Download, tone = ButtonTone.Tonal)
+        }
+    }
+}
+
+/** Completes artist, year, BPM and length in the whole library, at each service's pace (user, 22/11). */
+@Composable
+private fun EnrichCard(uiState: SettingsUiState, actions: SettingsActions) {
+    if (!uiState.look.internetOn) return   // essential mode (T19): no lookups, no card
+    val e = uiState.enrich
+    SettingsCard(stringResource(R.string.enrich_title)) {
+        // running: the count on its own line, in figures of one width, and the note below it, so the card never changes
+        // height as the number grows (user, 22/11: the line broke at 10 and everything under it jumped)
+        if (e.running) {
+            Text(
+                stringResource(if (e.again) R.string.enrich_running_again else R.string.enrich_running, e.done, e.total),
+                style = MaterialTheme.typography.bodyMedium.copy(fontFeatureSettings = "tnum"),
+                color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, softWrap = false,
+                modifier = Modifier.testTag(ENRICH_STATUS_TAG),
+            )
+            InfoText(stringResource(R.string.enrich_leave))
+        } else {
+            // one state, said once (user, 22/11: "all looked up" above "59 looked up" below was confusing)
+            val missing = uiState.missingData
+            val tried = uiState.triedData
+            // one sentence and one button (user, 22/11: two counts with two look-alike buttons were confusing). The songs
+            // looked up before are counted inside the total; the button looks up the ones not looked up yet, and once
+            // every one was, it looks them all up again
+            val all = missing + tried
+            val status = when {
+                e.offline -> stringResource(R.string.enrich_offline)
+                missing > 0 && tried > 0 -> pluralStringResource(R.plurals.enrich_missing, all, all) + " " + pluralStringResource(R.plurals.enrich_tried_inside, tried, tried)
+                missing > 0 -> pluralStringResource(R.plurals.enrich_missing, missing, missing)
+                tried > 0 -> pluralStringResource(R.plurals.enrich_tried, tried, tried)
+                else -> stringResource(R.string.enrich_nothing)
+            }
+            // just after a run, what it found comes first
+            val done = if (e.total > 0) pluralStringResource(R.plurals.enrich_done, e.filled, e.filled) + " " else ""
+            InfoText(done + status, Modifier.testTag(ENRICH_STATUS_TAG))
+            if (missing > 0) ActionButton(stringResource(R.string.enrich_start), actions.onEnrich, Modifier.fillMaxWidth().settingsItem("enrich"), icon = AppIcons.Sync, tone = ButtonTone.Tonal)
+            else if (tried > 0) ActionButton(stringResource(R.string.enrich_again), actions.onEnrichAgain, Modifier.fillMaxWidth().settingsItem("enrich"), icon = AppIcons.Sync, tone = ButtonTone.Tonal)
+        }
+        if (e.running) {
+            androidx.compose.material3.LinearProgressIndicator(
+                progress = { if (e.total == 0) 0f else e.done.toFloat() / e.total },
+                modifier = Modifier.fillMaxWidth(),
+            )
+            ActionButton(stringResource(R.string.enrich_stop), actions.onStopEnrich, Modifier.fillMaxWidth(), icon = AppIcons.Stop, tone = ButtonTone.Tonal)
+        }
+    }
+}
+
+const val ENRICH_STATUS_TAG = "enrich_status"
+
 @Composable
 private fun LibraryDetail(uiState: SettingsUiState, actions: SettingsActions) {
+    // subtitles group the cards (user, 22/11): the songs, importing from sites, copies; erasing everything last, in red
+    br.app.stagebook.ui.components.SettingsSubheader(stringResource(R.string.sub_songs))
     SettingsCard(stringResource(R.string.library_card)) {
         Text(
             br.app.stagebook.ui.components.songCountText(uiState.songCount) + " · " +
@@ -1819,7 +2013,7 @@ private fun LibraryDetail(uiState: SettingsUiState, actions: SettingsActions) {
             modifier = Modifier.settingsItem("library"),
         )
     }
-    ImportSitesDetail(uiState.look, actions)
+    EnrichCard(uiState, actions)
     // song tags: splitting national and international songs, once (moved here from the song list's ⋮, user 01/11);
     // Portuguese only
     if (br.app.stagebook.ui.components.nationalTagsShown()) SettingsCard(stringResource(R.string.tags_title)) {
@@ -1857,6 +2051,10 @@ private fun LibraryDetail(uiState: SettingsUiState, actions: SettingsActions) {
             )
         }
     }
+    HistoryCard(uiState, actions)
+    br.app.stagebook.ui.components.SettingsSubheader(stringResource(R.string.sub_import))
+    ImportSitesDetail(uiState.look, actions)
+    br.app.stagebook.ui.components.SettingsSubheader(stringResource(R.string.sub_copies))
     // one format only, .stagebook (user's request, 29/10), with the explanation visible (not hidden in "How it works")
     SettingsCard(stringResource(R.string.backup_save_card)) {
         var chosen by rememberSaveable { mutableStateOf(br.app.stagebook.data.Backup.Part.entries.map { it.name }.toSet()) }
@@ -1974,6 +2172,11 @@ private fun AboutDetail(uiState: SettingsUiState, actions: SettingsActions) {
     SettingsCard(stringResource(R.string.about_open_source)) {
         Text(stringResource(R.string.about_open_source_text), style = MaterialTheme.typography.bodyMedium)
         ActionButton(stringResource(R.string.about_see_code), { actions.onOpenLink(AppLinks.REPOSITORY) }, Modifier.settingsItem("about_code"), icon = AppIcons.Public, tone = ButtonTone.Tonal)
+    }
+    // what the app talks to and what it is made of (user, 22/11); the open source licenses ask for the credit
+    SettingsCard(stringResource(R.string.about_credits)) {
+        Text(stringResource(R.string.about_services_text), style = MaterialTheme.typography.bodyMedium, modifier = Modifier.settingsItem("about_credits"))
+        Text(stringResource(R.string.about_libraries_text), style = MaterialTheme.typography.bodyMedium)
     }
     SettingsCard(stringResource(R.string.about_support)) {
         Text(stringResource(R.string.about_support_text), style = MaterialTheme.typography.bodyMedium, modifier = Modifier.settingsItem("about_support"))

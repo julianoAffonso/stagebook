@@ -58,6 +58,7 @@ class WebEditorAuth(private val store: Store, private val now: () -> Long = Syst
     private val _requests = MutableStateFlow<List<Request>>(emptyList())
     val requests: StateFlow<List<Request>> = _requests
     private val answers = mutableMapOf<String, Answer>()
+    private val answeredAt = mutableMapOf<String, Long>()   // an answer nobody came for goes with the request's time (audit 22/11: the key stayed in memory)
     private val deniedUntil = mutableMapOf<String, Long>()   // address → when it may ask again
 
     /** The computer for this cookie key, or null (unknown or removed). */
@@ -92,6 +93,7 @@ class WebEditorAuth(private val store: Store, private val now: () -> Long = Syst
     fun answer(id: String, ok: Boolean) {
         val r = _requests.value.firstOrNull { it.id == id } ?: return
         _requests.update { list -> list.filterNot { it.id == id } }
+        answeredAt[id] = now()
         answers[id] = if (ok) {
             val key = token(32)
             _devices.update { it + Device(token(8), r.name, hash(key), now()) }
@@ -114,6 +116,7 @@ class WebEditorAuth(private val store: Store, private val now: () -> Long = Syst
     @Synchronized
     fun poll(id: String): Poll {
         expire()
+        answeredAt.remove(id)
         return when (val a = answers.remove(id)) {
             is Answer.Approved -> Poll.Approved(a.key)
             Answer.Denied -> Poll.Denied
@@ -140,6 +143,7 @@ class WebEditorAuth(private val store: Store, private val now: () -> Long = Syst
         val limit = now() - REQUEST_TTL_MS
         _requests.update { list -> list.filter { it.at >= limit } }
         deniedUntil.values.removeAll { it <= now() }
+        answeredAt.entries.removeAll { (id, at) -> (at < limit).also { old -> if (old) answers.remove(id) } }
     }
 
     private fun token(bytes: Int): String = ByteArray(bytes).also(random::nextBytes).let { Base64.getUrlEncoder().withoutPadding().encodeToString(it) }

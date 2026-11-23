@@ -36,13 +36,12 @@ import org.robolectric.annotation.Config
 @Config(sdk = [35], application = android.app.Application::class)
 class LastStageTest {
     private val context = ApplicationProvider.getApplicationContext<android.app.Application>()
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private val scope = testScope()
 
     @Before fun main() = Dispatchers.setMain(UnconfinedTestDispatcher())
     @After fun reset() { Dispatchers.resetMain(); scope.cancel() }
 
-    private fun repo() = LibraryRepository(context, scope)
-        .also { r -> runBlocking { withTimeout(5_000) { r.loaded.first { it } }; r.restore(emptyList(), emptyList()) } }
+    private fun repo() = testRepo(scope = scope, empty = true)
 
     private val library = Library(
         songs = listOf(Song(id = "s1", title = "A"), Song(id = "s2", title = "B")),

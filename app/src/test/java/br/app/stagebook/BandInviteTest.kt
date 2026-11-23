@@ -22,10 +22,10 @@ import org.robolectric.annotation.Config
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [35], qualifiers = "pt-rBR", application = android.app.Application::class)
 class BandInviteTest {
-    @get:org.junit.Rule val compose = androidx.compose.ui.test.junit4.createComposeRule()
+    @get:org.junit.Rule val compose = androidx.compose.ui.test.junit4.v2.createComposeRule()
     private val context = ApplicationProvider.getApplicationContext<android.app.Application>()
     private val identity = DeviceIdentity(context)
-    private val cloud = SetlistCloud(LibraryRepository(context, CoroutineScope(SupervisorJob() + Dispatchers.IO)), identity)
+    private val cloud = SetlistCloud(LibraryRepository(context, testScope()), identity)
 
     private fun otherDevice(name: String): br.app.stagebook.domain.BandProtocol.Hello {
         val key = br.app.stagebook.domain.BandCrypto.encode(br.app.stagebook.domain.BandCrypto.newKeyPair().public)

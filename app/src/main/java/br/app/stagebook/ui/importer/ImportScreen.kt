@@ -88,6 +88,8 @@ fun ImportRoute(
     val pdfNot = stringResource(R.string.pdf_site_not_pdf)
     LaunchedEffect(pdfSite) {
         pdfSite.outcome.collect {
+            // the PDF that came in opens in the editor, as a lyrics import does (user, 22/11)
+            (it as? PdfSiteViewModel.Outcome.Done)?.result?.single?.let { id -> if (viewModel.queueState.value != null) onOpenEditorQueued(id) else onOpenEditor(id) }
             appMessage.show(
                 when (it) {
                     is PdfSiteViewModel.Outcome.Done -> it.result.message(context)
@@ -184,6 +186,8 @@ fun ImportScreen(
     // the app's first WebView loads all of Chromium (up to ~1 s on the Fire): the screen shows first (address bar and
     // "loading") and the browser is created on the next frame
     var webView by remember { mutableStateOf<WebView?>(null) }
+    // how many times Android killed the page's process: each time the page is made again (audit 22/11)
+    var rendererGone by remember { androidx.compose.runtime.mutableIntStateOf(0) }
     fun newWebView() =
         WebView(context).apply {
             settings.javaScriptEnabled = true   // lyrics extraction runs as a script on the page
@@ -207,6 +211,14 @@ fun ImportScreen(
                     }
                 }
                 override fun doUpdateVisitedHistory(view: WebView, url: String, isReload: Boolean) { canGoBack = view.canGoBack() }
+                // Android killed the page's process (low memory on an ad-heavy site): not handled, the whole app was closed
+                // with it. This WebView is dead: it is let go (destroyed below) and a new one opens on the same address.
+                override fun onRenderProcessGone(view: WebView, detail: android.webkit.RenderProcessGoneDetail): Boolean {
+                    reading = false   // the script it was running will never answer
+                    webView = null
+                    rendererGone++
+                    return true
+                }
             }
             webChromeClient = object : WebChromeClient() {
                 override fun onProgressChanged(view: WebView, newProgress: Int) { progress = newProgress }
@@ -219,6 +231,11 @@ fun ImportScreen(
         } catch (_: android.util.AndroidRuntimeException) {
             snackbar.showSnackbar(cantOpen)   // the system's WebView is missing or updating
         }
+    }
+    LaunchedEffect(rendererGone) {
+        if (rendererGone == 0) return@LaunchedEffect
+        val back = address
+        runCatching { webView = newWebView().also { it.loadUrl(if (back.isBlank()) home else urlFor(back)) } }
     }
     // lyrics sites have ads and scripts: with the app in the background or the screen off, they stop
     val lifecycle = LocalLifecycleOwner.current.lifecycle
@@ -300,16 +317,15 @@ fun ImportScreen(
                         onValueChange = { address = it },
                         placeholder = { Text(stringResource(R.string.import_address_hint)) },
                         singleLine = true,
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri, imeAction = ImeAction.Go),
+                        // an address: no capitals and no autocorrect (the keyboard put a space after each period, user 22/11)
+                        keyboardOptions = KeyboardOptions(
+                            keyboardType = KeyboardType.Uri, imeAction = ImeAction.Go, autoCorrectEnabled = false,
+                            capitalization = androidx.compose.ui.text.input.KeyboardCapitalization.None,
+                        ),
                         // the page shows up whole: the keyboard closes on Go (device test B-03)
                         keyboardActions = KeyboardActions(onGo = { webView?.loadUrl(urlFor(address)); keyboard?.hide(); focus.clearFocus() }),
                         shape = MaterialTheme.shapes.medium,
-                        colors = TextFieldDefaults.colors(
-                            focusedContainerColor = MaterialTheme.colorScheme.surface,
-                            unfocusedContainerColor = MaterialTheme.colorScheme.surface,
-                            focusedIndicatorColor = Color.Transparent,
-                            unfocusedIndicatorColor = Color.Transparent,
-                        ),
+                        colors = br.app.stagebook.ui.components.searchFieldColors(),
                         modifier = Modifier.weight(1f),
                     )
                     IconButton(onClick = { webView?.loadUrl(urlFor(address)); keyboard?.hide(); focus.clearFocus() }) {
@@ -337,7 +353,8 @@ fun ImportScreen(
                         IconButton(onClick = { notice = false }) { Icon(AppIcons.Close, stringResource(R.string.action_close)) }
                     }
                 }
-                webView?.let { w -> AndroidView(factory = { w }, modifier = Modifier.fillMaxWidth().weight(1f)) }
+                // keyed: a page made again after its process died is another view
+                webView?.let { w -> androidx.compose.runtime.key(w) { AndroidView(factory = { w }, modifier = Modifier.fillMaxWidth().weight(1f)) } }
                     ?: Box(Modifier.fillMaxWidth().weight(1f), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
             }
             LoadingOverlay(visible = uiState.busy, message = stringResource(R.string.import_busy))

@@ -24,14 +24,12 @@ import org.robolectric.annotation.Config
 @Config(sdk = [35], application = android.app.Application::class)
 class WebEditorBreaksTest {
     private val context = ApplicationProvider.getApplicationContext<android.app.Application>()
-    private val repo = LibraryRepository(context, CoroutineScope(SupervisorJob() + Dispatchers.IO))
-        .also { r -> runBlocking { withTimeout(5_000) { r.loaded.first { it } }; r.restore(emptyList(), emptyList()) } }
+    private val repo = testRepo(empty = true)
     private val api = WebEditorApi(repo)
     private val device = WebEditorAuth.Device("d", "Chrome · Windows", "h", 0)
     private val ids = listOf("A", "B", "C", "D", "E").map { repo.saveSong(Song(title = it, author = "x", text = it)) }
 
-    private fun call(method: String, path: String, body: String = "") =
-        api.handle(HttpRequest(method, path, emptyMap(), body = body.toByteArray()), device)!!
+    private fun call(method: String, path: String, body: String = "") = api.send(method, path, body, device = device)
 
     private fun list(items: List<String>) = items.joinToString(",", "[", "]") { "\"$it\"" }
 

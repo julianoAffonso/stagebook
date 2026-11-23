@@ -27,7 +27,7 @@ internal fun File.replaceAtomically(backup: File? = null, ready: (tmp: File) -> 
         }
         val keep = backup != null && exists() && renameTo(backup)
         if (!tmp.renameTo(this)) {
-            if (keep) backup!!.renameTo(this)   // never left without a library: the previous one comes back
+            if (keep) backup.renameTo(this)   // never left without a library: the previous one comes back
             throw IOException("couldn't replace $name")
         }
         return true

@@ -8,7 +8,7 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.assertIsNotSelected
-import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
@@ -61,21 +61,17 @@ class ConductArmedTest {
     private val context = ApplicationProvider.getApplicationContext<android.app.Application>()
     private val identity = DeviceIdentity(context)
     private val trust = BandTrust(context)
-    private val voice = BandProtocol.Hello("voz", "Voz", "key")
+    private val voice = VOICE
     private val member = BandProtocol.Hello("armed-member", "Baixo", "key")
     private val played = mutableListOf<String>()
     private val opened = mutableListOf<String>()
     private val sent = mutableListOf<Conduct.Msg>()
 
     private val repo = runBlocking {
-        LibraryRepository(context, CoroutineScope(Dispatchers.IO)).also { r ->
-            withTimeout(15_000) { r.loaded.first { it } }
-            r.updateLook { it.copy(bandOn = true) }
-            withTimeout(15_000) { r.library.first { it.look.bandOn } }
-        }
+        testRepo(bandOn = true)
     }
-    private val link = BandLink(context, identity, trust, br.app.stagebook.data.StageGate(), BandInbox(context), repo)
-    private val conduct = BandConduct(link, repo, identity).also { it.deliver = { m -> sent += m; emptyMap() } }
+    private val link = testLink(repo = repo, identity = identity, trust = trust)
+    private val conduct = testConduct(repo = repo, link = link, identity = identity).also { it.deliver = { m -> sent += m; emptyMap() } }
     private val setId = repo.createSetlist("Show de sábado").also { id ->
         repo.addToSetlist(id, listOf("A", "B", "C").map { repo.saveSong(Song(title = it, author = "x", text = it)) })
     }
@@ -93,7 +89,7 @@ class ConductArmedTest {
         val cloud = br.app.stagebook.data.SetlistCloud(repo, identity)
         val connectivity = br.app.stagebook.data.Connectivity(context)
         val internet = br.app.stagebook.data.BandInternet(context, cloud, trust, identity, BandInbox(context), connectivity, link)
-        val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+        val scope = testScope()
         return SetlistsViewModel(repo, connectivity, cloud, link, trust, internet, br.app.stagebook.data.SetlistShowStore(context, repo, scope), conduct)
     }
 

@@ -1,7 +1,7 @@
 package br.app.stagebook
 
 import androidx.compose.material3.Text
-import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.test.core.app.ApplicationProvider
@@ -53,10 +53,9 @@ class InboxVersionTest {
     /** What the published app reads of a package: only the rule copied from it (BandProtocol.VERSION was 2 there). */
     @Serializable private data class OldPack(val list: String, val songs: List<JsonElement> = emptyList(), val v: Int = 2)
     private fun oldAppSaysUpdate(json: String): Boolean =
-        Json { ignoreUnknownKeys = true }.decodeFromString<OldPack>(json).v > 2
+        lenientJson.decodeFromString<OldPack>(json).v > 2
 
-    private fun repo() = LibraryRepository(context, CoroutineScope(SupervisorJob() + Dispatchers.IO))
-        .also { r -> runBlocking { withTimeout(5_000) { r.loaded.first { it } }; r.restore(emptyList(), emptyList()) } }
+    private fun repo() = testRepo(empty = true)
 
     private fun LibraryRepository.show(withBreak: Boolean): String {
         val s = createSetlist("Show")
@@ -66,7 +65,7 @@ class InboxVersionTest {
     }
 
     private fun link(repo: LibraryRepository) =
-        BandLink(context, identity, br.app.stagebook.data.BandTrust(context), br.app.stagebook.data.StageGate(), BandInbox(context), repo)
+        testLink(repo = repo, identity = identity)
 
     private fun inboxWire(withBreak: Boolean): String {
         val repo = repo(); val cloud = SetlistCloud(repo, identity)
@@ -141,7 +140,7 @@ class InboxVersionTest {
 
     /** What the published app reads of a Hello: its rule copied (`from.v > 2` says newer; no v = 2). */
     @Serializable private data class OldHello(val id: String, val v: Int = 2)
-    private fun oldHelloNewer(json: String) = Json { ignoreUnknownKeys = true }.decodeFromString<OldHello>(json).v > 2
+    private fun oldHelloNewer(json: String) = lenientJson.decodeFromString<OldHello>(json).v > 2
     private fun helloOf(messages: List<ByteArray>) = SetlistCloud.unpack(byteArrayOf('I'.code.toByte(), '1'.code.toByte()), messages.first())!!
 
     @Test fun `an invite from this app carries v 3 and the published app says update`() {
@@ -162,7 +161,7 @@ class InboxVersionTest {
         assertTrue(oldHelloNewer(hello(listOf(without, with))))
     }
 
-    private val json = Json { ignoreUnknownKeys = true }
+    private val json = lenientJson
 
     @Test fun `this app reads a Hello with no v as 2 and with v as written`() {
         assertEquals(2, json.decodeFromString<BandProtocol.Hello>("""{"id":"i","name":"n","key":"k"}""").v)

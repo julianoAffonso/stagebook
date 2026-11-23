@@ -122,6 +122,12 @@
                 <category android:name="android.intent.category.DEFAULT" />
                 <data android:mimeType="application/pdf" />
             </intent-filter>
+            <!-- a web page shared from a browser (Chrome's Share): its address opens the import browser on it (SharedPages) -->
+            <intent-filter>
+                <action android:name="android.intent.action.SEND" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="text/plain" />
+            </intent-filter>
             <!-- shared to the app (a chat's or a file manager's Share) -->
             <intent-filter>
                 <action android:name="android.intent.action.SEND" />

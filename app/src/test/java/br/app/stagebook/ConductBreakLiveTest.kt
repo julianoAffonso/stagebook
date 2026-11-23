@@ -23,7 +23,6 @@ import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.setMain
 import kotlinx.coroutines.withTimeout
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.json.Json
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -50,17 +49,10 @@ class ConductBreakLiveTest {
     @After fun reset() = Dispatchers.resetMain()
 
     private val context = ApplicationProvider.getApplicationContext<android.app.Application>()
-    private val voice = BandProtocol.Hello("voz", "Voz", "key")
+    private val voice = VOICE
 
     private inner class Pair2 {
-        val repo = LibraryRepository(context, CoroutineScope(SupervisorJob() + Dispatchers.IO)).also { r ->
-            runBlocking {
-                withTimeout(15_000) { r.loaded.first { it } }
-                r.restore(emptyList(), emptyList())
-                r.updateLook { it.copy(bandOn = true) }
-                withTimeout(15_000) { r.library.first { it.look.bandOn } }
-            }
-        }
+        val repo = testRepo(empty = true, bandOn = true)
         val set: String
         val items: List<Conduct.Item>
         init {
@@ -72,13 +64,10 @@ class ConductBreakLiveTest {
         val arrived = java.util.concurrent.atomic.AtomicInteger()
         var followerClock = 987_654_321_000L
         val trust = br.app.stagebook.data.BandTrust(context)
-        private fun link() = BandLink(
-            context, DeviceIdentity(context), trust, br.app.stagebook.data.StageGate(),
-            br.app.stagebook.data.BandInbox(context), repo,
-        )
+        private fun link() = testLink(repo = repo, trust = trust)
         val followerLink = link()
-        val follower = BandConduct(followerLink, repo, DeviceIdentity(context)).also { it.clock = { followerClock } }
-        val leader = BandConduct(link(), repo, DeviceIdentity(context)).also { c ->
+        val follower = testConduct(repo = repo, link = followerLink).also { it.clock = { followerClock } }
+        val leader = testConduct(repo = repo, link = link()).also { c ->
             c.deliver = { msg ->
                 sent += msg
                 followerLink.conductHandler?.invoke(voice, Conduct.decode(Conduct.encode(msg))!!)
@@ -130,10 +119,10 @@ class ConductBreakLiveTest {
         p.told { p.vm.resumeBreak() }
         val timer = p.following().breakTimer!!
         assertTrue(timer.running)
-        assertTrue(timer.elapsed(p.followerClock) - frozen in 0..20)   // counts from what it had
+        assertTrue(timer.elapsed(p.followerClock) - frozen in 0..TOLERANCE_MS)   // counts from what it had
         assertEquals(false, p.sent.last().breakPaused)
         p.followerClock += 30_000
-        assertTrue(p.following().breakTimer!!.elapsed(p.followerClock) - (frozen + 30_000) in 0..20)
+        assertTrue(p.following().breakTimer!!.elapsed(p.followerClock) - (frozen + 30_000) in 0..TOLERANCE_MS)
     }
 
     @Test fun `zeroing the leader's break zeroes the follower's, running or paused`() {
@@ -143,7 +132,7 @@ class ConductBreakLiveTest {
         assertTrue(p.following().breakTimer!!.elapsed(p.followerClock) >= 44 * 60_000)
         p.told { p.vm.resetBreak() }
         assertTrue(p.following().breakTimer!!.running)
-        assertTrue(p.following().breakTimer!!.elapsed(p.followerClock) < 20)
+        assertTrue(p.following().breakTimer!!.elapsed(p.followerClock) < TOLERANCE_MS)
         // paused and zeroed: standing at 00:00
         Thread.sleep(50)
         p.told { p.vm.pauseBreak() }
@@ -203,7 +192,7 @@ class ConductBreakLiveTest {
         val songs = listOf(Conduct.Item("A"), Conduct.Item("B"))
         val new = Conduct.encode(Conduct.Msg(Conduct.OPEN, "Voz", "Show", songs, 0, breakMs = 44_000, breakPaused = true))
         assertTrue("breakPaused" in new)
-        val old = Json { ignoreUnknownKeys = true }.decodeFromString(OldMsg.serializer(), new)
+        val old = lenientJson.decodeFromString(OldMsg.serializer(), new)
         assertEquals(OldMsg(Conduct.OPEN, "Voz", "Show", songs, 0, breakMs = 44_000), old)
         // running: the message is, byte for byte, the one that went before
         assertFalse("breakPaused" in Conduct.encode(Conduct.Msg(Conduct.OPEN, "Voz", "Show", songs, 0, breakMs = 44_000)))
@@ -212,7 +201,7 @@ class ConductBreakLiveTest {
     @Test fun `a leader from before the pause field never says paused, and the follower counts by itself`() {
         val p = Pair2()
         val songs = p.items
-        val old = Json { ignoreUnknownKeys = true }.encodeToString(OldMsg.serializer(), OldMsg(Conduct.OPEN, "Voz", "Show", songs, 0, breakMs = 5_000))
+        val old = lenientJson.encodeToString(OldMsg.serializer(), OldMsg(Conduct.OPEN, "Voz", "Show", songs, 0, breakMs = 5_000))
         p.followerLink.conductHandler!!.invoke(voice, Conduct.decode(old)!!)
         assertNotNull(p.following().breakSince)
         assertNull(p.following().breakFrozen)
@@ -220,10 +209,14 @@ class ConductBreakLiveTest {
     }
 
     @Test fun `the pause field came with the raised protocol version (3), and a message that makes no sense is no break`() {
-        // the field is only added and ignored by whoever doesn't know it, so devices on the same version keep talking
-        org.junit.Assert.assertTrue("the version was raised for these fields", BandProtocol.VERSION >= BandProtocol.BREAKS_VERSION)
         // a message that makes no sense: paused with no break is no break
         assertNull(Conduct.Msg(Conduct.OPEN, songs = listOf(Conduct.Item("A"), Conduct.Item("B")), index = 0, breakMs = -1, breakPaused = true).rest)
         assertFalse(Conduct.Msg(Conduct.OPEN, songs = listOf(Conduct.Item("A"), Conduct.Item("B")), index = 0, breakMs = -1, breakPaused = true).restPaused)
+    }
+
+    private companion object {
+        // the leader's clock here is the real one: what is being told apart are seconds and minutes, so a pause of the
+        // JVM under a loaded machine must not fail the test (audit 22/11: it was 20 ms)
+        const val TOLERANCE_MS = 500L
     }
 }

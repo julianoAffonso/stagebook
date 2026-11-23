@@ -1,5 +1,6 @@
 package br.app.stagebook
 
+import br.app.stagebook.ui.stage.takesExternalScreen
 import androidx.test.core.app.ApplicationProvider
 import br.app.stagebook.data.AppUpdater
 import br.app.stagebook.data.LibraryRepository
@@ -34,8 +35,14 @@ import org.robolectric.annotation.Config
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [35], application = android.app.Application::class)
 class EssentialModeTest {
-    @get:org.junit.Rule val compose = androidx.compose.ui.test.junit4.createComposeRule()
+    @get:org.junit.Rule val compose = androidx.compose.ui.test.junit4.v2.createComposeRule()
     private val context = ApplicationProvider.getApplicationContext<android.app.Application>()
+
+    @Test fun `essential mode lets the external screen go - Android mirrors the tablet`() {
+        assertTrue(Look().takesExternalScreen)
+        assertFalse(Look(extrasOn = false).takesExternalScreen)
+        assertFalse(Look(externalShow = br.app.stagebook.data.model.ExternalShow.OFF).takesExternalScreen)
+    }
 
     @Test fun `essential only with all four off`() {
         assertFalse(Look().essential)   // new app: everything on, the player too
@@ -46,14 +53,8 @@ class EssentialModeTest {
     }
 
     @Test fun `turning on turns everything off - turning a part back on leaves the mode - turning off brings back band internet extras and the player`() = runBlocking {
-        val repo = LibraryRepository(context, CoroutineScope(Dispatchers.IO))
-        val vm = SettingsViewModel(
-            repo, context, AppUpdater(context),
-            br.app.stagebook.data.MidiPedal(context, repo, CoroutineScope(Dispatchers.IO)),
-            br.app.stagebook.data.Backup(context, repo, br.app.stagebook.data.TrackStore(context)),
-            br.app.stagebook.data.MetronomeSound(context), br.app.stagebook.data.MidiOut(context, repo, CoroutineScope(Dispatchers.IO)),
-            br.app.stagebook.player.StagePlayer(context, repo),
-        )
+        val repo = LibraryRepository(context, testScope())
+        val vm = testSettingsVm(repo)
         suspend fun until(ok: (Look) -> Boolean) = withTimeout(15_000) { repo.library.first { ok(it.look) } }.look
 
         vm.setPlayerMode(true)
@@ -100,16 +101,12 @@ class EssentialModeTest {
     }
 
     @Test fun `band on the network off ends Lead the band and does not come back`() = runBlocking {
-        val repo = LibraryRepository(context, CoroutineScope(Dispatchers.IO))
-        withTimeout(15_000) { repo.loaded.first { it } }
+        val repo = testRepo()
         // The library is saved between tests: one that left the band off would end the conducting as soon as it starts
         repo.updateLook { it.copy(bandOn = true) }
         withTimeout(15_000) { repo.library.first { it.look.bandOn } }
-        val link = br.app.stagebook.data.BandLink(
-            context, br.app.stagebook.data.DeviceIdentity(context), br.app.stagebook.data.BandTrust(context),
-            br.app.stagebook.data.StageGate(), br.app.stagebook.data.BandInbox(context), repo,
-        )
-        val conduct = br.app.stagebook.data.BandConduct(link, repo, br.app.stagebook.data.DeviceIdentity(context))
+        val link = testLink(repo = repo)
+        val conduct = testConduct(repo = repo, link = link)
         conduct.start("s1", "Ensaio", listOf(br.app.stagebook.domain.Conduct.Item("Música")))
         assertTrue(conduct.role.value is br.app.stagebook.data.BandConduct.Role.Conducting)
         repo.updateLook { it.copy(bandOn = false) }
@@ -120,15 +117,11 @@ class EssentialModeTest {
     }
 
     @Test fun `a send on its way never brings an ended Lead the band back`() = runBlocking {
-        val repo = LibraryRepository(context, CoroutineScope(Dispatchers.IO))
-        withTimeout(15_000) { repo.loaded.first { it } }
+        val repo = testRepo()
         repo.updateLook { it.copy(bandOn = true) }
         withTimeout(15_000) { repo.library.first { it.look.bandOn } }
-        val link = br.app.stagebook.data.BandLink(
-            context, br.app.stagebook.data.DeviceIdentity(context), br.app.stagebook.data.BandTrust(context),
-            br.app.stagebook.data.StageGate(), br.app.stagebook.data.BandInbox(context), repo,
-        )
-        val conduct = br.app.stagebook.data.BandConduct(link, repo, br.app.stagebook.data.DeviceIdentity(context))
+        val link = testLink(repo = repo)
+        val conduct = testConduct(repo = repo, link = link)
         repeat(1_000) {
             conduct.start("s1", "Ensaio", listOf(br.app.stagebook.domain.Conduct.Item("Música")))
             kotlinx.coroutines.yield()
@@ -139,8 +132,7 @@ class EssentialModeTest {
     }
 
     @Test fun `internet off - nothing goes out to the band internet`() = runBlocking {
-        val repo = LibraryRepository(context, CoroutineScope(Dispatchers.IO))
-        withTimeout(15_000) { repo.loaded.first { it } }
+        val repo = testRepo()
         repo.updateLook { it.copy(internetOn = false) }
         withTimeout(15_000) { repo.library.first { !it.look.internetOn } }
         val cloud = br.app.stagebook.data.SetlistCloud(repo, br.app.stagebook.data.DeviceIdentity(context))
@@ -161,15 +153,8 @@ class EssentialModeTest {
     }
 
     @Test fun `alert on open - don't show again lasts until the mode is turned off`() = runBlocking {
-        val repo = LibraryRepository(context, CoroutineScope(Dispatchers.IO))
-        withTimeout(15_000) { repo.loaded.first { it } }
-        val vm = SettingsViewModel(
-            repo, context, AppUpdater(context),
-            br.app.stagebook.data.MidiPedal(context, repo, CoroutineScope(Dispatchers.IO)),
-            br.app.stagebook.data.Backup(context, repo, br.app.stagebook.data.TrackStore(context)),
-            br.app.stagebook.data.MetronomeSound(context), br.app.stagebook.data.MidiOut(context, repo, CoroutineScope(Dispatchers.IO)),
-            br.app.stagebook.player.StagePlayer(context, repo),
-        )
+        val repo = testRepo()
+        val vm = testSettingsVm(repo)
         suspend fun until(ok: (Look) -> Boolean) = withTimeout(15_000) { repo.library.first { ok(it.look) } }.look
         vm.setEssential(true)
         until { it.essential }

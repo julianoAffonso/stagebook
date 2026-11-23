@@ -38,7 +38,10 @@ class AndroidBackupRulesTest {
         "player" to false, "receive_links" to false, "resume_after_update" to false, "stage_quiet" to false,
         "setlist_pick" to false,   // the tags last used while adding songs to a setlist, by its id: nothing without that library
         "setlist_show" to false,   // what was played tonight on this device: no use on another one
+        "enrich" to false,   // which songs were looked up with no luck: this device's library ids, read again on the next look
+        "lead" to false,   // where each track's first sound is: a cache, read again from the file
         "last_stage" to false,   // the stage the app opens on: this device's place, no use on another one
+        "share" to false,   // the last "Only this Wi-Fi" choice when sending to the band: this device's habit
         "usb_delivery" to false, "usb_no_input" to false, "usb_queue" to false, "usb_route" to false, "versao_nova" to false, "web_editor" to false,
     )
 
@@ -97,15 +100,13 @@ class AndroidBackupRulesTest {
     @Test fun `the library that came without its tracks opens with the links cleared, and saved that way`() = runBlocking {
         val context = ApplicationProvider.getApplicationContext<android.app.Application>()
         File(context.filesDir, "tracks").apply { mkdirs() }.resolve("here.ogg").writeBytes(byteArrayOf(1))
-        val first = LibraryRepository(context, CoroutineScope(SupervisorJob() + Dispatchers.IO))
-        withTimeout(5_000) { first.loaded.first { it } }
+        val first = testRepo()
         first.saveSong(Song(title = "Here", author = "x", text = "l", track = "here.ogg", trackName = "Here"))
         first.saveSong(Song(title = "Gone", author = "x", text = "l", track = "gone.ogg", trackName = "Gone live"))
         val file = File(context.filesDir, "stagebook.json")
         withTimeout(5_000) { while (!file.exists() || !file.readText().contains("gone.ogg")) delay(20) }
 
-        val second = LibraryRepository(context, CoroutineScope(SupervisorJob() + Dispatchers.IO))
-        withTimeout(5_000) { second.loaded.first { it } }
+        val second = testRepo()
         val songs = second.library.value.songs.associateBy { it.title }
         assertEquals("here.ogg", songs.getValue("Here").track)
         assertEquals("", songs.getValue("Gone").track)

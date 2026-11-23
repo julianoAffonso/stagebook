@@ -81,6 +81,21 @@ fun rememberPdfOpen(file: File, open: (File) -> PdfSource = ::AndroidPdfSource):
     return state
 }
 
+/**
+ * The picture of page [page] of an open PDF, [width] pixels wide, drawn off the main thread: null while it is drawn, and
+ * when it can't be. One way for the editor's card, its trim window and its pages window (audit 22/11: three copies).
+ */
+@Composable
+fun rememberPdfPageImage(pages: PdfPages?, page: Int, width: Int): State<androidx.compose.ui.graphics.ImageBitmap?> =
+    androidx.compose.runtime.produceState<androidx.compose.ui.graphics.ImageBitmap?>(null, pages, page, width) {
+        value = null   // what is drawn over the page (a trim frame) must not sit on the picture of the page before
+        value = pages?.let { p ->
+            try { p.bitmap(page.coerceIn(0, (p.pageCount - 1).coerceAtLeast(0)), width).asImageBitmap() }
+            catch (e: kotlinx.coroutines.CancellationException) { throw e }
+            catch (_: Exception) { null }
+        }
+    }
+
 /** The colours turned over: white paper becomes black, for a dark stage. */
 internal val InvertFilter = ColorFilter.colorMatrix(
     ColorMatrix(floatArrayOf(-1f, 0f, 0f, 0f, 255f, 0f, -1f, 0f, 0f, 255f, 0f, 0f, -1f, 0f, 255f, 0f, 0f, 0f, 1f, 0f)),

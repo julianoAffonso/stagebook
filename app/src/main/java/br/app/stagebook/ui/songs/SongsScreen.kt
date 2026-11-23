@@ -89,9 +89,13 @@ fun SongsRoute(
     // PDF files chosen in the + menu: each becomes a song named after the file (checked first, the reason told when one is left out)
     val appMessage = br.app.stagebook.ui.components.LocalAppMessage.current
     val context = androidx.compose.ui.platform.LocalContext.current
-    val importScope = androidx.compose.runtime.rememberCoroutineScope()
+    val appContext = context.applicationContext
     val pickPdfs = androidx.activity.compose.rememberLauncherForActivityResult(androidx.activity.result.contract.ActivityResultContracts.OpenMultipleDocuments()) { uris ->
-        if (uris.isNotEmpty()) importScope.launch { appMessage.show(viewModel.importPdfs(uris).message(context), long = true) }
+        if (uris.isNotEmpty()) viewModel.importPdfs(uris) { result ->
+            appMessage.show(result.message(appContext), long = true)
+            // one PDF opens in the editor, as a lyrics import does (user, 22/11); several stay in the list
+            result.single?.let { onEditSong(it) }
+        }
     }
     SongsScreen(
         uiState = uiState,
@@ -154,7 +158,7 @@ fun SongsScreen(
     onScan: () -> Unit = {},
     onReceiveCode: (String) -> Unit = {},
     band: Int = 0,
-    onSendBand: (List<String>) -> Unit = {},
+    onSendBand: (List<String>, wifiOnly: Boolean) -> Unit = { _, _ -> },
     onBandSearch: (Boolean) -> Unit = {},
     received: Int = 0,
     onReceived: () -> Unit = {},
@@ -308,29 +312,22 @@ fun SongsScreen(
                 }
             }
             // at the bottom, as SongbookPro: the + with what is new (a song, the imports) and the checklist that turns the boxes on
-            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            br.app.stagebook.ui.components.ListBottomBar(selecting, stringResource(R.string.select_mode), { pickMode = !pickMode; if (!pickMode) selected = emptyList() }) {
                 br.app.stagebook.ui.share.AddMenuButton(
                     online, onScan, onReceiveCode, onNew = onNewSong, onPdfs = onImportPdfs, onPdfSites = onImportPdfSites, onSites = onImport, received = received, onReceived = onReceived,
                     onSync = onSync, internetOn = internetOn, localNet = localNet,
                 )
-                androidx.compose.foundation.layout.Spacer(Modifier.weight(1f))
-                androidx.compose.material3.IconButton(onClick = { pickMode = !pickMode; if (!pickMode) selected = emptyList() }) {
-                    Icon(
-                        AppIcons.Checklist, stringResource(R.string.select_mode),
-                        tint = if (selecting) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
-                    )
-                }
             }
         }
     }
     if (sharing) {
         ShareSheet(
             songs = selected.size, online = online, onQr = null, internetOn = internetOn,
-            limits = br.app.stagebook.ui.share.ShareLimits(lists = 1, songs = selected.size, setlists = false, pdfSizes = pdfSizesOf(selected)),
+            limits = br.app.stagebook.ui.share.ShareLimits(lists = 1, songs = selected.size, setlists = false, pdfSizes = remember(selected) { pdfSizesOf(selected) }),   // looks at the disk: once per choice, not per composition
             onInternet = { sharing = false; onShareSongs(selected); selected = emptyList() },
             onDismiss = { sharing = false },
             band = band,
-            onBand = { sharing = false; onSendBand(selected); selected = emptyList() },
+            onBand = { _, wifiOnly -> sharing = false; onSendBand(selected, wifiOnly); selected = emptyList() },
             onSearch = onBandSearch,
         )
     }
@@ -357,15 +354,17 @@ fun SongsScreen(
             { deletingMany = false },
         )
     }
+    // what adding the chosen songs to a setlist ended in, said the same way from both windows
+    fun added(r: AddResult) = when (r) {
+        is AddResult.Added -> { message.show(addedMessage(r)); selected = emptyList() }
+        AddResult.Limit -> limit = true
+        AddResult.Gone -> message.show(res.getString(R.string.songs_set_gone))
+    }
     if (addingToSet) {
         SetPickDialog(uiState.sets, onPick = { id ->
             addingToSet = false
             if (id == null) naming = true
-            else when (val r = onAddToSetlist(selected, id, "")) {
-                is AddResult.Added -> { message.show(addedMessage(r)); selected = emptyList() }
-                AddResult.Limit -> limit = true
-                AddResult.Gone -> message.show(res.getString(R.string.songs_set_gone))
-            }
+            else added(onAddToSetlist(selected, id, ""))
         }, onDismiss = { addingToSet = false })
     }
     if (naming) {
@@ -374,11 +373,7 @@ fun SongsScreen(
             initial = "",
             placeholder = stringResource(R.string.sets_name_hint),
             onConfirm = { name ->
-                when (val r = onAddToSetlist(selected, null, name)) {
-                    is AddResult.Added -> { message.show(addedMessage(r)); selected = emptyList() }
-                    AddResult.Limit -> limit = true
-                    AddResult.Gone -> message.show(res.getString(R.string.songs_set_gone))
-                }
+                added(onAddToSetlist(selected, null, name))
             },
             onDismiss = { naming = false },
         )

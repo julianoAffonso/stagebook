@@ -11,7 +11,7 @@ import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
-import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
@@ -165,6 +165,14 @@ class ConductStripOneLineTest {
         }
     }
 
+    // one line of the title's style, in dp, as drawn here
+    private fun titleLine(): Float {
+        ui = following("Ré", missingHere = true, from = "Voz")
+        show()
+        return bounds("conductTitleCut").let { (it.bottom - it.top).value }
+    }
+
+    // the title's name takes a second line before it is cut (user, 22/11: "Conduzindo · Teste inte…" said too little)
     @Test fun `a long leader's name is cut on the first line and Ask and Leave keep their text`() {
         sameStrip(following("Ré", missingHere = true, from = "Voz"), following("Ré", missingHere = true, from = longName), "Pedir", "Sair")
         val name = bounds("conductTitleCut")
@@ -236,18 +244,21 @@ class ConductStripOneLineTest {
         assertEquals(1, searches)
     }
 
-    @Test fun `a long setlist name is cut on the first line and the icon and End stay whole`() {
-        ui = ConductUi.Conducting("Show de sábado no bar da esquina com a banda toda e mais um pouco", 1, emptyList(), emptyList())
-        show()
+    @Test fun `a long setlist name goes on a second line and the icon and End stay whole`() {
+        val one = titleLine()
+        ui = ConductUi.Conducting("Teste integrado do show de sábado", 1, emptyList(), emptyList())
+        compose.waitForIdle()
         val name = bounds("conductTitleCut")
         val search = iconBounds("Procurar a banda")
         val end = text("Encerrar")
+        assertTrue("the name takes two lines: ${(name.bottom - name.top).value} for $one", (name.bottom - name.top).value > one * 1.5f)
         assertTrue("the name ends before the icon: ${name.right} <= ${search.left}", name.right <= search.left + 1.dp)
         assertTrue("End is whole and on screen", end.right <= 360.dp && end.bottom - end.top < 24.dp)
-        roomy = true
+        // a name longer than two lines is still cut, at the end of the second
+        ui = ConductUi.Conducting("Show de sábado no bar da esquina com a banda toda e mais um pouco de gente chegando depois", 1, emptyList(), emptyList())
         compose.waitForIdle()
-        assertTrue("and the name is cut", width("conductTitleCut") > (name.right - name.left).value + 20f)
-        roomy = false
+        val longer = bounds("conductTitleCut")
+        assertTrue("never more than two lines", (longer.bottom - longer.top).value < one * 2.5f)
     }
 
     private val lacker = listOf(ConductUi.Lacker("b", "Baixo", listOf("Ré")))
@@ -275,7 +286,6 @@ class ConductStripOneLineTest {
             ui = state
             show()
             val height = stripHeight()
-            println("STRIP_HEIGHT $name = ${height.value}")
             assertTrue("$name: $height is at least ${Sizes.strip}", height >= Sizes.strip)
             assertTrue("$name: $height is at most 64dp", height <= 64.dp)
         }
@@ -363,11 +373,19 @@ class ConductStripOneLineTest {
     @Test fun `a long name of a leader that is gone is cut`() =
         sameStrip(following("", from = "Voz", gone = true), following("", from = longName, gone = true), "Sair")
 
-    @Test fun `the leader's strip keeps its lines with a long setlist name and many names`() = sameStrip(
-        ConductUi.Conducting("Show", 0, listOf("Baixo"), emptyList()),
-        ConductUi.Conducting("Show de sábado no bar da esquina com a banda toda", 0, listOf("Baixo", "Guitarra", "Teclado", "Bateria", "Sopros", "Vocal de apoio"), emptyList()),
-        "Encerrar",
-    )
+    // many names stay on one line; a long setlist name may add one line to the title only (user, 22/11)
+    @Test fun `the leader's strip keeps End whole and its names on one line with a long setlist name`() {
+        ui = ConductUi.Conducting("Show", 0, listOf("Baixo"), emptyList())
+        show()
+        val end = size("Encerrar")
+        val detail = bounds("conductLineCut").let { it.bottom - it.top }
+        val height = stripHeight()
+        ui = ConductUi.Conducting("Show de sábado no bar da esquina com a banda toda", 0, listOf("Baixo", "Guitarra", "Teclado", "Bateria", "Sopros", "Vocal de apoio"), emptyList())
+        compose.waitForIdle()
+        assertEquals("\"Encerrar\" keeps its whole text on one line", end, size("Encerrar"))
+        assertEquals("the names stay one line", detail.value, bounds("conductLineCut").let { it.bottom - it.top }.value, PIXEL)
+        assertTrue("one title line more at most: $height to ${stripHeight()}", stripHeight() <= height + 24.dp)
+    }
 
     private companion object {
         val ROOMY = 1000.dp   // wide enough for the actions beside the text and every title whole

@@ -43,15 +43,20 @@ Lyrics, chords and backing tracks in one app, to play live on Android. Solo or w
 - **PDF songs:** attach a PDF to a song (or pick PDFs in the + menu, open one with Stagebook, or use **PDFs from sites**, which opens
   free score sites and makes the song when you tap a PDF): its pages show on stage,
   turned by the pedal, a tap or a swipe; zoom with two fingers (kept with the song), hold the page to highlight, crop the
-  margins (all pages or one) and invert the colors for a dark stage, both in the song's editor. PDFs go to the band on the same Wi-Fi (up to 6 MB per send) and over the internet when they fit the 4 KB messages
-  the free server takes (the send says why when they don't). PDFs are never read as text.
+  margins (all pages or one) and invert the colors for a dark stage, both in the song's editor. PDFs go to the band on the same Wi-Fi (up to 6 MB per send) and over the internet as encrypted attachments of the
+  free server (up to 30 MB per send, kept 3 hours; the send warns about it). PDFs are never read as text.
+  If the song kept lyrics or chords from before the PDF, a switch on the PDF card shows those lyrics on stage.
 - **Backing tracks:** OGG with any number of channels, MP3 or WAV, on a USB audio interface or the device's output.
-  With a mixer, per-output routing, EQ and normalization.
+  With a mixer, per-output routing, EQ and normalization. The track can fade out when you stop it and starts at its first sound.
+- **Complete song details:** one tap looks up the artist, year, BPM and length missing in the whole library; a song with a
+  backing track takes its length from the track itself.
 - **Settings by task:** the menu's Settings tab lists seven groups (stage, chords, page turning, import and backup, band and computer, player and
-  metronome, device), each opening full screen like the stage, with a **search** that also finds what is turned off and says why. Songs look the same everywhere
+  metronome, device), each opening full screen like the stage, with a **search** that also finds what is turned off and says why. Inside the bigger
+  groups, subtitles gather the cards on the same subject (in Band and computer: Playing with the band, Out of the app, Computer), and the stage preview
+  stays on top only while the options it shows pass under it. Songs look the same everywhere
   (title, artist, key, BPM, capo, track), and the Songs list can show and sort them by **most and least played**. The song editor has two screens, **Data** and **Lyrics and chords**; deleting
   a song asks with its name. The app warns, on the band and over the internet, when someone is on another version.
-- **Metronome**, lyrics and chords import from websites, **Now Playing** for OBS and Resolume
+- **Metronome**, lyrics and chords import from websites, **Now Playing** for OBS and Resolume, the song on a TV or projector (**external screen**: the same page as the stage, with or without chords, and the logo or your own image off stage)
   ([format](docs/now-playing.md)), backup to a `.stagebook` file (tap one in a chat, a download or the file manager
   and it opens in the app), an **editor on the computer** (in the browser, with setlists and breaks) and an **essential
   mode** that turns off what you won't use.
@@ -201,7 +206,9 @@ of it. The next release counts its notes from the version before, so nobody miss
 
 ### Engine simulator
 `tools/engine-sim/run.sh` runs the audio engine on a Mac with a fake USB interface and compares its sound with the
-version validated on a real mixer. It also tests drops, the clock plans and load. In Actions it runs on synthetic
+version validated on a real mixer. It also tests drops, the clock plans, load and the edges of the sound (no click on
+pause, play or after a seek; the end of the track). With no tracks given it makes its own out of noise (needs numpy and
+soundfile). In Actions it runs on synthetic
 tracks (real ones never go to the repository) and isn't a required check. When even the fourth open is judged noisy,
 the runner is marked as too noisy and the four plan A tests show as skipped; the plan B tests run anywhere. It doesn't
 replace the test on a real mixer.
@@ -233,6 +240,39 @@ texts are only data, sent as plain text.
   every 60 s and goes back after 5 s of good time; a stream judged off at open stays on plan B.
 - Output URBs carry 8 packets (1 ms), up to 32 in the queue. Input URBs start with 16 packets; if the check at open
   loses more than 3% of the packets, they go to 128 and the clock is checked again.
+
+## Services and libraries
+Stagebook has no server of its own. It talks to these free public services only when **Internet** is on in Settings
+(essential mode turns them all off), and sends only what each one needs:
+
+| Service | What for | What goes out |
+|---|---|---|
+| [MusicBrainz](https://musicbrainz.org) | artist and year of a song | title and artist; 1 request a second |
+| [Deezer API](https://developers.deezer.com/api) | suggested BPM and length | title and artist |
+| [ntfy.sh](https://ntfy.sh) | sending setlists, songs and PDFs by 3 words, band inbox | everything encrypted with the code's key |
+| [GitHub Releases](https://github.com/julianoAffonso/stagebook/releases) | new versions of the app | nothing but the download request |
+| Google search and chord/score sites | the import browser, only the sites you open | what any browser sends |
+
+The band on the local network (device discovery and sends) uses Android's own network service discovery; nothing
+leaves the Wi-Fi.
+
+Libraries in the app, all open source:
+
+| Library | What for | License |
+|---|---|---|
+| [Kotlin](https://kotlinlang.org), [kotlinx.coroutines](https://github.com/Kotlin/kotlinx.coroutines), [kotlinx.serialization](https://github.com/Kotlin/kotlinx.serialization) | language, background work, JSON | Apache 2.0 |
+| [Jetpack Compose](https://developer.android.com/compose) and Material 3 | every screen | Apache 2.0 |
+| [AndroidX](https://developer.android.com/jetpack/androidx) Activity, Lifecycle, Navigation, [CameraX](https://developer.android.com/camerax) | screens, navigation, the QR camera | Apache 2.0 |
+| [Hilt](https://dagger.dev/hilt/) (Dagger) | wiring the app's parts | Apache 2.0 |
+| [Reorderable](https://github.com/Calvin-LL/Reorderable) | dragging songs in a setlist | Apache 2.0 |
+| [ZXing](https://github.com/zxing/zxing) core | making and reading QR codes | Apache 2.0 |
+| [PdfBox-Android](https://github.com/TomRoush/PdfBox-Android) | making PDFs smaller | Apache 2.0 |
+| [stb_vorbis](https://github.com/nothings/stb), [dr_mp3 and dr_wav](https://github.com/mackron/dr_libs) | decoding backing tracks | public domain or MIT |
+
+Android itself draws the PDFs (`PdfRenderer`), reads a track's length (`MediaMetadataRetriever`) and tells a web
+address from a search (`Linkify`). The MCP server (`mcp/`) uses the [MCP TypeScript SDK](https://github.com/modelcontextprotocol/typescript-sdk)
+and [zod](https://zod.dev) (MIT). The tests use JUnit, [Robolectric](https://robolectric.org) and
+[Roborazzi](https://github.com/takahirom/roborazzi).
 
 ## License
 Source available under **PolyForm Shield 1.0.0** ([LICENSE.md](LICENSE.md)). Use it as you like, paid gigs included,

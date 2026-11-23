@@ -1,7 +1,7 @@
 package br.app.stagebook
 
 import androidx.compose.ui.test.assertIsDisplayed
-import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import br.app.stagebook.ui.setlists.SetlistRowUi
 import br.app.stagebook.ui.setlists.SetlistsScreen

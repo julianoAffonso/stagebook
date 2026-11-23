@@ -6,7 +6,7 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
@@ -48,21 +48,18 @@ import org.robolectric.annotation.Config
 class ConductNoticeShownTest {
     @get:Rule val compose = createComposeRule()
     private val context = ApplicationProvider.getApplicationContext<android.app.Application>()
-    private val voice = BandProtocol.Hello("voz", "Voz", "key")
+    private val voice = VOICE
     private val songs = listOf(Conduct.Item("Primeira"), Conduct.Item("Segunda", "Banda"))
 
     private val repo = runBlocking {
-        LibraryRepository(context, CoroutineScope(Dispatchers.IO)).also { r ->
+        LibraryRepository(context, testScope()).also { r ->
             withTimeout(15_000) { r.loaded.first { it } }
             r.updateLook { it.copy(bandOn = true, chords = true) }
             withTimeout(15_000) { r.library.first { it.look.bandOn } }
         }
     }
-    private val link = BandLink(
-        context, DeviceIdentity(context), br.app.stagebook.data.BandTrust(context), br.app.stagebook.data.StageGate(),
-        br.app.stagebook.data.BandInbox(context), repo,
-    )
-    private val follower = BandConduct(link, repo, DeviceIdentity(context))
+    private val link = testLink(repo = repo)
+    private val follower = testConduct(repo = repo, link = link)
     private var shown by mutableStateOf(true)
 
     private fun following() {

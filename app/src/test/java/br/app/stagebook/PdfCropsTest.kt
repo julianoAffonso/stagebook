@@ -56,7 +56,7 @@ class PdfCropsTest {
     }
 
     @Test fun `an old song without trims opens with none`() {
-        val json = kotlinx.serialization.json.Json { ignoreUnknownKeys = true }
+        val json = lenientJson
         val song = json.decodeFromString<br.app.stagebook.data.model.Song>("""{"id":"a","title":"x"}""")
         assertTrue(song.pdfCrops.isEmpty())
     }

@@ -38,10 +38,9 @@ import java.io.File
 @Config(sdk = [35], qualifiers = "pt-rBR", application = android.app.Application::class)
 class PdfSitesTest {
     private val context = ApplicationProvider.getApplicationContext<android.app.Application>()
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private val scope = testScope()
     @After fun stop() { scope.cancel() }
-    private val repo = LibraryRepository(context, scope)
-        .also { r -> runBlocking { withTimeout(5_000) { r.loaded.first { it } }; r.restore(emptyList(), emptyList()) } }
+    private val repo = testRepo(scope = scope, empty = true)
     private val importer = PdfImporter(repo, PdfStore(context), PdfInspector(object : PdfPageCounter { override fun pageCount(file: File) = 2 }))
     private val pdf = "%PDF-1.7\n".toByteArray() + ByteArray(80)
 
@@ -56,10 +55,25 @@ class PdfSitesTest {
         assertFalse(Look().sites(SiteKind.LYRICS).any { it in ImportSites.PDF })
     }
 
+    // IMSLP freezes on a phone (user, 22/11): off the suggested list and off a list a person saved with it
+    @Test fun `IMSLP is off the PDF sites, also from a saved list`() {
+        assertFalse(ImportSites.PDF.any { "imslp" in it.url })
+        // CPDL in its place: free choral scores, the PDF a direct link, no account (imported on the S26, 22/11)
+        assertTrue(ImportSites.PDF.any { it.name == "CPDL" && it.url.startsWith("https://www.cpdl.org/") })
+        val saved = Look(pdfSites = listOf(
+            br.app.stagebook.data.model.ImportSite("IMSLP", "https://imslp.org/"),
+            br.app.stagebook.data.model.ImportSite("Meu", "https://meu.example/"),
+        ))
+        assertEquals(listOf("Meu"), saved.sites(SiteKind.PDF).map { it.name })
+        // a list that had only IMSLP gets the suggested one, never an empty browser
+        val only = Look(pdfSites = listOf(br.app.stagebook.data.model.ImportSite("IMSLP", "https://imslp.org/")))
+        assertEquals(ImportSites.PDF, only.sites(SiteKind.PDF))
+    }
+
     @Test fun `a person's own PDF list is kept and old libraries get the suggested one`() {
         val own = Look(pdfSites = listOf(br.app.stagebook.data.model.ImportSite("Meu", "https://meu.example/")))
         assertEquals("Meu", own.sites(SiteKind.PDF).single().name)
-        val old = kotlinx.serialization.json.Json { ignoreUnknownKeys = true }.decodeFromString(Look.serializer(), "{}")
+        val old = lenientJson.decodeFromString(Look.serializer(), "{}")
         assertEquals(ImportSites.PDF, old.pdfSites)
     }
 
@@ -155,7 +169,7 @@ class PdfSitesTest {
         assertEquals("PDF", PdfDownload.nameOf("https://x.org/", null))
     }
 
-    @get:org.junit.Rule val compose = androidx.compose.ui.test.junit4.createComposeRule()
+    @get:org.junit.Rule val compose = androidx.compose.ui.test.junit4.v2.createComposeRule()
 
     @Test fun `the plus menu offers PDFs from sites beside Import PDFs and taps open the browser`() {
         var sites = 0

@@ -1,6 +1,6 @@
 package br.app.stagebook
 
-import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onLast
 import androidx.compose.ui.test.assertIsEnabled
@@ -69,7 +69,7 @@ class PdfEditorTest {
     private fun pdfFile(name: String, bytes: ByteArray = "%PDF-1.4\n".toByteArray() + ByteArray(2_000)) = File(context.cacheDir, name).apply { writeBytes(bytes) }
 
     private fun open(songId: String? = null, repoSongs: (LibraryRepository) -> String? = { null }): Triple<SongEditorViewModel, LibraryRepository, PdfStore> {
-        val scope = CoroutineScope(Dispatchers.IO)
+        val scope = testScope()
         val repo = LibraryRepository(context, scope)
         runBlocking { withTimeout(5_000) { repo.loaded.first { it } }; repo.restore(emptyList(), emptyList()) }
         val id = repoSongs(repo)
@@ -254,7 +254,7 @@ class PdfEditorTest {
     @Test fun `the trims of a new song survive the process being killed before it is saved`() = runBlocking {
         Dispatchers.setMain(UnconfinedTestDispatcher())
         try {
-            val scope = CoroutineScope(Dispatchers.IO)
+            val scope = testScope()
             val repo = LibraryRepository(context, scope)
             withTimeout(5_000) { repo.loaded.first { it } }; repo.restore(emptyList(), emptyList())
             val handle = SavedStateHandle(mapOf("fromImport" to false))

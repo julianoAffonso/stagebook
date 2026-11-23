@@ -198,7 +198,6 @@ fun StageRoute(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val editorQueue = br.app.stagebook.data.LocalEditorQueue.current
     val appContext = androidx.compose.ui.platform.LocalContext.current.applicationContext
-    val pdfStore = remember(appContext) { br.app.stagebook.data.PdfStore(appContext) }
     // following without the leader's song: the leader's break and nothing else (no song, player or pedal here)
     if (viewModel.breakOnly) {
         KeepScreenOn()
@@ -287,7 +286,18 @@ fun StageRoute(
         val shown = remember(uiState, screen) { uiState.copy(songs = uiState.songs.map { it.onScreen(screen) }) }
         val open = index.coerceIn(0, uiState.songs.lastIndex)
         LaunchedEffect(uiState.songs[open].id, screen) { viewModel.claimOldZoom(uiState.songs[open].id, screen) }
+        // a second screen (user, 22/11): the stage leaves what it shows in the app's mirror only while one is showing; the
+        // screen itself lives at the app's root (ExternalScreenHost), so it stays on the idle picture with the stage closed
+        val mirror = LocalStageMirror.current
+        // scrolling (user, 22/11): the TV mirrors the tablet as it is, its zoom and its turn included; the app lets the
+        // screen go and Android mirrors it
+        val scrolling = uiState.look.stageMode == br.app.stagebook.data.model.StageMode.SCROLL
+        if (mirror != null) {
+            SideEffect { mirror.mirrorTablet = scrolling }
+            DisposableEffect(mirror) { onDispose { mirror.frame = null; mirror.mirrorTablet = false } }
+        }
         StageScreen(
+            mirror = mirror?.takeIf { it.active && !scrolling },
             uiState = shown,
             index = open,
             page = page,
@@ -308,7 +318,7 @@ fun StageRoute(
                 val setId = uiState.setlist?.id?.takeIf { it.isNotEmpty() }
                 if (setId != null) ({ d.openSetlist(setId, false) }) else d.open.takeIf { !d.pinned }
             },
-            pdfFile = pdfStore::file,
+            pdfFile = { br.app.stagebook.data.PdfStore.fileIn(appContext, it) },   // where it is, with no second store built by the screen
             onDrawerHandle = viewModel::setDrawerHandle,
             onPdfView = viewModel::setPdfView,
             onPdfPage = viewModel::setPdfPage,
@@ -448,6 +458,7 @@ fun StageScreen(
     note: String = "",
     onBack: (() -> Unit)? = null,
     pdfFile: (name: String) -> java.io.File = { java.io.File(it) },   // where a song's PDF is
+    mirror: StageMirror? = null,   // set while an external screen shows: where the stage leaves what it has on screen
     onDrawerHandle: (Float, Boolean) -> Unit = { _, _ -> },
     onPdfView: (String, br.app.stagebook.domain.PdfView) -> Unit = { _, _ -> },
     onPdfPage: (String, Int) -> Unit = { _, _ -> },
@@ -644,17 +655,7 @@ fun StageScreen(
     }
     // the song's line under the finger (null: the chord list or a line the stage made, nothing to highlight)
     fun sourceLine(line: Int?): Int? = line?.let { pageLines.getOrNull(it)?.source }?.takeIf { it >= 0 }
-    fun styleFor(z: Float) = TextStyle(
-        color = fg,
-        fontSize = (look.fontSp * z).sp,
-        lineHeight = (look.fontSp * z * 1.25f).sp,
-        fontWeight = if (look.bold) FontWeight.Bold else FontWeight.Normal,
-        fontFamily = look.font.family,
-        // without cutting the breathing room of the first/last line: a line measured alone has the same height as
-        // inside the text, and the sum of the lines is the page's real height
-        lineHeightStyle = LineHeightStyle(LineHeightStyle.Alignment.Center, LineHeightStyle.Trim.None),
-        hyphens = Hyphens.None,
-    )
+    fun styleFor(z: Float) = stageTextStyle(look, look.fontSp * z, fg)
     // no cache: what it measures is kept in the stage's own remember (the default kept 8 whole-song layouts; audit 01/11)
     val measurer = rememberTextMeasurer(cacheSize = 0)
     var pageCount by remember { mutableIntStateOf(1) }
@@ -676,7 +677,8 @@ fun StageScreen(
     // fast foot: a press that arrives before the requested position shows up with the right song's page count would use
     // stale values (it skipped a song or got lost). It waits in the queue and is applied as soon as the screen settles.
     // Keyed by song order, not by the objects: saving the zoom brings the list again and must not clear the queue.
-    val presses = remember(uiState.songs.map { it.id }) { PressQueue() }
+    val songOrder = remember(uiState.songs) { uiState.songs.map { it.id } }   // not a new list at every composition
+    val presses = remember(songOrder) { PressQueue() }
     // auto-scroll (T15, scroll mode): any tap or pedal press only pauses
     var autoOn by remember(index) { mutableStateOf(false) }
     var autoAvailable by remember { mutableStateOf(false) }   // scroll mode and the song doesn't fit on one screen
@@ -896,7 +898,10 @@ fun StageScreen(
         val wide = wideLists()
         // key and capo belong to chords: they don't show in the lyrics only profile
         val hasKey = look.chords && remember(shownText) { Chords.key(shownText).isNotEmpty() || Chords.capo(shownText) > 0 }
-        Row(Modifier.fillMaxWidth().onPlaced { edgeBand[0] = (it.positionInParent().y + it.size.height).roundToInt() }.padding(top = Spacing.s, bottom = Spacing.s), horizontalArrangement = Arrangement.spacedBy(Spacing.m), verticalAlignment = Alignment.CenterVertically) {
+        // on a phone the artist line sits right under the title and the room goes under the artist, before the lyrics: the
+        // artist belongs to the song's name, not to the chords (user, 22/11: it was the other way round)
+        val artistBelow = !wide && (song.meta.isNotEmpty() || (hasKey && !song.missing))
+        Row(Modifier.fillMaxWidth().onPlaced { edgeBand[0] = (it.positionInParent().y + it.size.height).roundToInt() }.padding(top = Spacing.s, bottom = if (artistBelow) 0.dp else Spacing.s), horizontalArrangement = Arrangement.spacedBy(Spacing.m), verticalAlignment = Alignment.CenterVertically) {
         // a long title comes first and pushes the artist right, up to the key and capo badges (user, 31/10); the
         // artist keeps a little room so it doesn't vanish
         BoxWithConstraints(Modifier.weight(1f)) {
@@ -954,8 +959,8 @@ fun StageScreen(
                 }
             }
         }
-        if (!wide && (song.meta.isNotEmpty() || (hasKey && !song.missing))) {
-            Row(Modifier.fillMaxWidth().padding(bottom = Spacing.s), verticalAlignment = Alignment.CenterVertically) {
+        if (artistBelow) {
+            Row(Modifier.fillMaxWidth().padding(bottom = Spacing.m), verticalAlignment = Alignment.CenterVertically) {
                 Text(
                     song.meta,
                     style = MaterialTheme.typography.titleSmall,
@@ -1122,7 +1127,35 @@ fun StageScreen(
             }
             // a PDF song: its pages in place of the lyrics. The page count is what the pedal, the tap and the swipe turn through
             if (song.pdf.isNotEmpty()) {
-                val open by rememberPdfOpen(pdfFile(song.pdf))
+                val songPdf = remember(song.pdf) { pdfFile(song.pdf) }   // not on every composition: it looks at the disk
+                val opened by rememberPdfOpen(songPdf)
+                // pages left off the stage (user, 22/11): the stage counts only the pages shown; the marks and the trims stay
+                // on their file pages
+                val visible = remember(opened, song.pdfHidden) { (opened as? br.app.stagebook.ui.stage.PdfOpen.Ready)?.let { br.app.stagebook.domain.PdfHidden.visible(it.pages.pageCount, song.pdfHidden) } }
+                val open = remember(opened, visible) {
+                    val ready = opened as? br.app.stagebook.ui.stage.PdfOpen.Ready
+                    if (ready != null && visible != null && song.pdfHidden.isNotEmpty()) br.app.stagebook.ui.stage.PdfOpen.Ready(ready.pages.only(visible)) else opened
+                }
+                val hiding = visible != null && song.pdfHidden.isNotEmpty()
+                val shownMarks = if (hiding) br.app.stagebook.domain.PdfHidden.marks(song.pdfMarks, visible) else song.pdfMarks
+                val shownCrops = if (hiding) br.app.stagebook.domain.PdfHidden.crops(song.pdfCrops, visible) else song.pdfCrops
+                fun fileOf(page: Int) = if (hiding) br.app.stagebook.domain.PdfHidden.fileOf(page, visible) else page
+                // scroll mode: the pages one under the other, scrolled like the lyrics (user, 22/11). The pedal, the tap
+                // and the swipe go through its steps as through pages; the page it was left on isn't kept (steps aren't pages)
+                if (look.stageMode == br.app.stagebook.data.model.StageMode.SCROLL) {
+                    SideEffect { autoAvailable = pageCountFor == index && pageCount > 1 }
+                    val autoPx = with(LocalDensity.current) { (look.autoScroll * br.app.stagebook.data.model.Look.AUTO_SCROLL_DP_PER_LEVEL).dp.toPx() }
+                    Box(Modifier.fillMaxSize()) {
+                        PdfScrollView(
+                            open, current, song.pdfInvert ?: look.pdfInvert, onStepCount = { pageCount = it; pageCountFor = index },
+                            crops = shownCrops, marks = shownMarks, markColor = Color(look.highlightColor),
+                            autoOn = autoOn, autoPxPerSecond = autoPx, onAutoEnd = { autoOn = false },
+                            onPaused = { k -> onPosition(index, k) }, pageKey = index,
+                        )
+                        trackOverlays()
+                    }
+                    return@BoxWithConstraints
+                }
                 // it comes up on the page it was left on (once, when the song arrives on its first page, with its count known);
                 // after that each page turned is kept. A song entered from behind (the last page) is left where it is
                 var restoredFor by remember { mutableIntStateOf(-1) }
@@ -1141,13 +1174,19 @@ fun StageScreen(
                         onPdfPage(song.id, current)
                     }
                 }
+                if (mirror != null) SideEffect {
+                    mirror.frame = MirrorFrame(
+                        song.id, song.title, song.meta, text = shownText, pdf = song.pdf, pdfPage = fileOf(current), pdfInvert = song.pdfInvert ?: look.pdfInvert,
+                        pdfMarks = song.pdfMarks, pdfCrops = song.pdfCrops, pdfAt = current, pdfCount = if (pageCountFor == index) pageCount else 1,
+                    )
+                }
                 Box(Modifier.fillMaxSize()) {
                     PdfStageView(
                         open, current, song.pdfInvert ?: look.pdfInvert, onPageCount = { pageCount = it; pageCountFor = index },
-                        marks = song.pdfMarks, marking = marking, markColor = Color(look.highlightColor),
-                        onStroke = { page, points -> onPdfStroke(song.id, page, points) },
+                        marks = shownMarks, marking = marking, markColor = Color(look.highlightColor),
+                        onStroke = { page, points -> onPdfStroke(song.id, fileOf(page), points) },
                         view = song.pdfView,
-                        crops = song.pdfCrops,
+                        crops = shownCrops,
                         // nothing is drawn for page 0 while the song's own last page is being found
                         ready = song.pdfPage == 0 || restoredFor == index,
                         pageKey = index,
@@ -1159,11 +1198,11 @@ fun StageScreen(
                     // holding the page: the highlighter, and taking back what was marked on it
                     val boxW = this@BoxWithConstraints.constraints.maxWidth
                     editOffer?.let { offer ->
-                        val onPage = song.pdfMarks.any { it.page == current }
+                        val onPage = shownMarks.any { it.page == current }
                         PdfHoldButtons(
                             onMarker = { editOffer = null; marking = true },
-                            onUndo = if (onPage) ({ editOffer = null; onPdfUndo(song.id, current) }) else null,
-                            onClear = if (onPage) ({ editOffer = null; onPdfClear(song.id, current) }) else null,
+                            onUndo = if (onPage) ({ editOffer = null; onPdfUndo(song.id, fileOf(current)) }) else null,
+                            onClear = if (onPage) ({ editOffer = null; onPdfClear(song.id, fileOf(current)) }) else null,
                             modifier = Modifier.layout { measurable, c ->
                                 val p = measurable.measure(c.copy(minWidth = 0, minHeight = 0))
                                 val gap = Spacing.l.roundToPx()
@@ -1364,12 +1403,19 @@ fun StageScreen(
                 style,
                 columns,
                 // chord: bold, in its color and size, following the lyrics zoom
-                style.copy(color = chordLook.color, fontSize = style.fontSize * chordLook.scale, fontWeight = FontWeight.Bold, fontFamily = look.chordFont.family, lineHeight = TextUnit.Unspecified),
+                stageChordStyle(style, look, chordLook.color, chordLook.scale),
             ) }
             val chordPx = with(LocalDensity.current) { shown.chordStyle.fontSize.toPx() }
             // scroll: the lyrics move up to the current step; when the step changes (within the song), the line where
             // you continue lights up
             val scrollY = remember(index) { androidx.compose.animation.core.Animatable(0f) }
+            // the external screen shows the song lines of the page on stage (user, 22/11)
+            if (mirror != null) {
+                val sources = remember(fitted) { fitted.map { it.source } }
+                SideEffect {
+                    mirror.frame = MirrorFrame(song.id, song.title, song.meta, shownText, br.app.stagebook.domain.MirrorLines.sourceRange(sources, sheets[shownAt]))
+                }
+            }
             // taps on the page find the line under the finger in the scrolled text, not the top of the song (audit 01/11)
             SideEffect { hit.show(shown, columnWidth, gutter, chordPx, if (scrollMode) ({ scrollY.value }) else ({ 0f })) }
             val syncing = remember(index) { BooleanArray(1) }   // an auto-scroll pause sets the step without scrolling
@@ -1397,15 +1443,8 @@ fun StageScreen(
                     return@LaunchedEffect
                 }
                 autoRan[0] = true
-                var last = androidx.compose.runtime.withFrameNanos { it }
-                while (true) {
-                    val now = androidx.compose.runtime.withFrameNanos { it }
-                    // a long gap between frames (screen off, a stall) doesn't jump the text ahead (audit 01/11)
-                    val v = (scrollY.value + autoPx * autoScrollNanos(now - last) / 1_000_000_000f).coerceAtMost(maxScroll.toFloat())
-                    last = now
-                    scrollY.snapTo(v)
-                    if (v >= maxScroll) { autoOn = false; break }
-                }
+                runAutoScroll(scrollY, maxScroll.toFloat(), autoPx)
+                autoOn = false
             }
             var flash by remember(index) { mutableStateOf<IntRange?>(null) }   // y..y+height of the lit line, on screen
             LaunchedEffect(index, stopAt) {
@@ -1636,7 +1675,7 @@ fun StageScreen(
     // (read when touched, never while composing: the targets are a new object at every composition, and reading them here
     // made the stage compose for ever)
     StageEdgeTaps(band = { edgeBand[0] to edgeBand[1] }, vertical = { latest.vertical }, enabled = { !latest.marking }, dismiss = { latest.dismiss() }, onPrevious = { latest.previous() }, onNext = { latest.next() })
-    if (onBreakNow && breakSince != null) {
+    if (onBreakNow) {
         val next = uiState.songs[index + 1]
         val nextKey = remember(next.text) { Chords.key(next.text) }
         val title = if (next.missing) stringResource(R.string.set_item_missing) else next.title
@@ -1888,6 +1927,23 @@ private data class PageContent(
 internal fun metroBeatAt(sinceStart: Long, periodNanos: Long): Int = ((sinceStart + METRO_EARLY_NANOS) / periodNanos).toInt()
 
 /** The time auto-scroll moves the text for, between two frames: at most [MAX_SCROLL_FRAME_NANOS]. */
+/**
+ * Moves [scroll] down at [pxPerSecond], frame by frame, until [max]; returns when it gets there (cancelled when the
+ * automatic scroll is turned off). The lyrics and the PDF in scroll mode run this same loop (audit 22/11: each had its
+ * own copy, and they had already come apart).
+ */
+internal suspend fun runAutoScroll(scroll: androidx.compose.animation.core.Animatable<Float, *>, max: Float, pxPerSecond: Float) {
+    var last = androidx.compose.runtime.withFrameNanos { it }
+    while (true) {
+        val now = androidx.compose.runtime.withFrameNanos { it }
+        // a long gap between frames (screen off, a stall) doesn't jump the text ahead (audit 01/11)
+        val v = (scroll.value + pxPerSecond * autoScrollNanos(now - last) / 1_000_000_000f).coerceAtMost(max)
+        last = now
+        scroll.snapTo(v)
+        if (v >= max) return
+    }
+}
+
 internal fun autoScrollNanos(sinceLast: Long): Long = sinceLast.coerceIn(0, MAX_SCROLL_FRAME_NANOS)
 
 private const val METRO_EARLY_NANOS = 20_000_000L
@@ -2111,6 +2167,38 @@ private fun TrackButton(
     }
 }
 
+/**
+ * A small window of the stage, held just above the icon that opened it: title, × to close, and [content] centred under
+ * them. One scaffold for the metronome, the automatic scroll, the key and capo and the show's length (audit 22/11: the
+ * same twenty lines in each). [hug] makes it as wide as its widest row.
+ */
+@Composable
+private fun StageWindow(title: String, onDismiss: () -> Unit, spacing: androidx.compose.ui.unit.Dp, hug: Boolean, content: @Composable androidx.compose.foundation.layout.ColumnScope.() -> Unit) {
+    // a window of ours is open: a follower isn't taken to the leader's other song until it closes (FollowToStage)
+    br.app.stagebook.ui.components.FollowBusyWhile()
+    val gap = with(LocalDensity.current) { Spacing.s.roundToPx() }
+    androidx.compose.ui.window.Popup(
+        popupPositionProvider = AboveAnchor(gap),
+        onDismissRequest = onDismiss,
+        properties = androidx.compose.ui.window.PopupProperties(focusable = true),
+    ) {
+        Surface(shape = MaterialTheme.shapes.large, color = MaterialTheme.colorScheme.surfaceContainerHigh, shadowElevation = 6.dp) {
+            Column(
+                Modifier.padding(Spacing.l).then(if (hug) Modifier.width(IntrinsicSize.Max) else Modifier),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(spacing),
+            ) {
+                // title and the × to close
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.s)) {
+                    Text(title, style = MaterialTheme.typography.titleLarge)
+                    IconButton(onClick = onDismiss) { Icon(AppIcons.Close, stringResource(R.string.action_close)) }
+                }
+                content()
+            }
+        }
+    }
+}
+
 /** The song's key ({key}) and capo ({capo}) at the top of the stage; nothing if the song has neither. */
 /**
  * Metronome (small window above the icon): BPM with − and + and play, which closes the window; the rest is in Settings.
@@ -2122,33 +2210,18 @@ private fun MetronomeDialog(
     onPlay: () -> Unit,
     onDismiss: () -> Unit,
 ) {
-    // a window of ours is open: a follower isn't taken to the leader's other song until it closes (FollowToStage)
-    br.app.stagebook.ui.components.FollowBusyWhile()
-    val gap = with(LocalDensity.current) { Spacing.s.roundToPx() }
-    androidx.compose.ui.window.Popup(
-        popupPositionProvider = AboveAnchor(gap),
-        onDismissRequest = onDismiss,
-        properties = androidx.compose.ui.window.PopupProperties(focusable = true),
-    ) {
-        Surface(shape = MaterialTheme.shapes.large, color = MaterialTheme.colorScheme.surfaceContainerHigh, shadowElevation = 6.dp) {
-            Column(Modifier.padding(Spacing.l).width(IntrinsicSize.Max), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(Spacing.s)) {
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.s)) {
-                    Text(stringResource(R.string.metro_title), style = MaterialTheme.typography.titleLarge)
-                    IconButton(onClick = onDismiss) { Icon(AppIcons.Close, stringResource(R.string.action_close)) }
-                }
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.m)) {
-                    IconButton(onClick = { onBpm(bpm - 1) }) { Icon(AppIcons.Remove, stringResource(R.string.metro_slower)) }
-                    Text(stringResource(R.string.metro_bpm, bpm), style = MaterialTheme.typography.headlineSmall)
-                    IconButton(onClick = { onBpm(bpm + 1) }) { Icon(AppIcons.Add, stringResource(R.string.metro_faster)) }
-                }
-                br.app.stagebook.ui.components.SettingsLinkText(
-                    stringResource(R.string.metro_in_settings), stringResource(R.string.metro_settings_link),
-                    br.app.stagebook.ui.settings.SettingsSection.PLAYER, style = MaterialTheme.typography.bodySmall,
-                )
-                IconButton(onClick = onPlay, modifier = Modifier.size(Sizes.touch + Spacing.m)) {
-                    Icon(AppIcons.PlayRounded, stringResource(R.string.metro_play), Modifier.size(Sizes.touch), tint = MaterialTheme.colorScheme.primary)
-                }
-            }
+    StageWindow(stringResource(R.string.metro_title), onDismiss, spacing = Spacing.s, hug = true) {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.m)) {
+            IconButton(onClick = { onBpm(bpm - 1) }) { Icon(AppIcons.Remove, stringResource(R.string.metro_slower)) }
+            Text(stringResource(R.string.metro_bpm, bpm), style = MaterialTheme.typography.headlineSmall)
+            IconButton(onClick = { onBpm(bpm + 1) }) { Icon(AppIcons.Add, stringResource(R.string.metro_faster)) }
+        }
+        br.app.stagebook.ui.components.SettingsLinkText(
+            stringResource(R.string.metro_in_settings), stringResource(R.string.metro_settings_link),
+            br.app.stagebook.ui.settings.SettingsSection.PLAYER, style = MaterialTheme.typography.bodySmall,
+        )
+        IconButton(onClick = onPlay, modifier = Modifier.size(Sizes.touch + Spacing.m)) {
+            Icon(AppIcons.PlayRounded, stringResource(R.string.metro_play), Modifier.size(Sizes.touch), tint = MaterialTheme.colorScheme.primary)
         }
     }
 }
@@ -2169,41 +2242,25 @@ private class AboveAnchor(private val gap: Int) : androidx.compose.ui.window.Pop
 /** Auto-scroll (small window right above the icon): speed from 1 to 10 and play/pause, which closes the window. */
 @Composable
 private fun AutoScrollDialog(on: Boolean, level: Int, onToggle: () -> Unit, onLevel: (Int) -> Unit, onDismiss: () -> Unit) {
-    // a window of ours is open: a follower isn't taken to the leader's other song until it closes (FollowToStage)
-    br.app.stagebook.ui.components.FollowBusyWhile()
-    val gap = with(LocalDensity.current) { Spacing.s.roundToPx() }
-    androidx.compose.ui.window.Popup(
-        popupPositionProvider = AboveAnchor(gap),
-        onDismissRequest = onDismiss,
-        properties = androidx.compose.ui.window.PopupProperties(focusable = true),
-    ) {
-        Surface(shape = MaterialTheme.shapes.large, color = MaterialTheme.colorScheme.surfaceContainerHigh, shadowElevation = 6.dp) {
-            Column(Modifier.padding(Spacing.l), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(Spacing.m)) {
-                // title and the × to close (play also closes)
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.s)) {
-                    Text(stringResource(R.string.stage_auto_title), style = MaterialTheme.typography.titleLarge)
-                    IconButton(onClick = onDismiss) { Icon(AppIcons.Close, stringResource(R.string.action_close)) }
-                }
-                Text(stringResource(R.string.stage_auto_speed, level), style = MaterialTheme.typography.bodyLarge)
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.l)) {
-                    IconButton(onClick = { onLevel(level - 1) }, enabled = level > 1) { Icon(AppIcons.Remove, stringResource(R.string.stage_auto_slower)) }
-                    // rounded, big play in the accent color with no background (user's request, 29/10); the touch
-                    // target stays big
-                    IconButton(onClick = onToggle, modifier = Modifier.size(Sizes.touch + Spacing.m)) {
-                        Icon(
-                            if (on) AppIcons.PauseRounded else AppIcons.PlayRounded,
-                            stringResource(if (on) R.string.stage_auto_pause else R.string.stage_auto_play),
-                            Modifier.size(Sizes.touch),
-                            tint = MaterialTheme.colorScheme.primary,
-                        )
-                    }
-                    IconButton(onClick = { onLevel(level + 1) }, enabled = level < br.app.stagebook.data.model.Look.MAX_AUTO_SCROLL) {
-                        Icon(AppIcons.Add, stringResource(R.string.stage_auto_faster))
-                    }
-                }
-                Text(stringResource(R.string.stage_auto_hint), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    StageWindow(stringResource(R.string.stage_auto_title), onDismiss, spacing = Spacing.m, hug = false) {
+        Text(stringResource(R.string.stage_auto_speed, level), style = MaterialTheme.typography.bodyLarge)
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.l)) {
+            IconButton(onClick = { onLevel(level - 1) }, enabled = level > 1) { Icon(AppIcons.Remove, stringResource(R.string.stage_auto_slower)) }
+            // rounded, big play in the accent color with no background (user's request, 29/10); the touch
+            // target stays big
+            IconButton(onClick = onToggle, modifier = Modifier.size(Sizes.touch + Spacing.m)) {
+                Icon(
+                    if (on) AppIcons.PauseRounded else AppIcons.PlayRounded,
+                    stringResource(if (on) R.string.stage_auto_pause else R.string.stage_auto_play),
+                    Modifier.size(Sizes.touch),
+                    tint = MaterialTheme.colorScheme.primary,
+                )
+            }
+            IconButton(onClick = { onLevel(level + 1) }, enabled = level < br.app.stagebook.data.model.Look.MAX_AUTO_SCROLL) {
+                Icon(AppIcons.Add, stringResource(R.string.stage_auto_faster))
             }
         }
+        Text(stringResource(R.string.stage_auto_hint), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }
 
@@ -2213,40 +2270,25 @@ private fun AutoScrollDialog(on: Boolean, level: Int, onToggle: () -> Unit, onLe
  */
 @Composable
 private fun KeyCapoDialog(text: String, showCapo: Boolean, onTranspose: (Int) -> Unit, onCapo: (Int) -> Unit, onDismiss: () -> Unit) {
-    // a window of ours is open: a follower isn't taken to the leader's other song until it closes (FollowToStage)
-    br.app.stagebook.ui.components.FollowBusyWhile()
-    val gap = with(LocalDensity.current) { Spacing.s.roundToPx() }
     val hasChords = remember(text) { Chords.hasChords(text) || Chords.fromChordsOverLyrics(text).let(Chords::hasChords) }
     val key = remember(text) { Chords.key(text).ifEmpty { Chords.detectKey(text) } }
     val capo = remember(text) { Chords.capo(text) }
-    androidx.compose.ui.window.Popup(
-        popupPositionProvider = BelowAnchor(gap),
-        onDismissRequest = onDismiss,
-        properties = androidx.compose.ui.window.PopupProperties(focusable = true),
-    ) {
-        Surface(shape = MaterialTheme.shapes.large, color = MaterialTheme.colorScheme.surfaceContainerHigh, shadowElevation = 6.dp) {
-            Column(Modifier.padding(Spacing.l).width(IntrinsicSize.Max), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(Spacing.s)) {
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.s)) {
-                    Text(stringResource(if (showCapo) R.string.stage_key_capo_title else R.string.editor_key), style = MaterialTheme.typography.titleLarge)
-                    IconButton(onClick = onDismiss) { Icon(AppIcons.Close, stringResource(R.string.action_close)) }
-                }
-                if (showCapo) Text(stringResource(R.string.editor_key), style = MaterialTheme.typography.bodyLarge)
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.m)) {
-                    IconButton(onClick = { onTranspose(-1) }, enabled = hasChords) { Icon(AppIcons.Remove, stringResource(R.string.editor_transpose_down)) }
-                    Text(key.ifEmpty { "–" }, style = MaterialTheme.typography.headlineSmall)
-                    IconButton(onClick = { onTranspose(1) }, enabled = hasChords) { Icon(AppIcons.Add, stringResource(R.string.editor_transpose_up)) }
-                }
-                if (showCapo) {
-                    Text(stringResource(R.string.editor_capo), style = MaterialTheme.typography.bodyLarge)
-                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.m)) {
-                        IconButton(onClick = { onCapo(capo - 1) }, enabled = capo > 0) { Icon(AppIcons.Remove, stringResource(R.string.editor_capo_down)) }
-                        Text(if (capo == 0) "0" else stringResource(R.string.editor_capo_fret, capo), style = MaterialTheme.typography.headlineSmall)
-                        IconButton(onClick = { onCapo(capo + 1) }, enabled = capo < 12) { Icon(AppIcons.Add, stringResource(R.string.editor_capo_up)) }
-                    }
-                }
-                Text(stringResource(R.string.stage_key_capo_saved), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    StageWindow(stringResource(if (showCapo) R.string.stage_key_capo_title else R.string.editor_key), onDismiss, spacing = Spacing.s, hug = true) {
+        if (showCapo) Text(stringResource(R.string.editor_key), style = MaterialTheme.typography.bodyLarge)
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.m)) {
+            IconButton(onClick = { onTranspose(-1) }, enabled = hasChords) { Icon(AppIcons.Remove, stringResource(R.string.editor_transpose_down)) }
+            Text(key.ifEmpty { "–" }, style = MaterialTheme.typography.headlineSmall)
+            IconButton(onClick = { onTranspose(1) }, enabled = hasChords) { Icon(AppIcons.Add, stringResource(R.string.editor_transpose_up)) }
+        }
+        if (showCapo) {
+            Text(stringResource(R.string.editor_capo), style = MaterialTheme.typography.bodyLarge)
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.m)) {
+                IconButton(onClick = { onCapo(capo - 1) }, enabled = capo > 0) { Icon(AppIcons.Remove, stringResource(R.string.editor_capo_down)) }
+                Text(if (capo == 0) "0" else stringResource(R.string.editor_capo_fret, capo), style = MaterialTheme.typography.headlineSmall)
+                IconButton(onClick = { onCapo(capo + 1) }, enabled = capo < 12) { Icon(AppIcons.Add, stringResource(R.string.editor_capo_up)) }
             }
         }
+        Text(stringResource(R.string.stage_key_capo_saved), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }
 
@@ -2533,10 +2575,7 @@ private fun StageClock(
 /** The show's length, half an hour at a time, and a restart of its counter: a small window over the clock. */
 @Composable
 internal fun ShowLengthWindow(length: Int, onStep: (up: Boolean) -> Unit, onRestart: () -> Unit, onDismiss: () -> Unit) {
-    // a window of ours is open: a follower isn't taken to the leader's other song until it closes (FollowToStage)
-    br.app.stagebook.ui.components.FollowBusyWhile()
     val density = LocalDensity.current
-    val gap = with(density) { Spacing.s.roundToPx() }
     // the length gets the room of its widest value, so − and + stay put as "1h" turns into "1h30" (S26, 07/11)
     val lengthStyle = MaterialTheme.typography.headlineSmall
     val measurer = rememberTextMeasurer()
@@ -2545,25 +2584,13 @@ internal fun ShowLengthWindow(length: Int, onStep: (up: Boolean) -> Unit, onRest
             .maxOf { measurer.measure(ShowTimer.lengthText(it), lengthStyle, maxLines = 1).size.width }
         with(density) { widest.toDp() }
     }
-    androidx.compose.ui.window.Popup(
-        popupPositionProvider = AboveAnchor(gap),
-        onDismissRequest = onDismiss,
-        properties = androidx.compose.ui.window.PopupProperties(focusable = true),
-    ) {
-        Surface(shape = MaterialTheme.shapes.large, color = MaterialTheme.colorScheme.surfaceContainerHigh, shadowElevation = 6.dp) {
-            Column(Modifier.padding(Spacing.l).width(IntrinsicSize.Max), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(Spacing.s)) {
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.s)) {
-                    Text(stringResource(R.string.stage_show_title), style = MaterialTheme.typography.titleLarge)
-                    IconButton(onClick = onDismiss) { Icon(AppIcons.Close, stringResource(R.string.action_close)) }
-                }
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.m)) {
-                    IconButton(onClick = { onStep(false) }, enabled = length > ShowTimer.MIN_MINUTES) { Icon(AppIcons.Remove, stringResource(R.string.stage_show_shorter)) }
-                    Text(ShowTimer.lengthText(length), Modifier.widthIn(min = lengthWidth), style = lengthStyle, textAlign = TextAlign.Center, maxLines = 1)
-                    IconButton(onClick = { onStep(true) }, enabled = length < ShowTimer.MAX_MINUTES) { Icon(AppIcons.Add, stringResource(R.string.stage_show_longer)) }
-                }
-                ActionButton(stringResource(R.string.stage_show_restart), onRestart, icon = AppIcons.Undo, tone = ButtonTone.Tonal)
-            }
+    StageWindow(stringResource(R.string.stage_show_title), onDismiss, spacing = Spacing.s, hug = true) {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.m)) {
+            IconButton(onClick = { onStep(false) }, enabled = length > ShowTimer.MIN_MINUTES) { Icon(AppIcons.Remove, stringResource(R.string.stage_show_shorter)) }
+            Text(ShowTimer.lengthText(length), Modifier.widthIn(min = lengthWidth), style = lengthStyle, textAlign = TextAlign.Center, maxLines = 1)
+            IconButton(onClick = { onStep(true) }, enabled = length < ShowTimer.MAX_MINUTES) { Icon(AppIcons.Add, stringResource(R.string.stage_show_longer)) }
         }
+        ActionButton(stringResource(R.string.stage_show_restart), onRestart, icon = AppIcons.Undo, tone = ButtonTone.Tonal)
     }
 }
 

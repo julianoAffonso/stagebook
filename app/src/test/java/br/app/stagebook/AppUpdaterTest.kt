@@ -84,8 +84,8 @@ class AppUpdaterTest {
         apkUrl = "http://127.0.0.1:${server.address.port}/apk"
     }
 
-    private fun vm(u: AppUpdater) = LibraryRepository(context, CoroutineScope(Dispatchers.IO)).let { repo ->
-        SettingsViewModel(repo, context, u, br.app.stagebook.data.MidiPedal(context, repo, CoroutineScope(Dispatchers.IO)), br.app.stagebook.data.Backup(context, repo, br.app.stagebook.data.TrackStore(context)), br.app.stagebook.data.MetronomeSound(context), br.app.stagebook.data.MidiOut(context, repo, CoroutineScope(Dispatchers.IO)), br.app.stagebook.player.StagePlayer(context, repo))
+    private fun vm(u: AppUpdater) = LibraryRepository(context, testScope()).let { repo ->
+        testSettingsVm(repo, updater = u)
     }
 
     /** Waits for the update state to reach the screen (uiState only moves with someone watching). */

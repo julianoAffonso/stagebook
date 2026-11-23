@@ -47,21 +47,38 @@ class AndroidPdfSource(file: File) : PdfSource {
  * and at most [MAX_KEPT] kept (the one on screen, the next and one back): a Fire HD 10 has no room for a whole book.
  * Closed when the song leaves the stage.
  */
-class PdfPages(private val source: PdfSource) {
+class PdfPages private constructor(
+    private val source: PdfSource,
+    // a view of another one that shows only some of its pages (the hidden ones left out, user 22/11): it draws through that
+    // one, so the lock, the kept pages and the closing are the same
+    private val parent: PdfPages?,
+    private val shown: List<Int>?,
+) {
+    constructor(source: PdfSource) : this(source, null, null)
+
     private val lock = Mutex()
     private val kept = LinkedHashMap<Pair<Int, Int>, Bitmap>()   // (page, width) → the page, oldest first
     @Volatile private var closed = false
 
     /** Read once, when it opened: asking a closed PDF for its pages would throw (a screen that still holds an old one). */
-    val pageCount: Int = source.pageCount
+    val pageCount: Int = shown?.size ?: source.pageCount
 
-    suspend fun size(page: Int): Pair<Int, Int> = lock.withLock {
+    /** The same PDF showing only the pages [visible] (file pages, in order); this one when that is every page. */
+    fun only(visible: List<Int>): PdfPages {
+        val base = parent ?: this
+        return if (visible == (0 until base.pageCount).toList()) base else PdfPages(source, base, visible)
+    }
+
+    /** The file page that page [page] of this one is. */
+    fun filePage(page: Int): Int = shown?.getOrNull(page) ?: page
+
+    suspend fun size(page: Int): Pair<Int, Int> = parent?.size(filePage(page)) ?: lock.withLock {
         if (closed) throw CancellationException("the PDF was closed")
         withContext(Dispatchers.IO) { source.pageSize(page) }
     }
 
     /** The page drawn at [width] pixels, from the kept ones when it was drawn already. */
-    suspend fun bitmap(page: Int, width: Int): Bitmap = lock.withLock {
+    suspend fun bitmap(page: Int, width: Int): Bitmap = parent?.bitmap(filePage(page), width) ?: lock.withLock {
         if (closed) throw CancellationException("the PDF was closed")
         val key = page to width
         kept.remove(key)?.let { kept[key] = it; return@withLock it }   // seen again: the newest
@@ -84,6 +101,7 @@ class PdfPages(private val source: PdfSource) {
      * it under that page threw, and left the renderer open. Asking for a page after this is a cancellation, not a crash.
      */
     fun close() {
+        if (parent != null) return   // the one it shows is closed by its owner
         closed = true
         CoroutineScope(Dispatchers.IO).launch { lock.withLock { kept.clear(); source.close() } }
     }

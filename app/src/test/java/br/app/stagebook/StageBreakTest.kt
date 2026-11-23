@@ -10,7 +10,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.click
 import androidx.compose.ui.test.hasText
-import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -70,13 +70,7 @@ class StageBreakTest {
         compose.waitForIdle()
     }
 
-    private fun press(key: Int) {
-        compose.runOnUiThread {
-            pedal.dispatch(KeyEvent(0, 0, KeyEvent.ACTION_DOWN, key, 0))
-            pedal.dispatch(KeyEvent(0, 0, KeyEvent.ACTION_UP, key, 0))
-        }
-        compose.waitForIdle()
-    }
+    private fun press(key: Int) = pressPedal(compose, pedal, key)
     private fun forward() = press(KeyEvent.KEYCODE_PAGE_DOWN)
     private fun back() = press(KeyEvent.KEYCODE_PAGE_UP)
 

@@ -15,6 +15,7 @@ import br.app.stagebook.domain.Mixer
 import br.app.stagebook.domain.NormMode
 import br.app.stagebook.domain.OutputInfo
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
@@ -96,6 +97,20 @@ class StagePlayer @Inject constructor(
                 else if (changed) PlayerService.reconnect()
             }
         }
+        // skipping the silence turned on or off (user, 22/11): counts for the track already loaded, if it's at its start
+        scope.launch {
+            repository.library.map { it.look.trimSilence }.distinctUntilChanged().drop(1).collect { on ->
+                engine.withLock {
+                    val f = loaded ?: return@withLock
+                    if (durationMs < 0) return@withLock
+                    val before = lead
+                    lead = if (on) leadOf(f) else 0
+                    val ui = _ui.value
+                    val atStart = Engine.position() <= before + br.app.stagebook.domain.TrackEnds.LEAD_PAD_MS
+                    if (!ui.playing && !ui.waiting && atStart) Engine.seek(lead)
+                }
+            }
+        }
         // the mixer changed (the general one in Settings, or the loaded song's own over the stage): measure what's
         // missing and apply right away (only with the player on)
         scope.launch {
@@ -108,7 +123,7 @@ class StagePlayer @Inject constructor(
 
     /** Song open on stage (null = no backing track): loads its track, or, with a track playing, after it stops. */
     fun open(track: File?) {
-        if (queue.open(track) && PlayerService.running) scope.launch { load() }
+        if (queue.open(track) && PlayerService.running) loadAfterFade()
         if (track != null) prepareUnread()
     }
 
@@ -205,7 +220,39 @@ class StagePlayer @Inject constructor(
     fun stop() {
         pause()
         _ui.update { it.copy(away = false) }   // stopped on purpose: back to the start, nothing left to carry on
-        if (PlayerService.running) scope.launch { engine.withLock { Engine.seek(0) } }
+        backToStart()
+    }
+
+    // where the loaded track's first sound is (user, 22/11: skip the silence before it); 0 = its very start
+    @Volatile private var lead = 0L
+    // the jump back to the start, after the fade (user, 22/11): coming in the middle, the start would sound under it
+    @Volatile private var toStart: Job? = null
+
+    // until when a stop's fade is still sounding: the next song's track waits for it, or loading it cut the fade dry
+    @Volatile private var fadeUntil = 0L
+
+    // the song on screen changed: its track comes in once the fade of the one stopped is over
+    private fun loadAfterFade() {
+        scope.launch {
+            val wait = fadeUntil - android.os.SystemClock.elapsedRealtime()
+            if (wait > 0) delay(wait)
+            load()
+        }
+    }
+
+    // the fade as Settings offers it: a value from a hand-edited backup can't make the engine misbehave (audit 22/11)
+    private fun stopFade(): Int = repository.library.value.look.stopFadeMs.coerceIn(0, br.app.stagebook.domain.TrackEnds.FADES_MS.max())
+
+    private fun backToStart() {
+        if (!PlayerService.running) return
+        toStart?.cancel()
+        val wait = br.app.stagebook.domain.TrackEnds.seekDelay(stopFade())
+        toStart = scope.launch {
+            if (wait > 0) delay(wait)
+            // played again meanwhile (the end of a song and a tap come from different threads): that play already went to
+            // the start, and this seek would throw it back in the middle of the first bar (audit 22/11)
+            engine.withLock { if (!_ui.value.playing && !_ui.value.waiting) Engine.seek(lead) }
+        }
     }
 
     // the wait for an output that dropped mid-song (see serviceChanged)
@@ -222,7 +269,11 @@ class StagePlayer @Inject constructor(
         PlayerService.playWanted(true)
         _ui.update { it.copy(waiting = true) }
         queue.started()
+        // played again while a stop was still fading: from the start now, not from where the fade was
+        val restart = toStart?.isActive == true
+        toStart?.cancel()
         scope.launch {
+            if (restart) engine.withLock { Engine.seek(lead) }
             if (!load()) {
                 PlayerService.playWanted(false)
                 _ui.value = PlayerUi(message = context.getString(R.string.player_no_track))
@@ -235,17 +286,21 @@ class StagePlayer @Inject constructor(
     }
 
     fun pause() {
+        val wasPlaying = _ui.value.playing
         endWatch?.cancel()
         dropWait?.cancel()
         PlayerService.playWanted(false)
         // the sign goes with the wait: left on, it blinked on every song with nothing waiting for the interface (audit 10/11)
         _ui.update { it.copy(playing = false, waiting = false, away = false) }
         if (PlayerService.running) {
+            val fade = stopFade()
+            Engine.setFadeOut(fade)
+            if (wasPlaying) fadeUntil = android.os.SystemClock.elapsedRealtime() + br.app.stagebook.domain.TrackEnds.seekDelay(fade)
             Engine.pause()
             PlayerService.playing(false)
         }
         // the song on screen changed while this track played: its track comes in now
-        if (queue.stopped() && PlayerService.running) scope.launch { load() }
+        if (queue.stopped() && PlayerService.running) loadAfterFade()
     }
 
     /**
@@ -287,6 +342,8 @@ class StagePlayer @Inject constructor(
         val lanes = Engine.lanes()
         if (lanes > mixer.channels) repository.updateLook { it.copy(mixer = it.mixer.copy(channels = lanes)) }
         measureAndApply()
+        lead = if (repository.library.value.look.trimSilence) leadOf(f) else 0
+        if (lead > 0) Engine.seek(lead)
         ready = f
         true
     }
@@ -311,16 +368,46 @@ class StagePlayer @Inject constructor(
     private fun songMix(lib: br.app.stagebook.data.model.Library): br.app.stagebook.domain.SongMix? =
         loaded?.name?.let { name -> lib.songs.firstOrNull { it.track == name }?.mix }
 
+    // the file's identity for what is measured on it: another file, even under the same name, is measured again
+    // kept while the file's name, size and date are the same: a load asked for it three times, each reading the file's
+    // start again (audit 22/11)
+    private fun fileKey(f: File): String {
+        val seen = Triple(f.absolutePath, f.length(), f.lastModified())
+        keyKept?.takeIf { it.first == seen }?.let { return it.second }
+        val key = br.app.stagebook.domain.TrackEnds.cacheKey(
+            seen.first.substringAfterLast('/'), seen.second, seen.third, runCatching { f.inputStream().use(br.app.stagebook.domain.TrackEnds::headOf) }.getOrDefault(0L),
+        )
+        keyKept = seen to key
+        return key
+    }
+    @Volatile private var keyKept: Pair<Triple<String, Long, Long>, String>? = null
+
+    // where the track's first sound is, read once per file and kept (only the start of the file is read)
+    private fun leadOf(f: File): Long {
+        val prefs = context.getSharedPreferences("lead", Context.MODE_PRIVATE)
+        val key = fileKey(f)
+        if (prefs.contains(key)) return prefs.getLong(key, 0)
+        val first = Engine.leadingSilence(f.absolutePath, br.app.stagebook.domain.TrackEnds.SOUND, br.app.stagebook.domain.TrackEnds.MAX_SILENCE_MS)
+        val at = br.app.stagebook.domain.TrackEnds.startAt(first)
+        val present = f.parentFile?.list()?.toSet().orEmpty()
+        prefs.edit {
+            br.app.stagebook.domain.TrackEnds.stale(prefs.all.keys, present, f.name, key).forEach { remove(it) }
+            putLong(key, at)
+        }
+        return at
+    }
+
     private fun measure(f: File, mask: Int): Measure? {
         val prefs = context.getSharedPreferences("norm", Context.MODE_PRIVATE)
-        val key = "${f.name}|${f.length()}|$mask"
+        val key = fileKey(f) + "|$mask"
         prefs.getString(key, null)?.split(';')?.mapNotNull { it.toFloatOrNull() }?.takeIf { it.size == 2 }
             ?.let { return Measure(it[0], it[1]) }
         val m = Engine.analyzeMask(f.absolutePath, mask) ?: return null
         // measures of tracks no longer in the folder go away (the list only grew and went into every backup; audit 30/10)
         val present = f.parentFile?.list()?.toSet().orEmpty()
+        // another file under the same name (a restored backup) is another sound: what was measured for the old one goes
         prefs.edit {
-            prefs.all.keys.filter { it.substringBefore('|') !in present }.forEach { remove(it) }
+            br.app.stagebook.domain.TrackEnds.stale(prefs.all.keys, present, f.name, fileKey(f)).forEach { remove(it) }
             putString(key, "${m[0]};${m[1]}")
         }
         return Measure(m[0], m[1])
@@ -348,7 +435,7 @@ class StagePlayer @Inject constructor(
                             // measured) skipped the seek and the next play stayed at the end (audit 01/11)
                             kotlinx.coroutines.withContext(kotlinx.coroutines.NonCancellable) {
                                 pause()
-                                engine.withLock { Engine.seek(0) }
+                                backToStart()
                             }
                         }
                     }

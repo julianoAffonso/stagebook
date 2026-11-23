@@ -1,5 +1,6 @@
 package br.app.stagebook
 
+import kotlinx.coroutines.launch
 import androidx.test.core.app.ApplicationProvider
 import br.app.stagebook.data.LibraryRepository
 import br.app.stagebook.data.model.Song
@@ -23,8 +24,7 @@ import org.robolectric.annotation.Config
 class LibraryEditsTest {
     private val context = ApplicationProvider.getApplicationContext<android.app.Application>()
 
-    private fun repo() = LibraryRepository(context, CoroutineScope(SupervisorJob() + Dispatchers.IO))
-        .also { r -> runBlocking { withTimeout(5_000) { r.loaded.first { it } } } }
+    private fun repo() = testRepo()
 
     private fun LibraryRepository.items(setId: String) = library.value.setlist(setId)!!.items
 
@@ -135,5 +135,25 @@ class LibraryEditsTest {
         val s = r.createSetlist("Show").also { r.addToSetlist(it, listOf(a)) }
         assertNotNull(r.qrPayload(s))
         assertNull(r.qrPayload("missing"))
+    }
+
+    // audit 22/11: one save for the lot
+    @Test fun `several setlists deleted, and several songs taken out of one, each in a single change`() = kotlinx.coroutines.runBlocking {
+        val repo = testRepo(empty = true)
+        val ids = listOf("A", "B", "C", "D").map { repo.saveSong(br.app.stagebook.data.model.Song(title = it, text = "x")) }
+        val one = repo.createSetlist("Um").also { repo.addToSetlist(it, ids) }
+        val two = repo.createSetlist("Dois")
+        val three = repo.createSetlist("Três")
+        var changes = 0
+        val watch = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch { repo.library.collect { changes++ } }
+        awaitTrue { changes > 0 }
+        val before = changes
+        repo.removeItems(one, listOf(0 to ids[0], 2 to ids[2], 3 to "not this one"))
+        awaitTrue { repo.library.value.setlist(one)!!.items.size == 2 }
+        org.junit.Assert.assertEquals(listOf(ids[1], ids[3]), repo.library.value.setlist(one)!!.items)
+        repo.deleteSetlists(listOf(two, three))
+        awaitTrue { repo.library.value.sets.size == 1 }
+        watch.cancel()
+        org.junit.Assert.assertEquals("two changes, not one per item", 2, changes - before)
     }
 }

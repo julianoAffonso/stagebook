@@ -165,7 +165,7 @@ class LibraryRepository @Inject constructor(
     fun saveSong(song: Song): String {
         val id = song.id.ifEmpty { newId() }
         // a PDF name from outside (a band answer, a file) that is not a plain file name is no PDF: it never points out of its folder
-        val saved = song.copy(id = id).let { if (it.pdf.isEmpty() || PdfStore.safeName(it.pdf) != null) it else it.copy(pdf = "", pdfName = "", pdfMarks = emptyList(), pdfCrops = emptyList(), pdfPage = 0) }
+        val saved = song.copy(id = id).let { if (it.pdf.isEmpty() || PdfStore.safeName(it.pdf) != null) it else it.copy(pdf = "", pdfName = "", pdfMarks = emptyList(), pdfCrops = emptyList(), pdfHidden = emptyList(), pdfPage = 0, pdfText = false) }
         mutate { lib ->
             val exists = lib.songs.any { it.id == id }
             lib.copy(songs = if (exists) lib.songs.map { if (it.id == id) saved else it } else lib.songs + saved)
@@ -177,10 +177,18 @@ class LibraryRepository @Inject constructor(
         mutate { lib -> lib.copy(songs = lib.songs.map { if (it.id == id) change(it) else it }) }
 
     /** The song was played on show day [day]: counted once a day (a second time that day writes nothing). */
-    fun countPlay(id: String, day: String) {
+    fun countPlay(id: String, day: String, setlist: String = "") {
         val song = song(id) ?: return
         if (br.app.stagebook.domain.PlayStats.record(song, day) == null) return
-        updateSong(id) { br.app.stagebook.domain.PlayStats.record(it, day) ?: it }
+        // the count and the history line in one save: the history keeps the name as it is now (user, 22/11)
+        mutate { lib ->
+            val now = lib.song(id) ?: return@mutate lib
+            val counted = br.app.stagebook.domain.PlayStats.record(now, day) ?: return@mutate lib
+            lib.copy(
+                songs = lib.songs.map { if (it.id == id) counted else it },
+                history = br.app.stagebook.domain.PlayHistory.add(lib.history, br.app.stagebook.data.model.PlayEntry(day, now.title, now.author, setlist)),
+            )
+        }
     }
 
     /** Changes several songs in one save (tags on a selection). */
@@ -260,6 +268,20 @@ class LibraryRepository @Inject constructor(
     fun deleteSetlist(id: String) {
         setPickedTags(id, emptySet())
         mutate { lib -> lib.copy(sets = lib.sets.filterNot { it.id == id }) }
+    }
+
+    /** Several setlists deleted in one save (one each was a write of the whole library per setlist; audit 22/11). */
+    fun deleteSetlists(ids: Collection<String>) {
+        val gone = ids.toSet()
+        gone.forEach { setPickedTags(it, emptySet()) }
+        mutate { lib -> lib.copy(sets = lib.sets.filterNot { it.id in gone }) }
+    }
+
+    /** Several songs out of a setlist in one save: each as [removeItem] takes it, only if it is still at its place. */
+    fun removeItems(setId: String, picks: List<Pair<Int, String>>) = updateSet(setId) { s ->
+        val out = picks.filter { (i, songId) -> s.items.getOrNull(i) == songId }.map { it.first }.toSet()
+        if (out.isEmpty()) s
+        else s.copy(items = s.items.filterIndexed { i, _ -> i !in out }, breaks = SetlistBreaks.afterRemoving(s.breaks, s.items.size, out))
     }
 
     /** The song at [from] goes to [to] (positions among the songs); the breaks stay between the same songs. */
@@ -461,6 +483,13 @@ class LibraryRepository @Inject constructor(
     }
 
     /** Backup restored: its songs and setlists replace the ones here (the look stays). */
+    /** A backup's history of what was played joins this one: each line once, oldest first (user, 22/11). */
+    suspend fun joinHistory(history: List<br.app.stagebook.data.model.PlayEntry>) {
+        if (history.isEmpty()) return
+        ready.await()
+        mutate { lib -> lib.copy(history = (lib.history + history).distinct().sortedBy { it.day }.takeLast(br.app.stagebook.domain.PlayHistory.MAX)) }
+    }
+
     suspend fun restore(songs: List<Song>, sets: List<Setlist>) {
         ready.await()
         mutate { lib -> lib.copy(songs = songs, sets = sets.map { it.withValidBreaks() }) }

@@ -22,10 +22,15 @@ class PdfImporter @Inject constructor(
     private val inspector: PdfInspector,
 ) {
     data class Refusal(val name: String, val problem: PdfProblem)
-    data class Result(val added: List<String>, val refused: List<Refusal>)
+    /** [added]: titles; [ids]: the songs made, in the same order. */
+    data class Result(val added: List<String>, val refused: List<Refusal>, val ids: List<String> = emptyList()) {
+        /** The one song made, to open in the editor as after a lyrics import (user, 22/11); null with none or several. */
+        val single: String? get() = ids.singleOrNull()
+    }
 
     suspend fun import(uris: List<Uri>): Result {
         val added = ArrayList<String>()
+        val ids = ArrayList<String>()
         val refused = ArrayList<Refusal>()
         for (uri in uris) {
             val shown = store.displayName(uri)
@@ -33,13 +38,13 @@ class PdfImporter @Inject constructor(
                 is PdfAttach.Saved -> {
                     val (artist, named) = artistAndTitleOf(shown)
                     val title = freeTitle(named, artist)
-                    repository.saveSong(Song(title = title, author = artist, pdf = saved.name, pdfName = shown))
+                    ids += repository.saveSong(Song(title = title, author = artist, pdf = saved.name, pdfName = shown))
                     added += title
                 }
                 is PdfAttach.Refused -> refused += Refusal(shown.ifEmpty { "PDF" }, saved.problem)
             }
         }
-        return Result(added, refused)
+        return Result(added, refused, ids)
     }
 
     /** One PDF that came as bytes (a download in the importer): checked like a picked file, and a song made of it. */
@@ -49,8 +54,8 @@ class PdfImporter @Inject constructor(
             is PdfAttach.Saved -> {
                 val (artist, named) = artistAndTitleOf(shown)
                 val title = freeTitle(named, artist)
-                repository.saveSong(Song(title = title, author = artist, pdf = saved.name, pdfName = shown))
-                Result(listOf(title), emptyList())
+                val id = repository.saveSong(Song(title = title, author = artist, pdf = saved.name, pdfName = shown))
+                Result(listOf(title), emptyList(), listOf(id))
             }
             is PdfAttach.Refused -> Result(emptyList(), listOf(Refusal(shown, saved.problem)))
         }

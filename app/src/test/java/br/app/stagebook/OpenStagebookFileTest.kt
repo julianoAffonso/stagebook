@@ -38,8 +38,7 @@ class OpenStagebookFileTest {
     private val context = ApplicationProvider.getApplicationContext<android.app.Application>()
 
     private fun setup(): Triple<LibraryRepository, Backup, IncomingFiles> = runBlocking {
-        val repo = LibraryRepository(context, CoroutineScope(SupervisorJob() + Dispatchers.IO))
-        withTimeout(5_000) { repo.loaded.first { it } }
+        val repo = testRepo()
         val backup = Backup(context, repo, TrackStore(context))
         Triple(repo, backup, IncomingFiles(context, backup))
     }

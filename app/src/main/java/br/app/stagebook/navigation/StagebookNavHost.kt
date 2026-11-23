@@ -73,6 +73,7 @@ fun StagebookNavHost(
     openedFiles: Flow<br.app.stagebook.data.IncomingFiles.Result> = emptyFlow(),
     resume: String? = null,
     openedPdfs: Flow<android.net.Uri> = emptyFlow(),   // PDFs opened with the app or shared to it: each comes in as a song
+    sharedPages: Flow<String> = emptyFlow(),   // web pages shared to the app: each opens the import browser on it
 ) {
     val nav = rememberNavController()
     // at launch the app opens on the stage that was open last, in place of the empty screen (the stage is the root: back
@@ -103,7 +104,19 @@ fun StagebookNavHost(
     val message = rememberAppMessage()
     // a PDF opened with the app: a song is made of it right away (nothing on screen is disturbed), and the message says so, or why not
     LaunchedEffect(openedPdfs) {
-        openedPdfs.collect { uri -> message.show(start.importPdfs(listOf(uri)).message(pdfContext), long = true) }
+        openedPdfs.collect { uri ->
+            val result = start.importPdfs(listOf(uri))
+            message.show(result.message(pdfContext), long = true)
+            // it opens in the editor, as a lyrics import does (user, 22/11)
+            result.single?.let { nav.navigate(SongEditor(songId = it)) }
+        }
+    }
+    // a page shared from a browser (user, 22/11): the import browser opens on it, and the person imports from there as
+    // from any site (the kind, PDF or lyrics and chords, is told by the address: ImportViewModel)
+    LaunchedEffect(sharedPages) {
+        // in place of an importer already open: kept (launchSingleTop), it stayed on its old page and the shared one was
+        // ignored (audit 22/11)
+        sharedPages.collect { url -> nav.navigate(Importer(url)) { popUpTo<Importer> { inclusive = true } } }
     }
     // the update going in: the system takes over, so the person is told what is happening, and only what is true
     val installStartedText = androidx.compose.runtime.rememberUpdatedState(androidx.compose.ui.res.stringResource(br.app.stagebook.R.string.update_installing))
@@ -208,7 +221,10 @@ fun StagebookNavHost(
         }
     }
     var drawerShown by remember { androidx.compose.runtime.mutableStateOf(false) }
-    CompositionLocalProvider(LocalAppMessage provides message, br.app.stagebook.ui.components.LocalOpenSettings provides openSettings, br.app.stagebook.ui.components.LocalOpenImporter provides { nav.navigate(Importer(queued = true)) { launchSingleTop = true } }, br.app.stagebook.ui.components.LocalFollowGate provides followGate) {
+    // the external screen (user, 22/11): one for the whole app, idle picture with the stage closed
+    val stageMirror = remember { br.app.stagebook.ui.stage.StageMirror() }
+    br.app.stagebook.ui.stage.ExternalScreenHost(stageMirror)
+    CompositionLocalProvider(br.app.stagebook.ui.stage.LocalStageMirror provides stageMirror, LocalAppMessage provides message, br.app.stagebook.ui.components.LocalOpenSettings provides openSettings, br.app.stagebook.ui.components.LocalOpenImporter provides { nav.navigate(Importer(queued = true)) { launchSingleTop = true } }, br.app.stagebook.ui.components.LocalFollowGate provides followGate) {
     BandStripLayout(liftIme = !drawerShown, screens = {
     LibraryDrawerHost(nav, onShown = { drawerShown = it; start.menuShown(it) }, openNow = menuAtStart, onOpenedNow = { menuAtStart = false }) {
     NavHost(

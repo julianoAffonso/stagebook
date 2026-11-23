@@ -9,7 +9,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.onNodeWithTag
-import androidx.compose.ui.test.junit4.createAndroidComposeRule
+import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.performClick
 import br.app.stagebook.data.model.Look
@@ -67,13 +67,7 @@ class StageMidShowTest {
         compose.waitForIdle()
     }
 
-    private fun press(key: Int) {
-        compose.runOnUiThread {
-            pedal.dispatch(KeyEvent(0, 0, KeyEvent.ACTION_DOWN, key, 0))
-            pedal.dispatch(KeyEvent(0, 0, KeyEvent.ACTION_UP, key, 0))
-        }
-        compose.waitForIdle()
-    }
+    private fun press(key: Int) = pressPedal(compose, pedal, key)
 
     @Test fun `going to the break turns the metronome off`() {
         show()

@@ -1,6 +1,6 @@
 package br.app.stagebook
 
-import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.onAllNodesWithText
@@ -73,8 +73,7 @@ class AutoProfileTest {
     }
 
     private fun importer(look: Look, kind: String): ImportViewModel = runBlocking {
-        val repo = LibraryRepository(context, CoroutineScope(Dispatchers.IO))
-        withTimeout(5_000) { repo.loaded.first { it } }
+        val repo = testRepo()
         repo.updateLook { look }
         ImportViewModel(
             repo, br.app.stagebook.data.PageImporter(repo, MusicBrainz(), br.app.stagebook.data.DeezerBpm(), br.app.stagebook.data.Connectivity(context)),
@@ -95,7 +94,7 @@ class AutoProfileTest {
     @Config(qualifiers = "pt-rBR-w1280dp-h4000dp-port-hdpi")
     @Test fun `Settings offers automatic beside the other two profiles`() {
         var chosen: SongProfile? = null
-        compose.setContent { StagebookTheme { SettingsScreen(SettingsUiState(loading = false), SettingsActions(onProfile = { chosen = it }), section = SettingsSection.LYRICS) } }
+        compose.setContent { StagebookTheme { SettingsScreen(SettingsUiState(loading = false), SettingsActions(onProfile = { chosen = it }), section = SettingsSection.CHORDS) } }
         compose.onNodeWithText(str(R.string.settings_lyrics_only)).assertExists()
         // "Automático" is also an answer of other cards further down (the columns): the profile's comes first
         compose.onAllNodesWithText(str(R.string.settings_profile_auto))[0].performClick()

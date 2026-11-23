@@ -54,6 +54,7 @@ object WebHttp {
     const val MAX_HEAD = 16 * 1024
 
     const val HEAD_DEADLINE_MS = 10_000L
+    const val BODY_DEADLINE_MS = 30_000L
 
     /**
      * Reads one request. [maxBody] decides, by path, how big the body can be (backing tracks are bigger); [toFile]
@@ -80,15 +81,22 @@ object WebHttp {
         gate(HttpRequest(first[0].uppercase(), decode(path), query(target.substringAfter('?', "")), headers, remote = remote))?.let { throw HttpError(it) }
         val file = toFile(decode(path))
         if (file != null) {
-            file.outputStream().use { out ->
-                val buf = ByteArray(64 * 1024)
-                var left = length
-                while (left > 0) {
-                    val n = stream.read(buf, 0, minOf(buf.size.toLong(), left).toInt())
-                    if (n < 0) { file.delete(); throw HttpError(400) }
-                    out.write(buf, 0, n)
-                    left -= n
+            // whatever stops it (the connection cut, a timeout, the disk full, the editor turned off), the half file goes:
+            // it stayed in the cache, up to 1 GB, until the editor was turned on again (audit 22/11)
+            try {
+                file.outputStream().use { out ->
+                    val buf = ByteArray(64 * 1024)
+                    var left = length
+                    while (left > 0) {
+                        val n = stream.read(buf, 0, minOf(buf.size.toLong(), left).toInt())
+                        if (n < 0) throw HttpError(400)
+                        out.write(buf, 0, n)
+                        left -= n
+                    }
                 }
+            } catch (e: Exception) {
+                file.delete()
+                throw e
             }
             return HttpRequest(first[0].uppercase(), decode(path), query(target.substringAfter('?', "")), headers, ByteArray(0), remote, file)
         }
@@ -96,9 +104,12 @@ object WebHttp {
         val body = ByteArrayOutputStream(minOf(length, 64L * 1024).toInt())
         val buf = ByteArray(16 * 1024)
         var left = length
+        // a small body has a deadline as the head has: a byte every few seconds held a place for as long as it liked
+        val bodyDeadline = System.currentTimeMillis() + BODY_DEADLINE_MS
         while (left > 0) {
             val n = stream.read(buf, 0, minOf(buf.size.toLong(), left).toInt())
             if (n < 0) throw HttpError(400)
+            if (System.currentTimeMillis() > bodyDeadline) throw HttpError(408)
             body.write(buf, 0, n)
             left -= n
         }
@@ -110,7 +121,9 @@ object WebHttp {
             append("HTTP/1.1 ").append(response.status).append(' ').append(reason(response.status)).append("\r\n")
             append("Content-Type: ").append(response.contentType).append("\r\n")
             append("Content-Length: ").append(response.body.size).append("\r\n")
-            append("Cache-Control: no-store\r\n")
+            // nothing is kept by the browser unless the answer itself says so (a PDF page's picture does: sent with both
+            // lines, "no-store" won and every click drew all the pages again on the tablet; audit 22/11)
+            if (response.headers.keys.none { it.equals("Cache-Control", ignoreCase = true) }) append("Cache-Control: no-store\r\n")
             append("X-Content-Type-Options: nosniff\r\n")
             append("Connection: close\r\n")
             response.headers.forEach { (k, v) -> append(k).append(": ").append(v).append("\r\n") }

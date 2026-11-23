@@ -4,7 +4,7 @@ import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.getUnclippedBoundsInRoot
-import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
@@ -99,17 +99,17 @@ class SettingsGroupsTest {
         compose.onNodeWithText("Dividir em colunas").assertDoesNotExist()
     }
 
-    @Test fun `Turn the page holds the pedal and MIDI, the MIDI output and during the show`() {
+    @Test fun `Turn the page holds the mode, the pedal and during the show, and the MIDI output went out of the app`() {
         group(section = SettingsSection.PAGE, midi = true)
-        listOf("Modo", "Pedal e MIDI", "Saída MIDI", "Durante o show").forEach { compose.onNodeWithText(it).assertExists() }
+        listOf("Modo", "Pedal e MIDI", "Durante o show").forEach { compose.onNodeWithText(it).assertExists() }
+        compose.onNodeWithText("Saída MIDI").assertDoesNotExist()
         assertTrue(top("Modo") < top("Pedal e MIDI"))
-        assertTrue(top("Saída MIDI") < top("Durante o show"))
+        assertTrue(top("Pedal e MIDI") < top("Durante o show"))
         compose.onNodeWithText("Manter a tela ligada", substring = true).assertExists()
     }
 
     @Test fun `the MIDI output leaves with the extras`() {
-        group(look = Look(extrasOn = false), section = SettingsSection.PAGE, midi = true)
-        compose.onNodeWithText("Pedal e MIDI").assertExists()
+        group(look = Look(extrasOn = false), section = SettingsSection.BAND, midi = true)
         compose.onNodeWithText("Saída MIDI").assertDoesNotExist()
     }
 
@@ -151,8 +151,8 @@ class SettingsGroupsTest {
         assertTrue(top("Idioma") < top("Bateria do aparelho"))
     }
 
-    @Test fun `Chords group leaves with Lyrics only`() {
-        assertFalse(SettingsSection.CHORDS.shown(Look().copy(chords = false)))
+    @Test fun `Chords group stays with Lyrics only - the choice to bring the chords back is in it`() {
+        assertTrue(SettingsSection.CHORDS.shown(Look().copy(chords = false)))
         assertTrue(SettingsSection.CHORDS.shown(Look()))
     }
 

@@ -20,7 +20,8 @@ import javax.inject.Singleton
 class TrackStore @Inject constructor(@ApplicationContext private val context: Context) {
     private val dir get() = File(context.filesDir, "tracks").apply { mkdirs() }
 
-    fun file(name: String): File = File(dir, name)
+    // only a plain file name the app made: a name from outside (a songs file, a backup) never reaches another folder
+    fun file(name: String): File = File(dir, PdfStore.safeName(name) ?: UNSAFE)
 
     /**
      * Copies the chosen track; returns the saved name, or null if it isn't really OGG/MP3/WAV (checked by its first
@@ -46,7 +47,7 @@ class TrackStore @Inject constructor(@ApplicationContext private val context: Co
         }
     }
 
-    fun remove(name: String) { if (name.isNotEmpty()) File(dir, name).delete() }
+    fun remove(name: String) { if (PdfStore.safeName(name) != null) File(dir, name).delete() }
 
     /**
      * Deletes the files no song points to (deleted songs, a restored backup) and copies left half done (`.part`), once
@@ -58,6 +59,23 @@ class TrackStore @Inject constructor(@ApplicationContext private val context: Co
     }
 
     /** The chosen file's name without the extension ("Under Pressure"), to show; empty when Android doesn't say. */
+    /**
+     * The track's length in seconds, read by Android from the file's own header (not the audio engine); 0 when it can't
+     * tell. A song with no length takes it when the track is attached (user, 22/11).
+     */
+    suspend fun seconds(name: String): Int = withContext(Dispatchers.IO) { if (name.isEmpty()) 0 else lengthOf(file(name)) }
+
+    // tests swap the reader (Robolectric has no media decoder)
+    internal var lengthOf: (File) -> Int = { f ->
+        runCatching {
+            val r = android.media.MediaMetadataRetriever()
+            try {
+                r.setDataSource(f.path)
+                ((r.extractMetadata(android.media.MediaMetadataRetriever.METADATA_KEY_DURATION)?.toLongOrNull() ?: 0L) / 1000).toInt()
+            } finally { r.release() }
+        }.getOrDefault(0).takeIf { it in 1..br.app.stagebook.domain.Chords.MAX_DURATION_S } ?: 0
+    }
+
     fun displayName(uri: Uri): String = runCatching { queryName(uri) }.getOrNull().orEmpty().let(::shownName)
 
     private fun queryName(uri: Uri): String? =
@@ -78,6 +96,8 @@ class TrackStore @Inject constructor(@ApplicationContext private val context: Co
     }
 
     companion object {
+        private const val UNSAFE = "unsafe-name.none"
+
         /**
          * Copies [input] into [to] in chunks (without closing [input]); returns the real format's extension from the
          * first bytes, or null when it isn't audio or passes [MAX_BYTES] (the caller deletes [to]). A track picked by

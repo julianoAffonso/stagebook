@@ -1,3 +1,5 @@
+@file:OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
+
 package br.app.stagebook
 
 import android.net.Uri
@@ -43,7 +45,7 @@ import java.io.File
 @Config(sdk = [35], application = android.app.Application::class)
 class ReceivedFileRestoreTest {
     private val context = ApplicationProvider.getApplicationContext<android.app.Application>()
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private val scope = testScope()
     private lateinit var repo: LibraryRepository
     private lateinit var backup: Backup
     private lateinit var incoming: IncomingFiles
@@ -51,11 +53,10 @@ class ReceivedFileRestoreTest {
 
     @Before fun start() {
         Dispatchers.setMain(UnconfinedTestDispatcher())
-        repo = LibraryRepository(context, scope)
-        runBlocking { withTimeout(5_000) { repo.loaded.first { it } } }
+        repo = testRepo(scope = scope)
         backup = Backup(context, repo, TrackStore(context))
         incoming = IncomingFiles(context, backup)
-        vm = SettingsViewModel(repo, context, AppUpdater(context), MidiPedal(context, repo, scope), backup, MetronomeSound(context), MidiOut(context, repo, scope), br.app.stagebook.player.StagePlayer(context, repo))
+        vm = testSettingsVm(repo, scope = scope, backup = backup)
     }
 
     @After fun stop() = Dispatchers.resetMain()

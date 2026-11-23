@@ -19,7 +19,7 @@ import org.robolectric.annotation.Config
 class MidiForegroundTest {
     @Test fun `starts paused and follows the app coming to the front and leaving`() {
         val context = ApplicationProvider.getApplicationContext<android.app.Application>()
-        val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+        val scope = testScope()
         val pedal = MidiPedal(context, LibraryRepository(context, scope), scope)
         @Suppress("UNCHECKED_CAST")
         val inFront = MidiPedal::class.java.getDeclaredField("inFront").apply { isAccessible = true }.get(pedal) as MutableStateFlow<Boolean>

@@ -36,15 +36,15 @@ import org.robolectric.annotation.Config
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [35], qualifiers = "pt-rBR", application = android.app.Application::class)
 class InviteSingleUseTest {
-    @get:Rule val compose = androidx.compose.ui.test.junit4.createComposeRule()
+    @get:Rule val compose = androidx.compose.ui.test.junit4.v2.createComposeRule()
     private val context = ApplicationProvider.getApplicationContext<android.app.Application>()
-    private val repo = LibraryRepository(context, CoroutineScope(SupervisorJob() + Dispatchers.IO))
+    private val repo = LibraryRepository(context, testScope())
     private val identity = DeviceIdentity(context)
     private val cloud = SetlistCloud(repo, identity)
     private val trust = BandTrust(context)
 
     private fun band(t: BandTrust = trust): Pair<BandInternet, BandLink> {
-        val link = BandLink(context, identity, t, StageGate(), BandInbox(context), repo)
+        val link = testLink(repo = repo, identity = identity, trust = t)
         return BandInternet(context, cloud, t, identity, BandInbox(context), Connectivity(context), link) to link
     }
 

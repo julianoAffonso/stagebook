@@ -6,7 +6,6 @@ import br.app.stagebook.data.BandSession
 import br.app.stagebook.domain.BandCrypto
 import br.app.stagebook.domain.BandProtocol
 import kotlinx.coroutines.runBlocking
-import kotlinx.serialization.json.Json
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -58,18 +57,20 @@ class BandVersionWarningTest {
         return r to (me.trusted.isEmpty() && other.trusted.isEmpty())
     }
 
-    @Test fun `the protocol is on version 4`() = assertEquals(4, BandProtocol.VERSION)
+    @Test fun `the protocol is on version 5`() = assertEquals(5, BandProtocol.VERSION)
 
-    @Test fun `another device on 3 (the published app) - this one on 4 says version, and nothing is saved`() {
+    @Test fun `another device on 3 or 4 (published apps) - this one on 5 says version, and nothing is saved`() {
+        assertEquals(BandSession.JoinResult.VERSION to true, join(4))
+        assertEquals(BandSession.JoinResult.VERSION to true, joinOther(4))
         assertEquals(BandSession.JoinResult.VERSION to true, join(2))
         assertEquals(BandSession.JoinResult.VERSION to true, joinOther(2))
         assertEquals(BandSession.JoinResult.VERSION to true, join(3))
         assertEquals(BandSession.JoinResult.VERSION to true, joinOther(3))
     }
 
-    @Test fun `another device on 5 (a newer app) - this one on 4 says version, and nothing is saved`() {
-        assertEquals(BandSession.JoinResult.VERSION to true, join(5))
-        assertEquals(BandSession.JoinResult.VERSION to true, joinOther(5))
+    @Test fun `another device on 6 (a newer app) - this one on 5 says version, and nothing is saved`() {
+        assertEquals(BandSession.JoinResult.VERSION to true, join(6))
+        assertEquals(BandSession.JoinResult.VERSION to true, joinOther(6))
     }
 
     @Test fun `the same version still talks`() {
@@ -77,7 +78,7 @@ class BandVersionWarningTest {
     }
 
     @Test fun `a Hello with no version is read as 2, because the published app never wrote it`() {
-        val h = Json { ignoreUnknownKeys = true }.decodeFromString<BandProtocol.Hello>("""{"id":"i","name":"n","key":"k"}""")
+        val h = lenientJson.decodeFromString<BandProtocol.Hello>("""{"id":"i","name":"n","key":"k"}""")
         assertEquals(2, h.v)
         // a mismatch with this app (3), so a published app on the network gets "version" instead of being taken for current
         assertTrue(h.v != BandProtocol.VERSION)

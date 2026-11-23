@@ -37,8 +37,7 @@ class PdfSongStoreTest {
     private val pdfBytes = "%PDF-1.4\n%fake body\n".toByteArray()
 
     private fun setup(): Triple<LibraryRepository, PdfStore, Backup> = runBlocking {
-        val repo = LibraryRepository(context, CoroutineScope(SupervisorJob() + Dispatchers.IO))
-        withTimeout(5_000) { repo.loaded.first { it } }
+        val repo = testRepo()
         val pdfs = PdfStore(context)
         Triple(repo, pdfs, Backup(context, repo, TrackStore(context), null, pdfs))
     }

@@ -1,6 +1,6 @@
 package br.app.stagebook
 
-import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -52,9 +52,8 @@ class EditorRouteStepsTest {
 
     private fun rig(at: Int): Rig {
         val context = ApplicationProvider.getApplicationContext<android.app.Application>()
-        val scope = CoroutineScope(Dispatchers.IO)
-        val repo = LibraryRepository(context, scope)
-        runBlocking { withTimeout(5_000) { repo.loaded.first { it } } }
+        val scope = testScope()
+        val repo = testRepo(scope = scope)
         val ids = listOf("EdA", "EdB", "EdC").map { repo.saveSong(Song(title = it, author = "Band", text = "[G]letra $it")) }
         val queue = EditorQueue()
         queue.open(ids, at)

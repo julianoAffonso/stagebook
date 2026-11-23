@@ -120,6 +120,72 @@
         <item quantity="one">%d break</item>
         <item quantity="other">%d breaks</item>
     </plurals>
+    <string name="editor_duration">Length</string>
+    <string name="length_minutes">%1$d min</string>
+    <string name="length_hours_minutes">%1$d h %2$d min</string>
+    <plurals name="set_block_unknown">
+        <item quantity="one">+ %d with no length</item>
+        <item quantity="other">+ %d with no length</item>
+    </plurals>
+    <string name="pdf_pages_title">Pages on stage</string>
+    <string name="pdf_pages_of">%1$d of %2$d</string>
+    <string name="pdf_pages_hint">Tap a page to leave it off the stage, and again to bring it back. The file doesn\'t change.</string>
+    <plurals name="pdf_pages_shown">
+        <item quantity="one">%1$d of %2$d page on stage</item>
+        <item quantity="other">%1$d of %2$d pages on stage</item>
+    </plurals>
+    <string name="pdf_page_label">Page %d</string>
+    <string name="pdf_page_shown">on stage</string>
+    <string name="pdf_page_hidden">hidden</string>
+    <string name="enrich_title">Complete song details</string>
+    <string name="enrich_start">Look up what is missing</string>
+    <string name="enrich_stop">Stop</string>
+    <string name="enrich_running">Looking up song %1$d of %2$d</string>
+    <string name="enrich_running_again">Trying again: song %1$d of %2$d</string>
+    <string name="enrich_leave">You can leave this screen.</string>
+    <string name="enrich_offline">No internet right now. Try again when you are connected.</string>
+    <string name="enrich_nothing">Every song has artist, year, BPM and length.</string>
+    <plurals name="enrich_missing">
+        <item quantity="one">%d song is missing artist, year, BPM or length.</item>
+        <item quantity="other">%d songs are missing artist, year, BPM or length.</item>
+    </plurals>
+    <plurals name="enrich_tried">
+        <item quantity="one">%d song still lacks something. The services didn\'t find it.</item>
+        <item quantity="other">%d songs still lack something. The services didn\'t find it.</item>
+    </plurals>
+    <plurals name="enrich_tried_inside">
+        <item quantity="one">%d of them was looked up already, with no luck.</item>
+        <item quantity="other">%d of them were looked up already, with no luck.</item>
+    </plurals>
+    <string name="enrich_again">Look again</string>
+    <plurals name="enrich_done">
+        <item quantity="one">Done. %d song got new details.</item>
+        <item quantity="other">Done. %d songs got new details.</item>
+    </plurals>
+    <string name="history_title">What was played</string>
+    <string name="history_empty">Nothing played yet. A song counts after a minute on stage, once per show day.</string>
+    <string name="history_month">This month</string>
+    <string name="history_year">12 months</string>
+    <string name="history_all">All</string>
+    <string name="history_export">Export spreadsheet (CSV)</string>
+    <string name="history_failed">Couldn\'t save the spreadsheet.</string>
+    <string name="history_file">played</string>
+    <string name="history_col_date">Date</string>
+    <string name="history_col_song">Song</string>
+    <string name="history_col_artist">Artist</string>
+    <string name="history_col_setlist">Setlist</string>
+    <plurals name="history_summary">
+        <item quantity="one">%d song played</item>
+        <item quantity="other">%d songs played</item>
+    </plurals>
+    <plurals name="history_days">
+        <item quantity="one">on %d show day.</item>
+        <item quantity="other">on %d show days.</item>
+    </plurals>
+    <plurals name="history_done">
+        <item quantity="one">Spreadsheet saved with %d song.</item>
+        <item quantity="other">Spreadsheet saved with %d songs.</item>
+    </plurals>
     <plurals name="set_block">
         <item quantity="one">SET %1$d · %2$d song</item>
         <item quantity="other">SET %1$d · %2$d songs</item>
@@ -195,6 +261,10 @@
     <string name="about_tagline">Lyrics, chords and backing tracks to play live, solo or with the band.</string>
     <string name="about_privacy">Privacy</string>
     <string name="about_privacy_text">Your songs, setlists and settings stay on this device. What goes to the band or over the internet is protected, and nobody in between can read it. No account, no ads, no tracking.</string>
+    <string name="about_credits">Services and libraries</string>
+    <string name="about_services_text">Stagebook has no server of its own. With Internet on, it uses:\n• MusicBrainz: artist and year\n• Deezer API: BPM and length\n• ntfy.sh: sends by 3 words and the band inbox, encrypted\n• GitHub Releases: new versions\n• The sites you open in the import browser</string>
+    <string name="about_libraries_text">Made with open source libraries: Kotlin, kotlinx.coroutines and kotlinx.serialization, Jetpack Compose and Material 3, AndroidX and CameraX, Hilt, Reorderable, ZXing and PdfBox-Android (Apache 2.0); stb_vorbis, dr_mp3 and dr_wav (public domain or MIT).</string>
+    <string name="kw_credits">serviços bibliotecas licenças créditos services libraries licenses credits open source</string>
     <string name="about_open_source">Source available</string>
     <string name="about_open_source_text">Stagebook is free and anyone can see the code. Use it as you like, paid gigs included, and help make it better. Just don\'t copy it to make a competing app.</string>
     <string name="about_see_code">See the code</string>
@@ -291,7 +361,7 @@
     <string name="essential_player">Track player</string>
     <string name="essential_player_detail">Backing tracks, USB audio interface and mixer</string>
     <string name="essential_extras">Metronome and chord extras</string>
-    <string name="essential_extras_detail">Chord sound and details, metronome, Now Playing and song MIDI</string>
+    <string name="essential_extras_detail">Chord sound and details, metronome, Now Playing, external screen and song MIDI</string>
     <string name="essential_banner">Essential mode on</string>
     <string name="essential_alert_title">Essential mode on</string>
     <string name="essential_alert_text">Lyrics, chords, chord diagrams and the pedal stay on. What\'s off:</string>
@@ -436,6 +506,21 @@
     <string name="settings_chord_play_both">Both</string>
     <string name="announce_title">Tell what\'s playing</string>
     <string name="announce_switch">Send the current song to OBS and others</string>
+    <string name="external_title">External screen</string>
+    <string name="external_help">With a TV or projector connected, by cable or wireless, the song shows there on the same page as the stage.</string>
+    <string name="external_show">On the external screen</string>
+    <string name="external_off">Nothing (Android mirrors the tablet)</string>
+    <string name="external_lyrics">Lyrics only</string>
+    <string name="external_chords">Lyrics and chords</string>
+    <string name="external_pdf">Lyrics, chords and PDF</string>
+    <string name="external_detail">PDF song: with Lyrics, chords and PDF its pages show. With the others, the lyrics kept in the song show, or its name if it has none.</string>
+    <string name="external_idle">With the stage closed</string>
+    <string name="external_idle_logo">Stagebook logo</string>
+    <string name="external_idle_black">Black screen</string>
+    <string name="external_idle_image">My image</string>
+    <string name="external_image_change">Change image</string>
+    <string name="external_image_refused">This file isn\'t an image, or it\'s over 20 MB.</string>
+    <string name="kw_external">tela externa tv projetor hdmi espelhar external screen tv projector hdmi mirror cast</string>
     <string name="announce_help">When the song changes, the stage tells apps like OBS and Resolume what\'s playing, with artist, key and BPM. The lyrics never go out.</string>
     <string name="metro_shown">Show on stage</string>
     <string name="metro_title">Metronome</string>
@@ -590,7 +675,7 @@
     <string name="settings_midi_out_help">Songs can send MIDI when they show on stage and when you leave them, to change a preset or a scene. Pick here where it goes. A Bluetooth device shows up in the list once it\'s connected in Connect a pedal or MIDI device. A mixer or sound card on USB doesn\'t show up, because opening its MIDI would take the audio interface from the player.</string>
     <string name="settings_midi_out_device">Send to</string>
     <string name="settings_midi_out_none">Nowhere</string>
-    <string name="settings_midi_out_find_bt">Can\'t find your Bluetooth device? Connect it in Connect a pedal or MIDI device.</string>
+    <string name="settings_midi_out_find_bt">Can\'t find your Bluetooth device? Connect it in %1$s.</string>
     <string name="settings_midi_out_away">%1$s, not connected</string>
     <string name="settings_midi_usb_help">When off, Stagebook leaves USB alone, so it\'s free for a USB audio interface.</string>
     <string name="settings_midi_scanning">Searching…</string>
@@ -819,6 +904,8 @@
         <item quantity="one">Send to the band (%1$d device)</item>
         <item quantity="other">Send to the band (%1$d devices)</item>
     </plurals>
+    <string name="share_band_wifi_only">Only this Wi-Fi</string>
+    <string name="share_band_wifi_only_hint">Nothing goes over the internet: band members on this Wi-Fi get it now, the others don\'t.</string>
     <string name="share_band_hint">Whoever is on this Wi-Fi gets it right away. The others get it online when they open the app, within 12 hours. Each one checks it before it comes in.</string>
     <plurals name="share_band_sent">
         <item quantity="one">Sent to %1$d band device</item>
@@ -912,6 +999,8 @@
     <string name="editor_pdf_remove">Remove PDF</string>
     <string name="editor_pdf_missing">The PDF isn\'t on this device. Attach it again.</string>
     <string name="editor_pdf_note">This song is a PDF. You can\'t edit the PDF; on stage you can mark it with the highlighter.</string>
+    <string name="editor_pdf_as_text">Show the lyrics on stage</string>
+    <string name="editor_pdf_as_text_detail">This song kept lyrics or chords. On, the stage shows them in place of the PDF.</string>
     <string name="editor_pdf_ask_lyrics">This song already has lyrics. They stay saved and come back if you remove the PDF.</string>
     <string name="editor_pdf_remove_confirm">Remove the PDF from this song? The file is deleted from this device and the lyrics come back.</string>
     <plurals name="editor_pdf_facts">
@@ -1032,6 +1121,14 @@
     <string name="metro_out_together">Through Android, this device sends the click to the USB interface with the song.</string>
     <string name="metro_out_hint">To pick a USB interface output, plug it in with the player on.</string>
     <string name="usb_via_android">Play on the interface through Android</string>
+    <string name="track_ends_title">Start and stop</string>
+    <string name="stop_fade">Fade when stopping</string>
+    <string name="stop_fade_none">No fade</string>
+    <string name="stop_fade_seconds">%1$s s</string>
+    <string name="stop_fade_detail">When you stop or pause the track, the volume goes down over this time.</string>
+    <string name="trim_silence">Skip the silence at the start</string>
+    <string name="trim_silence_detail">The track starts at its first sound.</string>
+    <string name="kw_fade">fade parar silêncio começo fade stop silence start trim</string>
     <string name="usb_via_android_detail">Use it only if the interface connects but there\'s no sound or it stutters. Sound goes through Android\'s audio, which can stutter too.</string>
     <string name="usb_route_auto_android">The app turned this on for %1$s, because the sound failed several times on Stagebook\'s engine.</string>
     <string name="usb_route_auto_engine">The app turned this off for %1$s, because no sound came out through Android.</string>
@@ -1118,10 +1215,10 @@
         <item quantity="other">%d more setlists came along and are waiting in Received from the band.</item>
     </plurals>
     <string name="share_internet_limit">Too much to send over the internet at once. Send it in more than one go.</string>
-    <string name="share_internet_pdf_limit">The PDFs need %1$d messages of 4 KB, and the internet server takes %2$d per send (%3$d are left after the songs). The songs go without the PDF. To send it, use the band on the same network.</string>
+    <string name="share_internet_pdf_limit">The PDFs add up to %1$d MB, and the internet takes up to %2$d MB per send (%3$d MB each). The songs go without the PDF. To send it, use the band on the same network.</string>
     <string name="share_band_pdf_budget">The PDFs add up to %1$d MB and a send to the band takes up to %2$d MB: the ones that don\'t fit go without the PDF.</string>
-    <string name="share_band_pdf_note">The PDFs go to whoever is on this network; a band member far away gets the small ones (up to 60 KB in all) and the song without the rest.</string>
-    <string name="share_internet_pdf_fits">The PDFs go along: %1$d of the %2$d messages the server takes.</string>
+    <string name="share_band_pdf_note">The PDFs go to whoever is on this network. A band member far away gets them through the internet, where they stay only %1$d hours.</string>
+    <string name="share_internet_pdf_fits">The PDFs go along, compressed. The server keeps them only %1$d hours: whoever opens it later gets the songs without the PDF.</string>
     <string name="share_internet_limit_titles">Too much to send over the internet at once. Turn off “Bring the songs” or send fewer setlists.</string>
     <string name="share_band_limit">Too many setlists at once. Send them in more than one go.</string>
     <string name="settings_lyrics_card">Lyrics</string>
@@ -1248,6 +1345,18 @@
     <string name="hide_internet">Only with the internet on</string>
     <string name="hide_scroll">Only in Scroll mode</string>
     <string name="hide_pages">Only in Turn pages mode</string>
+    <string name="sub_songs">Songs</string>
+    <string name="sub_import">Import from sites</string>
+    <string name="sub_copies">Copies</string>
+    <string name="sub_band">Playing with the band</string>
+    <string name="sub_broadcast">Out of the app</string>
+    <string name="sub_android">Android settings</string>
+    <string name="sub_computer">Computer</string>
+    <string name="sub_player">Backing track</string>
+    <string name="sub_page">Page</string>
+    <string name="sub_pedal">Pedal</string>
+    <string name="sub_show">Show</string>
+    <string name="hide_external_off">Only when the external screen shows something</string>
     <string name="hide_sites_chords">Only with the Lyrics and chords profile</string>
     <string name="hide_sites_lyrics">Only with the Lyrics only profile</string>
     <string name="hide_pt">Only with the app in Portuguese</string>
@@ -1262,6 +1371,7 @@
     <string name="pdf_refused_too_big">This PDF is too big. The limit is %1$d MB.</string>
     <string name="pdf_refused_password">This PDF has a password. Save a copy without one and try again.</string>
     <string name="pdf_refused_too_many_pages">This PDF has too many pages. The limit is %1$d.</string>
+    <string name="pdf_refused_expired">The PDF didn\'t arrive. The internet server keeps it only %1$d hours: ask for it to be sent again.</string>
     <string name="pdf_refused_unreadable">This PDF couldn\'t be opened. It may be damaged.</string>
     <string name="set_discard">Discard</string>
     <string name="set_save_question">Save the changes to “%1$s”?</string>

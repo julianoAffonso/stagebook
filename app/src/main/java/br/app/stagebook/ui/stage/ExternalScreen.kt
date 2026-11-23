@@ -1,0 +1,297 @@
+package br.app.stagebook.ui.stage
+
+import android.app.Presentation
+import android.content.Context
+import android.content.ContextWrapper
+import android.hardware.display.DisplayManager
+import android.view.Display
+import androidx.activity.ComponentActivity
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.Immutable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.ComposeView
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.TextMeasurer
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.rememberTextMeasurer
+import androidx.compose.ui.text.style.Hyphens
+import androidx.compose.ui.text.style.LineHeightStyle
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.Constraints
+import androidx.compose.ui.unit.TextUnit
+import androidx.compose.ui.unit.sp
+import androidx.lifecycle.setViewTreeLifecycleOwner
+import androidx.lifecycle.setViewTreeViewModelStoreOwner
+import androidx.savedstate.setViewTreeSavedStateRegistryOwner
+import br.app.stagebook.data.model.ExternalIdle
+import br.app.stagebook.data.model.ExternalShow
+import androidx.compose.ui.graphics.asImageBitmap
+import br.app.stagebook.data.model.Look
+import br.app.stagebook.data.model.PdfCrop
+import br.app.stagebook.data.model.PdfMark
+import br.app.stagebook.ui.theme.Spacing
+import java.io.File
+
+/**
+ * What the stage has on screen, for the external screen (user, 22/11): the song, and the part of it in view: its song
+ * lines [lines] (null: from the top), or the PDF's file page [pdfPage].
+ */
+@Immutable
+data class MirrorFrame(
+    val songId: String,
+    val title: String,
+    val meta: String = "",
+    val text: String = "",
+    val lines: IntRange? = null,
+    val pdf: String = "",
+    val pdfPage: Int = 0,
+    val pdfInvert: Boolean = false,
+    val pdfMarks: List<PdfMark> = emptyList(),
+    val pdfCrops: List<PdfCrop> = emptyList(),
+    val pdfAt: Int = 0,      // the page the stage shows, counting only the pages shown
+    val pdfCount: Int = 1,   // how many pages the stage shows
+)
+
+/**
+ * Where the stage leaves what it shows; read by the external screen. [active] while an external screen shows: only then
+ * the stage writes [frame], and with the stage closed it is null (the screen shows its idle picture).
+ */
+class StageMirror {
+    var frame by mutableStateOf<MirrorFrame?>(null)
+    var active by mutableStateOf(false)
+    var mirrorTablet by mutableStateOf(false)   // the stage scrolls: the screen is let go and Android mirrors the tablet
+}
+
+/** The app's one mirror, from the root: the stage writes it, the external screen reads it. */
+val LocalStageMirror = androidx.compose.runtime.staticCompositionLocalOf<StageMirror?> { null }
+
+private tailrec fun Context.activity(): ComponentActivity? = when (this) {
+    is ComponentActivity -> this
+    is ContextWrapper -> baseContext.activity()
+    else -> null
+}
+
+/**
+ * The first screen Android offers for a presentation (HDMI, wireless display), while [enabled]; null when there is none.
+ * Listens to screens coming and going only while enabled: nothing runs with the option off (the Fire is the rule).
+ */
+@Composable
+fun rememberPresentationDisplay(enabled: Boolean): Display? {
+    val context = LocalContext.current
+    var display by remember { mutableStateOf<Display?>(null) }
+    DisposableEffect(enabled) {
+        val manager = context.getSystemService(DisplayManager::class.java)
+        if (!enabled || manager == null) { display = null; return@DisposableEffect onDispose {} }
+        fun pick() { display = manager.getDisplays(DisplayManager.DISPLAY_CATEGORY_PRESENTATION).firstOrNull() }
+        val listener = object : DisplayManager.DisplayListener {
+            override fun onDisplayAdded(id: Int) = pick()
+            override fun onDisplayRemoved(id: Int) = pick()
+            override fun onDisplayChanged(id: Int) = pick()
+        }
+        pick()
+        manager.registerDisplayListener(listener, null)
+        onDispose { manager.unregisterDisplayListener(listener); display = null }
+    }
+    return display
+}
+
+/** [content] on [display], as an Android presentation, while it is in the composition. */
+@Composable
+fun ExternalPresentation(display: Display, content: @Composable () -> Unit) {
+    val context = LocalContext.current
+    val latest = rememberUpdatedState(content)
+    // made again when Android closes it by itself (the TV changed its resolution a second after connecting) or it failed
+    // to show: before, the TV went back to mirroring the tablet until the cable was plugged again (audit 22/11)
+    var generation by remember(display) { androidx.compose.runtime.mutableIntStateOf(0) }
+    var again by remember(display) { mutableStateOf(false) }
+    DisposableEffect(display, generation) {
+        val activity = context.activity() ?: return@DisposableEffect onDispose {}
+        val presentation = Presentation(activity, display)
+        val view = ComposeView(presentation.context).apply { setContent { latest.value() } }
+        presentation.setContentView(view)
+        presentation.window?.decorView?.let {
+            it.setViewTreeLifecycleOwner(activity)
+            it.setViewTreeSavedStateRegistryOwner(activity)
+            it.setViewTreeViewModelStoreOwner(activity)
+        }
+        var leaving = false
+        presentation.setOnDismissListener { if (!leaving) again = true }
+        // the screen may go away between being found and shown
+        if (runCatching { presentation.show() }.isFailure) again = true
+        onDispose { leaving = true; runCatching { presentation.dismiss() } }
+    }
+    // after a moment, not at once: a screen really gone would be tried in a loop
+    if (again) androidx.compose.runtime.LaunchedEffect(generation) {
+        kotlinx.coroutines.delay(PRESENTATION_RETRY_MS)
+        again = false
+        generation++
+    }
+}
+
+/**
+ * The external screen's picture of [frame], as [look] says: the lines the stage has in view, as large as they fit, or the
+ * PDF's page. A PDF song in a text mode, or a page with no song lines (the chord list), shows the song's name.
+ */
+@Composable
+fun ExternalStageContent(frame: MirrorFrame?, look: Look, pdfFile: (String) -> File, modifier: Modifier = Modifier, idleImage: File? = null) {
+    if (frame == null) { ExternalIdleContent(look.externalIdle, idleImage, modifier); return }
+    val bg = Color(look.bg)
+    val fg = Color(look.fg)
+    Box(modifier.fillMaxSize().background(bg).testTag(EXTERNAL_TAG), Alignment.Center) {
+        if (frame.pdf.isNotEmpty()) {
+            val lyrics = remember(frame.text) { hasLyrics(frame.text) }
+            if (look.externalShow != ExternalShow.PDF && lyrics) {
+                // the PDF's kept lyrics, the part of the page on stage (a PDF song with no lyrics shows its name)
+                LyricsPart(frame, look, fg) { all -> br.app.stagebook.domain.MirrorLines.pdfPart(all.size, { all[it].text.isEmpty() }, frame.pdfCount, frame.pdfAt) }
+            } else if (look.externalShow == ExternalShow.PDF) {
+                val file = remember(frame.pdf) { pdfFile(frame.pdf) }   // not on every composition: it looks at the disk
+                val open by rememberPdfOpen(file)
+                PdfStageView(
+                    open, frame.pdfPage, frame.pdfInvert, onPageCount = {}, marks = frame.pdfMarks, markColor = Color(look.highlightColor),
+                    crops = frame.pdfCrops, pageKey = frame.songId,
+                )
+            } else TitleCard(frame, fg)
+            return@Box
+        }
+        LyricsPart(frame, look, fg) { all -> frame.lines?.let { r -> all.indices.filter { all[it].source in r }.let { if (it.isEmpty()) IntRange.EMPTY else it.first()..it.last() } } ?: all.indices }
+    }
+}
+
+/** The song has lyrics to show, beyond titles and directives (a PDF song may keep them). */
+private fun hasLyrics(text: String): Boolean =
+    stageLines(text, SectionNames(null), Color.White, false, ChordLook(false, 1f, Color.White)).any { it.text.isNotBlank() }
+
+/**
+ * The lines of [frame]'s text that [part] picks, as large as they fit the screen, with chords unless the person chose
+ * lyrics only. No lines with words (a page with only the chord list) shows the song's name.
+ */
+@Composable
+private fun LyricsPart(frame: MirrorFrame, look: Look, fg: Color, part: (List<StageLine>) -> IntRange) {
+    val names = rememberSectionNames(look.translateSections)
+    val showChords = look.externalShow != ExternalShow.LYRICS
+    val chords = remember(showChords, look.chordScale, look.chordColor) { ChordLook(showChords, look.chordScale, Color(look.chordColor)) }
+    // the song is read once, and each page turn only picks its part (keyed on the whole frame, every turn read the song again)
+    val all = remember(frame.text, names, chords, look.sectionColor, look.showSections, look.sectionScale, look.sectionFont, look.highlightColor) {
+        stageLines(frame.text, names, Color(look.sectionColor), look.showSections, chords, look.sectionScale, Color(look.highlightColor), look.sectionFont.family)
+    }
+    val text = remember(all, frame.lines, frame.pdfAt, frame.pdfCount) {
+        val r = part(all)
+        (if (r.isEmpty()) emptyList() else all.subList(r.first, r.last + 1)).map { it.text }.dropWhile { it.isEmpty() }.dropLastWhile { it.isEmpty() }
+    }
+    if (text.none { it.isNotBlank() }) { TitleCard(frame, fg); return }
+    BoxWithConstraints(Modifier.fillMaxSize().padding(Spacing.l)) {
+        val measurer = rememberTextMeasurer(cacheSize = 0)
+        val joined = remember(text) { joinLines(text) }
+        val density = LocalDensity.current
+        val w = constraints.maxWidth
+        val h = constraints.maxHeight
+        val size = remember(joined, w, h, look.bold, look.font, chords.scale) {
+            with(density) { fitFontPx(measurer, joined, w, h) { px -> externalStyle(px.toSp(), fg, look) }.toSp() }
+        }
+        val style = externalStyle(size, fg, look)
+        ChordText(
+            joined, style,
+            stageChordStyle(style, look, chords.color, chords.scale),
+            Modifier.align(Alignment.Center),
+        )
+    }
+}
+
+/**
+ * The external screen with the stage closed (user, 22/11): the app's logo on black (the default), black, or the person's
+ * image, whole and centred. An image that is gone or can't be read leaves the screen black.
+ */
+@Composable
+fun ExternalIdleContent(idle: ExternalIdle, image: File?, modifier: Modifier = Modifier) {
+    // another image saved over the same file: drawn again (the file's date was read while composing, and nothing composed)
+    val version by br.app.stagebook.data.ExternalImageStore.version.collectAsState()
+    Box(modifier.fillMaxSize().background(Color.Black).testTag(EXTERNAL_IDLE_TAG), Alignment.Center) {
+        when (idle) {
+            ExternalIdle.LOGO -> br.app.stagebook.ui.components.AppLogo(size = androidx.compose.ui.unit.Dp(LOGO_DP))
+            ExternalIdle.BLACK -> Unit
+            ExternalIdle.IMAGE -> BoxWithConstraints(Modifier.fillMaxSize()) {
+                val w = constraints.maxWidth
+                val h = constraints.maxHeight
+                val picture by androidx.compose.runtime.produceState<androidx.compose.ui.graphics.ImageBitmap?>(null, image, version, w, h) {
+                    value = image?.takeIf { it.exists() }?.let { f -> kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { sampled(f, w, h) } }
+                }
+                picture?.let {
+                    androidx.compose.foundation.Image(it, null, Modifier.fillMaxSize().testTag(EXTERNAL_IMAGE_TAG), contentScale = androidx.compose.ui.layout.ContentScale.Fit)
+                }
+            }
+        }
+    }
+}
+
+// read at about the screen's size: a phone photo at full size would take tens of MB for a TV that shows 2
+private fun sampled(f: File, w: Int, h: Int): androidx.compose.ui.graphics.ImageBitmap? = runCatching {
+    val bounds = android.graphics.BitmapFactory.Options().apply { inJustDecodeBounds = true }
+    android.graphics.BitmapFactory.decodeFile(f.path, bounds)
+    var sample = 1
+    while (bounds.outWidth / (sample * 2) >= w.coerceAtLeast(1) && bounds.outHeight / (sample * 2) >= h.coerceAtLeast(1)) sample *= 2
+    android.graphics.BitmapFactory.decodeFile(f.path, android.graphics.BitmapFactory.Options().apply { inSampleSize = sample })?.asImageBitmap()
+}.getOrNull()
+
+@Composable
+private fun TitleCard(frame: MirrorFrame, fg: Color) {
+    Column(Modifier.padding(Spacing.l), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(Spacing.m)) {
+        Text(frame.title, color = fg, fontSize = 64.sp, lineHeight = 72.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
+        if (frame.meta.isNotBlank()) Text(frame.meta, color = fg.copy(alpha = 0.7f), fontSize = 36.sp, textAlign = TextAlign.Center)
+    }
+}
+
+private fun externalStyle(size: TextUnit, fg: Color, look: Look) = stageTextStyle(look, size.value, fg)
+
+/**
+ * The largest font, in pixels, at which [text] fits [width] × [height] with no line wrapped. Lines are never wrapped on the
+ * external screen: chords stay over their syllables and the part reads as on the stage.
+ */
+internal fun fitFontPx(measurer: TextMeasurer, text: AnnotatedString, width: Int, height: Int, style: (Float) -> TextStyle): Float {
+    if (width <= 0 || height <= 0) return MIN_EXTERNAL_PX
+    fun size(px: Float) = measurer.measure(text, style(px), softWrap = false, constraints = Constraints()).size
+    // nothing wraps and every height follows the font, so the text grows in proportion: measured once at a reference size
+    // and scaled (it was a search of ten layouts on every page turn, on the thread that animates the tablet's own page;
+    // audit 22/11), then checked, and brought down a step at a time if rounding left it a pixel over
+    val ref = size(REFERENCE_PX)
+    if (ref.width <= 0 || ref.height <= 0) return MIN_EXTERNAL_PX
+    // the chords drawn above a letter can reach a little past the line's end
+    var px = (REFERENCE_PX * minOf(width / (ref.width * CHORD_SLACK), height.toFloat() / ref.height)).coerceIn(MIN_EXTERNAL_PX, MAX_EXTERNAL_PX)
+    repeat(FIT_STEPS) {
+        val now = size(px)
+        if (now.width * CHORD_SLACK <= width && now.height <= height) return px
+        px = (px * 0.97f).coerceAtLeast(MIN_EXTERNAL_PX)
+    }
+    return px
+}
+
+const val EXTERNAL_TAG = "external_screen"
+const val EXTERNAL_IDLE_TAG = "external_idle"
+const val EXTERNAL_IMAGE_TAG = "external_image"
+private const val LOGO_DP = 240f
+private const val MIN_EXTERNAL_PX = 12f
+private const val MAX_EXTERNAL_PX = 400f
+private const val FIT_STEPS = 4
+private const val REFERENCE_PX = 48f
+private const val PRESENTATION_RETRY_MS = 1_500L
+private const val CHORD_SLACK = 1.04f

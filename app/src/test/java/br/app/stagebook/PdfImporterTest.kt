@@ -33,11 +33,10 @@ import java.io.File
 @Config(sdk = [35], qualifiers = "pt-rBR", application = android.app.Application::class)
 class PdfImporterTest {
     private val context = ApplicationProvider.getApplicationContext<android.app.Application>()
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private val scope = testScope()
     @After fun stop() { scope.cancel() }
 
-    private val repo = LibraryRepository(context, scope)
-        .also { r -> runBlocking { withTimeout(5_000) { r.loaded.first { it } }; r.restore(emptyList(), emptyList()) } }
+    private val repo = testRepo(scope = scope, empty = true)
     private val importer = PdfImporter(repo, PdfStore(context), PdfInspector(object : PdfPageCounter { override fun pageCount(file: File) = 3 }))
 
     private fun pdf(name: String, body: ByteArray = "%PDF-1.7\n".toByteArray() + ByteArray(50)): Uri {
@@ -64,6 +63,16 @@ class PdfImporterTest {
         assertTrue(one.pdf.isNotEmpty() && File(context.filesDir, "pdfs/${one.pdf}").exists())
         assertEquals("Cifra Um.pdf", one.pdfName)
         assertEquals("", one.text)
+    }
+
+    @Test fun `one PDF names its song to open in the editor, several name none`() = runBlocking {
+        val one = importer.import(listOf(pdf("Sozinha.pdf")))
+        assertEquals(repo.library.value.songs.single { it.title == "Sozinha" }.id, one.single)
+        val two = importer.import(listOf(pdf("A.pdf"), pdf("B.pdf")))
+        assertEquals(2, two.ids.size)
+        assertEquals(null, two.single)
+        val bytes = importer.importBytes("Baixada.pdf", "%PDF-1.7\n".toByteArray() + ByteArray(50))
+        assertEquals(repo.library.value.songs.single { it.title == "Baixada" }.id, bytes.single)
     }
 
     @Test fun `a file that is no PDF is left out with the reason and the others still come in`() = runBlocking {

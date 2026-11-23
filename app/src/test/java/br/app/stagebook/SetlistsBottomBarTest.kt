@@ -2,7 +2,7 @@ package br.app.stagebook
 
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
-import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
@@ -54,14 +54,14 @@ class SetlistsBottomBarTest {
         var asked = emptyList<String>()
         compose.setContent {
             StagebookTheme {
-                SetlistsScreen(state, {}, {}, {}, {}, online = true, songsIn = { 12 }, pdfSizesIn = { ids -> asked = ids; listOf(500_000L) })
+                SetlistsScreen(state, {}, {}, {}, {}, online = true, songsIn = { 12 }, pdfSizesIn = { ids -> asked = ids; listOf(9_000_000L) })
             }
         }
         compose.onNodeWithText("Show de sábado").performTouchInput { longClick() }
         compose.waitForIdle()
         compose.onNodeWithContentDescription("Compartilhar").performClick()
         compose.waitForIdle()
-        compose.onNodeWithText("servidor da internet aceita", substring = true).assertIsDisplayed()
+        compose.onNodeWithText("pela internet vão até 30 MB", substring = true).assertIsDisplayed()
         assertEquals(listOf("1"), asked)
     }
 }

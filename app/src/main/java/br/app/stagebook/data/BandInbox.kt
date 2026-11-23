@@ -6,6 +6,7 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.async
 import kotlinx.coroutines.launch
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
@@ -50,8 +51,12 @@ class BandInbox @Inject constructor(@ApplicationContext context: Context) {
     private val pdfDir = File(context.filesDir, "pdfs")
     private val json = Json { ignoreUnknownKeys = true }
 
-    private val _items = MutableStateFlow(load())
-    val items: StateFlow<List<Item>> = _items
+    private val scope = backgroundScope(kotlinx.coroutines.Dispatchers.IO)
+    // read in the background from the moment the app builds this (it was read on the screen's thread, at startup, with
+    // every waiting song's text; audit 22/11); whoever asks before it is there waits for it, as before
+    private val saved = scope.async { load() }
+    private val _items by lazy { MutableStateFlow(kotlinx.coroutines.runBlocking { saved.await() }) }
+    val items: StateFlow<List<Item>> get() = _items
 
     /**
      * Keeps what arrived. The same send arriving twice (over Wi-Fi and the internet) doesn't repeat; the same setlist
@@ -90,7 +95,6 @@ class BandInbox @Inject constructor(@ApplicationContext context: Context) {
 
     fun remove(id: String) { _items.update { l -> l.filterNot { it.id == id } }; scope.launch { save() } }
 
-    private val scope = backgroundScope(kotlinx.coroutines.Dispatchers.IO)
 
     private fun load(): List<Item> = runCatching { json.decodeFromString<List<Item>>(file.readText()) }.getOrDefault(emptyList())
 

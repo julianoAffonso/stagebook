@@ -30,7 +30,7 @@ class RoutesFromMenuTest {
     }
 
     @Test fun `an old saved route without the flag reads as not from the menu`() {
-        val json = Json { ignoreUnknownKeys = true }
+        val json = lenientJson
         assertEquals(false, json.decodeFromString<Settings>("""{"section":"DEVICE"}""").fromMenu)
         assertEquals(false, json.decodeFromString<SongEditor>("""{"songId":"a"}""").fromMenu)
     }

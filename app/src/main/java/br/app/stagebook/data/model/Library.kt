@@ -1,5 +1,6 @@
 package br.app.stagebook.data.model
 
+import androidx.core.net.toUri
 import androidx.compose.runtime.Immutable
 import br.app.stagebook.domain.PedalAction
 import kotlinx.serialization.SerialName
@@ -63,7 +64,17 @@ data class Song(
     // exported songs file. Kept with the song, so deleting a setlist or clearing its marks takes nothing away
     val plays: Int = 0,
     val lastPlayed: String = "",
+    // the PDF's pages left off the stage, by file page (user, 22/11); like the trims, this device and the backup
+    val pdfHidden: List<Int> = emptyList(),
+    // the stage shows the lyrics and chords kept in the song instead of its PDF (user, 22/11); goes with the PDF
+    val pdfText: Boolean = false,
 ) {
+    /**
+     * The stage shows the kept lyrics in place of the PDF: asked for ([pdfText]) and with lyrics to show. Read here, not
+     * the flag alone: a text emptied later (the editor on the computer, the MCP) left the stage with nothing (audit 22/11).
+     */
+    val pdfAsText: Boolean get() = pdfText && br.app.stagebook.domain.KeptLyrics.has(text)
+
     /** The audio didn't come with the song (a backup without the tracks, Android's own copy): only its name is here. */
     val audioLost: Boolean get() = track.isEmpty() && trackName.isNotEmpty()
 
@@ -71,8 +82,16 @@ data class Song(
     val pdfLost: Boolean get() = pdf.isEmpty() && pdfName.isNotEmpty()
 
     /** The same song with no trace of a PDF (what the QR, the text export and a received song never carry). */
-    fun withoutPdf(): Song = if (pdf.isEmpty() && pdfName.isEmpty() && pdfMarks.isEmpty() && pdfCrops.isEmpty() && pdfInvert == null && pdfScale == 1f && pdfPanX == 0f && pdfPanY == 0f) this else copy(pdf = "", pdfName = "", pdfMarks = emptyList(), pdfCrops = emptyList(), pdfPage = 0, pdfInvert = null, pdfScale = 1f, pdfPanX = 0f, pdfPanY = 0f)
+    fun withoutPdf(): Song = if (pdf.isEmpty() && pdfName.isEmpty() && pdfMarks.isEmpty() && pdfCrops.isEmpty() && pdfHidden.isEmpty() && pdfInvert == null && pdfScale == 1f && pdfPanX == 0f && pdfPanY == 0f && !pdfText) this else copy(pdf = "", pdfName = "", pdfMarks = emptyList(), pdfCrops = emptyList(), pdfHidden = emptyList(), pdfPage = 0, pdfInvert = null, pdfScale = 1f, pdfPanX = 0f, pdfPanY = 0f, pdfText = false)
 }
+
+/**
+ * A song played on a show day ([day] yyyy-MM-dd, see ShowDay): its name and artist as they were then (a song deleted
+ * later still reads right) and the setlist it was played from ("" = opened alone).
+ */
+@Immutable
+@Serializable
+data class PlayEntry(val day: String, val title: String, val author: String = "", val setlist: String = "")
 
 /** One point of a highlighter stroke, relative to the page: 0 (left, top) to 1 (right, bottom), valid on any screen size. */
 @Immutable
@@ -186,20 +205,42 @@ object ImportSites {
         ImportSite("LaCuerda", "https://acordes.lacuerda.net/"),
     )
     // free scores in PDF (public domain or free licence, chosen 15/11): the person browses, taps a PDF, and it comes in as a song.
-    // Not on the list on purpose: sites that ask for an account or payment for the PDF (MuseScore), sites that refuse any
-    // automated check (CPDL answers 403, so it can't be confirmed to open), and chord/lyrics sites (they have no PDF, and the
-    // lists above import those as text).
+    // Not on the list on purpose: sites that ask for an account or payment for the PDF (MuseScore, Musopen, Free-scores,
+    // 8notes) and chord/lyrics sites (they have no PDF, and the lists above import those as text). CPDL answers 403 to an
+    // automated check but works for a person browsing: imported on the S26 end to end (22/11), in IMSLP's place
     val PDF = listOf(
         ImportSite("Mutopia Project", "https://www.mutopiaproject.org/"),
-        ImportSite("IMSLP", "https://imslp.org/"),
+        ImportSite("CPDL", "https://www.cpdl.org/wiki/"),
         ImportSite("Musica Brasilis", "https://musicabrasilis.org.br/"),
     )
+
+    // taken off the PDF list (user, 22/11): IMSLP's new site freezes on a phone, in Chrome too, and its PDF button
+    // never answers. Also off the lists people already saved, so nobody lands on it
+    val RETIRED_PDF = listOf("imslp.org")
 }
 
 /** How the lyrics move on stage: turn pages (default) or scroll (user's request, 29/10). */
 enum class StageMode {
     @SerialName("pages") PAGES,
     @SerialName("scroll") SCROLL,
+}
+
+/**
+ * What a second screen shows while the stage is open (user, 22/11). [OFF]: Android mirrors the tablet as usual. The text
+ * modes show a PDF song by its title only; [PDF] shows its pages, and a lyrics song with its chords.
+ */
+enum class ExternalShow {
+    @SerialName("off") OFF,
+    @SerialName("lyrics") LYRICS,
+    @SerialName("chords") CHORDS,
+    @SerialName("pdf") PDF,
+}
+
+/** What a second screen shows while the stage isn't open (user, 22/11): the app's logo, black, or the person's own image. */
+enum class ExternalIdle {
+    @SerialName("logo") LOGO,
+    @SerialName("black") BLACK,
+    @SerialName("image") IMAGE,
 }
 
 /** What the stage clock shows; a tap moves to the next (user, 07/11). */
@@ -244,7 +285,8 @@ val Look.siteKind: SiteKind get() = if (chords) SiteKind.CHORDS else SiteKind.LY
 /** The import sites of one kind, in the user's order. */
 fun Look.sites(kind: SiteKind): List<ImportSite> = when (kind) {
     SiteKind.CHORDS -> chordSites
-    SiteKind.PDF -> pdfSites
+    SiteKind.PDF -> pdfSites.filterNot { site -> ImportSites.RETIRED_PDF.any { site.url.toUri().host?.endsWith(it) == true } }
+        .ifEmpty { ImportSites.PDF }
     SiteKind.LYRICS -> lyricSites
 }
 
@@ -266,6 +308,8 @@ data class Look(
     val fontSp: Float = 30f,
     // a PDF on the stage with its colours turned over (white paper becomes black)
     val pdfInvert: Boolean = false,
+    val externalShow: ExternalShow = ExternalShow.CHORDS,   // what a second screen (HDMI, wireless display) shows (user, 22/11)
+    val externalIdle: ExternalIdle = ExternalIdle.LOGO,   // what the second screen shows with the stage closed (user, 22/11)
     // the library drawer stays open beside the stage (the pin on its top row; only where the screen is wide enough)
     val drawerPinned: Boolean = false,
     // where the stage's side handle sits on the left edge, as a share of the height (0 top .. 1 bottom); held and dragged by the person
@@ -285,6 +329,8 @@ data class Look(
     val showMinutes: Int = br.app.stagebook.domain.ShowTimer.DEFAULT_MINUTES,   // the show's length, in half hours
     val showStart: Long = 0L,   // when the show's counter started (epoch ms); 0 = not started
     val trackStops: Boolean = true,   // the stage's track button stops and goes back to the start; off = pauses (user, 31/10)
+    val stopFadeMs: Int = 0,   // the volume goes down over this when the person stops or pauses; 0 = only the anti-click (user, 22/11)
+    val trimSilence: Boolean = true,   // the backing track starts at its first sound (user, 22/11)
     val pedalName: String = "",   // name of the Bluetooth pedal recognized from the last button pressed
     val columns: StageColumns = StageColumns.AUTO,
     val stageMode: StageMode = StageMode.PAGES,
@@ -374,6 +420,9 @@ data class Library(
     val songs: List<Song> = emptyList(),
     val sets: List<Setlist> = emptyList(),
     val look: Look = Look(),
+    // what was played, one line per song per show day (user, 22/11: exportable, e.g. for royalties). This device and the
+    // backup only: never the band, the QR or the exported songs file
+    val history: List<PlayEntry> = emptyList(),
 ) {
     // by id in one step (a setlist screen looked up each of its songs in the whole list on every library change); not
     // serialized, built the first time it's needed for this library

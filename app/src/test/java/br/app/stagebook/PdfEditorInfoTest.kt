@@ -59,7 +59,7 @@ class PdfEditorInfoTest {
     private fun picked(name: String, size: Int = 2_000) = android.net.Uri.fromFile(File(context.cacheDir, name).apply { writeBytes(bytes(size)) })
 
     private fun open(song: Song? = null): Pair<SongEditorViewModel, LibraryRepository> {
-        val scope = CoroutineScope(Dispatchers.IO)
+        val scope = testScope()
         val repo = LibraryRepository(context, scope)
         runBlocking { withTimeout(5_000) { repo.loaded.first { it } }; repo.restore(emptyList(), emptyList()) }
         val args = mutableMapOf<String, Any?>("fromImport" to false)
@@ -108,7 +108,7 @@ class PdfEditorInfoTest {
         assertNotEquals(first.file, second.file)
         assertEquals(pdfs.file(vm.pdf), second.file)
         assertEquals(5_009L, second.bytes)
-        assertFalse("the PDF before is gone from the disk", first.file!!.exists())
+        assertFalse("the PDF before is gone from the disk", first.file.exists())
         assertEquals(vm.pdf, repo.library.value.songs.single().pdf)
         vm.removePdf()
         assertNull(vm.pdfInfo)

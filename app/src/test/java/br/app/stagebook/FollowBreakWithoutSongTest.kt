@@ -46,60 +46,15 @@ import java.util.concurrent.CopyOnWriteArrayList
 class FollowBreakWithoutSongTest {
     private val context = ApplicationProvider.getApplicationContext<android.app.Application>()
     private val songs = listOf(Conduct.Item("Primeira"), Conduct.Item("Segunda", "Banda"), Conduct.Item("Terceira"))
-    private val voice = BandProtocol.Hello("voz", "Voz", "key")
+    private val voice = VOICE
 
-    /** A leader and a follower joined by what the leader sends; [opened] is what the follower's stage was asked to open. */
-    private inner class Band(val repo: LibraryRepository) {
-        var leaderClock = 1_000_000L
-        var followerClock = 987_654_321_000L
-        val arrived = java.util.concurrent.atomic.AtomicInteger()
-        private val followerLink = link()
-        val leader = BandConduct(link(), repo, DeviceIdentity(context)).also { it.clock = { leaderClock } }
-        val follower = BandConduct(followerLink, repo, DeviceIdentity(context)).also { it.clock = { followerClock } }
-        var listening: BandLink = followerLink
-        val opened = CopyOnWriteArrayList<String>()
+    private inner class Band(repo: LibraryRepository) : TestBand(repo, songs, watchOpened = true)
 
-        init {
-            leader.deliver = { msg ->
-                listening.conductHandler?.invoke(voice, Conduct.decode(Conduct.encode(msg))!!)
-                arrived.incrementAndGet()
-                emptyMap()
-            }
-            watch(follower, opened)
-        }
-
-        fun link() = BandLink(
-            context, DeviceIdentity(context), br.app.stagebook.data.BandTrust(context), br.app.stagebook.data.StageGate(),
-            br.app.stagebook.data.BandInbox(context), repo,
-        )
-
-        fun watch(who: BandConduct, into: MutableList<String>) {
-            CoroutineScope(Dispatchers.Unconfined).launch { who.openSong.collect { into += it } }
-        }
-
-        fun following(who: BandConduct = follower) = who.role.value as Role.Following
-
-        fun told(messages: Int = 1, act: () -> Unit) {
-            val before = arrived.get()
-            act()
-            await { arrived.get() >= before + messages }
-        }
-
-        fun started(index: Int = 0): Band {
-            told { leader.start("s1", "Show", songs, index) }
-            told { leader.open("s1", index) }
-            return this
-        }
-
-        fun library() = repo.library.value.songs
-    }
-
-    private fun await(what: () -> Boolean) = runBlocking { withTimeout(10_000) { while (!what()) delay(10) } }
+    private fun await(what: () -> Boolean) = awaitTrue(10_000, what)
 
     /** A band whose follower has only the songs named in [have]; returns their ids by title too. */
     private fun band(vararg have: String): Pair<Band, Map<String, String>> = runBlocking {
-        val repo = LibraryRepository(context, CoroutineScope(Dispatchers.IO))
-        withTimeout(15_000) { repo.loaded.first { it } }
+        val repo = testRepo()
         repo.updateLook { it.copy(bandOn = true) }
         withTimeout(15_000) { repo.library.first { it.look.bandOn } }
         val ids = have.associateWith { title ->
@@ -174,7 +129,7 @@ class FollowBreakWithoutSongTest {
         b.told { b.leader.rest("s1", 0) }
         b.leaderClock += 240_000   // four minutes later another device shows up
         val lateLink = b.link()
-        val late = BandConduct(lateLink, b.repo, DeviceIdentity(context)).also { it.clock = { 5_000_000L } }
+        val late = testConduct(repo = b.repo, link = lateLink).also { it.clock = { 5_000_000L } }
         val opened = CopyOnWriteArrayList<String>()
         b.watch(late, opened)
         b.listening = lateLink

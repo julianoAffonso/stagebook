@@ -4,7 +4,7 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.junit4.v2.createComposeRule
 import br.app.stagebook.ui.components.FollowBusyWhile
 import br.app.stagebook.ui.components.FollowGate
 import br.app.stagebook.ui.components.LocalFollowGate

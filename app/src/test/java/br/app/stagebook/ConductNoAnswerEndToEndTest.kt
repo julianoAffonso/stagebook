@@ -39,15 +39,9 @@ class ConductNoAnswerEndToEndTest {
     private fun peer(id: String) = BandLink.Peer(id, id.uppercase(), java.net.InetAddress.getLoopbackAddress(), 1)
 
     private val repo = runBlocking {
-        LibraryRepository(context, CoroutineScope(Dispatchers.IO)).also { r ->
-            withTimeout(15_000) { r.loaded.first { it } }
-            r.updateLook { it.copy(bandOn = true) }
-            withTimeout(15_000) { r.library.first { it.look.bandOn } }
-        }
+        testRepo(bandOn = true)
     }
-    private val link = BandLink(
-        context, DeviceIdentity(context), br.app.stagebook.data.BandTrust(context), br.app.stagebook.data.StageGate(), BandInbox(context), repo,
-    )
+    private val link = testLink(repo = repo)
 
     /** Who is on the network now, as the leader sees it. */
     private val online = MutableStateFlow(listOf(peer("a"), peer("b")))

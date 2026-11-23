@@ -36,7 +36,7 @@ fun HelpTip(text: String, modifier: Modifier = Modifier, label: String = stringR
     val state = rememberTooltipState(isPersistent = true)
     val scope = rememberCoroutineScope()
     TooltipBox(
-        positionProvider = TooltipDefaults.rememberRichTooltipPositionProvider(),
+        positionProvider = TooltipDefaults.rememberTooltipPositionProvider(androidx.compose.material3.TooltipAnchorPosition.Above),
         tooltip = { RichTooltip { Text(text) } },
         state = state,
         modifier = modifier.settingsChrome(),
@@ -59,7 +59,7 @@ fun HelpIcon(text: String, modifier: Modifier = Modifier) {
     val state = rememberTooltipState(isPersistent = true)
     val scope = rememberCoroutineScope()
     TooltipBox(
-        positionProvider = TooltipDefaults.rememberRichTooltipPositionProvider(),
+        positionProvider = TooltipDefaults.rememberTooltipPositionProvider(androidx.compose.material3.TooltipAnchorPosition.Above),
         tooltip = { RichTooltip { Text(text) } },
         state = state,
         modifier = modifier.settingsChrome(),

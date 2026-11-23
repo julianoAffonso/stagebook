@@ -1,6 +1,6 @@
 package br.app.stagebook
 
-import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import br.app.stagebook.data.UpdateOffer
@@ -38,7 +38,7 @@ class AppUpdateDialogTest {
     @Test fun `back only closes the window`() {
         show()
         compose.waitForIdle()
-        ShadowDialog.getLatestDialog().onBackPressed()
+        (ShadowDialog.getLatestDialog() as androidx.activity.ComponentDialog).onBackPressedDispatcher.onBackPressed()
         compose.waitForIdle()
         assertTrue(closed)
         assertFalse(later)

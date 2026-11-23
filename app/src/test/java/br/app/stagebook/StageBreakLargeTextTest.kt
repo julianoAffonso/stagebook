@@ -9,7 +9,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.SemanticsNodeInteraction
-import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.text.TextLayoutResult
 import br.app.stagebook.ui.LocalPedalInput
@@ -44,19 +44,9 @@ class StageBreakLargeTextTest {
     private var since by mutableStateOf<Long?>(null)
     private val pedal = PedalInput()
 
-    private fun forward() {
-        compose.runOnUiThread {
-            pedal.dispatch(KeyEvent(0, 0, KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_PAGE_DOWN, 0))
-            pedal.dispatch(KeyEvent(0, 0, KeyEvent.ACTION_UP, KeyEvent.KEYCODE_PAGE_DOWN, 0))
-        }
-        compose.waitForIdle()
-    }
+    private fun forward() = pressPedal(compose, pedal)
 
-    private fun layout(node: SemanticsNodeInteraction): TextLayoutResult {
-        val out = ArrayList<TextLayoutResult>()
-        node.fetchSemanticsNode().config.getOrNull(SemanticsActions.GetTextLayoutResult)?.action?.invoke(out)
-        return out.single()
-    }
+    private fun layout(node: androidx.compose.ui.test.SemanticsNodeInteraction) = node.textLayout()
 
     private fun sweep(prefix: String) {
         RuntimeEnvironment.setFontScale(1.15f)

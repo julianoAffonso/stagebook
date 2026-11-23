@@ -13,7 +13,7 @@ import { StagebookClient, StagebookError, answers, discoverAll, save } from "./c
 export const VERSION: string = JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf8")).version;
 
 type Song = {
-  id: string; title: string; author: string; year: string; tempo: string; text: string;
+  id: string; title: string; author: string; year: string; tempo: string; duration?: string; text: string;
   track: string; trackName: string; key: string; capo: number; tags: string[];
 };
 type SongItem = { id: string; title: string; author: string; year: string; key: string; tags: string[]; bpm?: number; capo?: number; hasTrack?: boolean };
@@ -43,7 +43,8 @@ function songOut(s: Song, withText: boolean) {
 /** The distinct chords of a ChordPro text, in order of appearance. */
 export function chordsIn(chordpro: string): string[] {
   const seen = new Set<string>();
-  for (const m of chordpro.matchAll(/\[([A-G][^\[\]\s]*)\]/g)) seen.add(m[1]);
+  // a chord as the app reads one (ChordName): [Chorus], [Bridge] or [Final] are section titles, not chords
+  for (const m of chordpro.matchAll(/\[([A-G][#b♯♭]?(?:maj|min|dim|aug|sus|add|m|M|°|º|\+|-|\d|\(|\)|#|b|♯|♭|,|\/(?=\d))*(?:\/[A-G][#b♯♭]?)?\*{0,3})\]/g)) seen.add(m[1]);
   return [...seen];
 }
 
@@ -80,7 +81,8 @@ export function checkBreaks(breaks: number[] | undefined, songs: number): void {
   if (breaks.some((p, i) => i > 0 && p <= breaks[i - 1])) throw new StagebookError("Break positions must be in ascending order, with no repeats.");
 }
 
-const norm = (s: string) => s.normalize("NFD").replace(/\p{Diacritic}/gu, "").toLowerCase();
+// as the app compares names (TextKey): no accents, no apostrophes, only letters and digits
+const norm = (s: string) => s.normalize("NFD").replace(/\p{Diacritic}/gu, "").replace(/['’´`]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
 
 export function buildServer(client: StagebookClient): McpServer {
   const server = new McpServer(
@@ -232,6 +234,7 @@ export function buildServer(client: StagebookClient): McpServer {
     author: z.string().optional().describe("Artist."),
     year: z.string().optional(),
     tempo: z.string().optional().describe("BPM, e.g. '120'."),
+    duration: z.string().optional().describe("The song's length, e.g. '3:45'; setlists add the songs up per set."),
     text: z.string().optional().describe("Lyrics and chords in ChordPro (chords above the lyrics are converted too)."),
     key: z.string().optional().describe("The song's key, e.g. G."),
     capo: z.number().int().min(0).max(12).optional(),
@@ -246,7 +249,7 @@ export function buildServer(client: StagebookClient): McpServer {
       inputSchema: { ...songFields, title: z.string(), text: z.string() },
     },
     safe(async (a: Partial<Song> & { title: string; text: string }) => {
-      const r = await client.send("POST", "/api/songs", { title: a.title, author: a.author ?? "", year: a.year ?? "", tempo: a.tempo ?? "", text: a.text, key: a.key ?? "", capo: a.capo ?? 0, tags: a.tags ?? [] });
+      const r = await client.send("POST", "/api/songs", { title: a.title, author: a.author ?? "", year: a.year ?? "", tempo: a.tempo ?? "", duration: a.duration ?? "", text: a.text, key: a.key ?? "", capo: a.capo ?? 0, tags: a.tags ?? [] });
       return text({ created: r?.id });
     }),
   );
@@ -326,7 +329,7 @@ export function buildServer(client: StagebookClient): McpServer {
       const r = await client.send("POST", "/api/import", { text: pasted ?? "", url: url ?? "", title: title ?? "", withTab: with_tab ?? null }, undefined, 60000, signal);
       if (r?.status === "askTab") return text("The song has tablature: call again with with_tab true (keep it) or false (chords only).");
       if (!keep) return text({ toReview: { title: r.title, author: r.author, year: r.year, tempo: r.tempo, key: r.key, capo: r.capo, chords: chordsIn(r.text ?? ""), text: r.text } });
-      const created = await client.send("POST", "/api/songs", { title: r.title, author: r.author, year: r.year, tempo: r.tempo, text: r.text, key: r.key, capo: r.capo, tags: [] });
+      const created = await client.send("POST", "/api/songs", { title: r.title, author: r.author, year: r.year, tempo: r.tempo, duration: r.duration ?? "", text: r.text, key: r.key, capo: r.capo, tags: [] });
       return text({ created: created?.id, title: r.title, author: r.author });
     }),
   );
@@ -556,7 +559,7 @@ export function buildServer(client: StagebookClient): McpServer {
     { title: "A Stagebook song (ChordPro)", description: "One song as ChordPro, with its details as directives.", mimeType: "text/plain" },
     async (uri, { id }) => {
       const s = (await client.get(`/api/songs/${encodeURIComponent(String(id))}`)) as Song;
-      const head = [`{title: ${s.title}}`, s.author && `{artist: ${s.author}}`, s.year && `{year: ${s.year}}`, s.key && `{key: ${s.key}}`, s.capo ? `{capo: ${s.capo}}` : "", s.tempo && `{tempo: ${s.tempo}}`].filter(Boolean);
+      const head = [`{title: ${s.title}}`, s.author && `{artist: ${s.author}}`, s.year && `{year: ${s.year}}`, s.key && `{key: ${s.key}}`, s.capo ? `{capo: ${s.capo}}` : "", s.tempo && `{tempo: ${s.tempo}}`, s.duration && `{duration: ${s.duration}}`].filter(Boolean);
       return { contents: [{ uri: uri.href, mimeType: "text/plain", text: [...head, "", s.text].join("\n") }] };
     },
   );

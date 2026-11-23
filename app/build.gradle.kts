@@ -78,7 +78,12 @@ android {
     // audio engine (player): comes ready from build_native.sh, the same command as the validated engine
     sourceSets.getByName("main").jniLibs.srcDir(layout.buildDirectory.dir("native").get().asFile)
     // same effect as the validated version's android:extractNativeLibs="true"
-    packaging { jniLibs { useLegacyPackaging = true } }
+    packaging {
+        jniLibs { useLegacyPackaging = true }
+    }
+    // PdfBox's fonts and Asian cmaps only draw text; the app only recompresses a PDF's images (user, 22/11). The app's own
+    // assets have no folder with these names (assets/web only)
+    androidResources { ignoreAssetsPatterns += listOf("<dir>cmap", "<dir>ttf") }
 }
 
 // arm64 = TCL and phones; armeabi-v7a = Fire HD 10 (32-bit Fire OS); x86_64 = emulator
@@ -120,6 +125,8 @@ kotlin {
 }
 
 dependencies {
+    // PDF compression on attach (user, 22/11): Apache 2.0. Without its cryptography (password PDFs are refused anyway)
+    implementation(libs.pdfbox.android) { exclude(group = "org.bouncycastle") }
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.lifecycle.runtime.compose)

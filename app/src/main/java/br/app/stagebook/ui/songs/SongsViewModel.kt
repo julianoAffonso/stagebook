@@ -106,7 +106,13 @@ class SongsViewModel @Inject constructor(
 
     /** Sends the chosen songs over the internet (no setlist); the code shows in a dialog. */
     /** PDF files chosen to come in as songs (the + menu): each is checked, a song is made of the good ones. */
-    suspend fun importPdfs(uris: List<android.net.Uri>) = pdfImporter.import(uris)
+    /**
+     * The PDFs picked come in as songs, and [done] gets the result. In the view model's scope: started in the menu's own,
+     * closing the menu half way dropped the PDFs still to come, with no word (audit 22/11).
+     */
+    fun importPdfs(uris: List<android.net.Uri>, done: (br.app.stagebook.data.PdfImporter.Result) -> Unit) {
+        viewModelScope.launch { done(pdfImporter.import(uris)) }
+    }
 
     /** The sizes of the PDFs these songs carry (the internet send checks they fit). */
     fun pdfSizesOf(ids: List<String>): List<Long> = setlistCloud.pdfSizes(ids)
@@ -119,7 +125,7 @@ class SongsViewModel @Inject constructor(
     fun bandSearch(on: Boolean) = share.bandSearch(on)
 
     /** Sends the chosen songs to everyone in the band on the network now. */
-    fun sendBand(ids: List<String>) = share.sendBand { setlistCloud.songsPackage(ids) }
+    fun sendBand(ids: List<String>, wifiOnly: Boolean = false) = share.sendBand(wifiOnly) { setlistCloud.songsPackage(ids) }
 
     /** Import needs internet: the button is disabled without it (only watched while the screen is open). */
     val online: StateFlow<Boolean> = connectivity.online.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), true)

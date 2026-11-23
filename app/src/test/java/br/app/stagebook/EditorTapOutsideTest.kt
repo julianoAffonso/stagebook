@@ -9,7 +9,7 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.click
 import androidx.compose.ui.test.hasSetTextAction
-import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.lifecycle.SavedStateHandle
 import androidx.test.core.app.ApplicationProvider
 import br.app.stagebook.data.EditorQueue
@@ -51,9 +51,8 @@ class EditorTapOutsideTest {
 
     @Test fun `a tap outside takes the focus off, the tools and the field do not`() {
         val context = ApplicationProvider.getApplicationContext<android.app.Application>()
-        val scope = CoroutineScope(Dispatchers.IO)
-        val repo = LibraryRepository(context, scope)
-        runBlocking { withTimeout(5_000) { repo.loaded.first { it } } }
+        val scope = testScope()
+        val repo = testRepo(scope = scope)
         val id = repo.saveSong(Song(title = "Hazard", author = "Richard Marx", text = "[G]linha 1\n[D]linha 2"))
         val vm = SongEditorViewModel(repo, SongMetadata(repo, MusicBrainz(), scope), ImportDraft(), SavedStateHandle(mapOf("songId" to id, "fromImport" to false, "cursor" to -1)), ImportQueue(repo), TrackStore(context), EditorQueue())
         runBlocking { withTimeout(5_000) { while (vm.uiState.loading) kotlinx.coroutines.delay(10) } }

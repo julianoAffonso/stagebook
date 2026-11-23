@@ -28,10 +28,10 @@ import org.robolectric.annotation.Config
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [35], qualifiers = "pt-rBR", application = android.app.Application::class)
 class InviteSecretTest {
-    @get:Rule val compose = androidx.compose.ui.test.junit4.createComposeRule()
+    @get:Rule val compose = androidx.compose.ui.test.junit4.v2.createComposeRule()
     private val context = ApplicationProvider.getApplicationContext<android.app.Application>()
     private val identity = DeviceIdentity(context)
-    private val cloud = SetlistCloud(LibraryRepository(context, CoroutineScope(SupervisorJob() + Dispatchers.IO)), identity)
+    private val cloud = SetlistCloud(LibraryRepository(context, testScope()), identity)
 
     private val words = "47-violao-lua"
     private val secretA = "AAAAAAAAAAAAAAAAAAAAAA"

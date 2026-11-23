@@ -37,8 +37,7 @@ class StageMetaTest {
     @After fun reset() = Dispatchers.resetMain()
 
     @Test fun `artist changed in the editor shows in the stage subtitle`() = runBlocking {
-        val repo = LibraryRepository(context, CoroutineScope(SupervisorJob() + Dispatchers.IO))
-        withTimeout(5_000) { repo.loaded.first { it } }
+        val repo = testRepo()
         val id = repo.saveSong(Song(title = "Música", author = "Banda", year = "1985", text = "linha"))
         val vm = stage(repo, id)
         assertEquals("Banda · 1985", withTimeout(5_000) { vm.uiState.first { it.songs.isNotEmpty() && !it.loading } }.songs.single().meta)
@@ -47,8 +46,7 @@ class StageMetaTest {
     }
 
     @Test fun `key and capo changed on stage are saved in the song`() = runBlocking {
-        val repo = LibraryRepository(context, CoroutineScope(SupervisorJob() + Dispatchers.IO))
-        withTimeout(5_000) { repo.loaded.first { it } }
+        val repo = testRepo()
         val id = repo.saveSong(Song(title = "Tom no palco", text = "{key: G}\n[G]linha [D]outra"))
         val vm = stage(repo, id)
         vm.transpose(id, 2)
@@ -60,8 +58,7 @@ class StageMetaTest {
     }
 
     @Test fun `the stage carries the name of the audio that did not come`() = runBlocking {
-        val repo = LibraryRepository(context, CoroutineScope(SupervisorJob() + Dispatchers.IO))
-        withTimeout(5_000) { repo.loaded.first { it } }
+        val repo = testRepo()
         val id = repo.saveSong(Song(title = "Sem o áudio", text = "[G]linha", trackName = "Ao vivo"))
         val vm = stage(repo, id)
         assertEquals("Ao vivo", withTimeout(5_000) { vm.uiState.first { it.songs.isNotEmpty() && !it.loading } }.songs.single().lostTrack)
@@ -70,8 +67,7 @@ class StageMetaTest {
     // a setlist's break (see StageBreakTest for the screen): the stage knows where the breaks are, and the time the
     // break started stays with the stage's saved state, so turning the device doesn't restart its counter
     @Test fun `the stage carries the setlist's breaks and keeps when a break started`() = runBlocking {
-        val repo = LibraryRepository(context, CoroutineScope(SupervisorJob() + Dispatchers.IO))
-        withTimeout(5_000) { repo.loaded.first { it } }
+        val repo = testRepo()
         val ids = listOf("A", "B", "C").map { repo.saveSong(Song(title = it, text = "linha")) }
         val set = repo.createSetlist("Show").also { repo.addToSetlist(it, ids); repo.addBreak(it) }
         val saved = SavedStateHandle(mapOf("setId" to set, "start" to 0))
@@ -90,8 +86,7 @@ class StageMetaTest {
     // the setlist over the stage (see StageSetlistPanelTest for the screen): only a stage opened from a setlist has
     // one, with its name, each song's key and the same marks the setlist's screen shows
     @Test fun `a stage opened from a setlist carries it, and a single song carries none`() = runBlocking {
-        val repo = LibraryRepository(context, CoroutineScope(SupervisorJob() + Dispatchers.IO))
-        withTimeout(5_000) { repo.loaded.first { it } }
+        val repo = testRepo()
         val ids = listOf("{key: G}\n{tempo: 120}\n{capo: 2}\nlinha", "linha", "{key: Em}\nlinha").mapIndexed { i, text -> repo.saveSong(Song(title = "Painel $i", text = text, track = if (i == 0) "a.ogg" else "")) }
         val set = repo.createSetlist("Show do painel").also { repo.addToSetlist(it, ids) }
         val vm = stage(repo, "", SavedStateHandle(mapOf("setId" to set, "start" to 0)))
@@ -111,8 +106,7 @@ class StageMetaTest {
 
     // back to the song to check something and on to the break again: the break goes on counting (user, 13/11)
     @Test fun `a break keeps its start when left backward or forward and found again`() = runBlocking {
-        val repo = LibraryRepository(context, CoroutineScope(SupervisorJob() + Dispatchers.IO))
-        withTimeout(5_000) { repo.loaded.first { it } }
+        val repo = testRepo()
         val ids = listOf("A", "B", "C").map { repo.saveSong(Song(title = it, text = "linha")) }
         val set = repo.createSetlist("Show").also { repo.addToSetlist(it, ids); repo.addBreak(it); repo.addBreak(it) }   // breaks before B and C: the counter belongs to a real break
         val saved = SavedStateHandle(mapOf("setId" to set, "start" to 0))
@@ -143,34 +137,3 @@ class StageMetaTest {
 
     private fun stage(repo: LibraryRepository, id: String, saved: SavedStateHandle = SavedStateHandle(mapOf("songId" to id, "start" to 0))) = testStage(context, repo, saved)
 }
-
-/** A stage with the real pieces around it (no audio plays in a test); [show] is where the setlist's marks go. */
-internal fun testStage(
-    context: android.app.Application,
-    repo: LibraryRepository,
-    saved: SavedStateHandle,
-    show: br.app.stagebook.data.SetlistShowStore = br.app.stagebook.data.SetlistShowStore(context, repo, CoroutineScope(SupervisorJob() + Dispatchers.IO)),
-    bandTrust: br.app.stagebook.data.BandTrust = br.app.stagebook.data.BandTrust(context),
-    lastStage: br.app.stagebook.data.LastStage = br.app.stagebook.data.LastStage(context),
-    conduct: br.app.stagebook.data.BandConduct = br.app.stagebook.data.BandConduct(
-        br.app.stagebook.data.BandLink(
-            context, br.app.stagebook.data.DeviceIdentity(context), br.app.stagebook.data.BandTrust(context),
-            StageGate(), br.app.stagebook.data.BandInbox(context), repo,
-        ),
-        repo, br.app.stagebook.data.DeviceIdentity(context),
-    ),
-) = StageViewModel(repo, saved, StageGate(), br.app.stagebook.data.TrackStore(context), br.app.stagebook.player.StagePlayer(context, repo),
-    conduct,
-    br.app.stagebook.data.MetronomeSound(context),
-    br.app.stagebook.data.ChordPlayer(),
-    br.app.stagebook.data.StageAnnouncer(
-        br.app.stagebook.data.BandLink(
-            context, br.app.stagebook.data.DeviceIdentity(context), br.app.stagebook.data.BandTrust(context),
-            StageGate(), br.app.stagebook.data.BandInbox(context), repo,
-        ),
-    ),
-    br.app.stagebook.data.MidiOut(context, repo, kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO)),
-    show,
-    bandTrust,
-    lastStage,
-)

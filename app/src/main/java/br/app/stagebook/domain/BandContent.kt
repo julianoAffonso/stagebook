@@ -32,34 +32,26 @@ object BandContent {
     const val PDF_PACKAGE_BYTES = 6L * 1024 * 1024
 
     /**
-     * The PDFs' bytes in one package for a band member's inbox over the internet: 60 KB in all. The package is cut in 2 KB
-     * messages of the same free server (about 80 KB of base64 is some 40 of them), and a PDF is written in base64 inside it.
-     * A PDF that doesn't fit goes without its file, and the inbox says why.
+     * The PDFs over the internet (user, 22/11): each one goes compressed and encrypted as an attachment of the same free
+     * server (ntfy.sh: up to 15 MB a file and 100 MB per sender, kept 3 hours, no account). A PDF of [MAX_PDF_BYTES] is
+     * about 10.7 MB once encrypted (base64). The PDFs of one send by code add up to [INTERNET_PDF_BYTES], and those of one
+     * package for a member far away to [PAIR_PDF_BYTES] (each far member gets their own copy). The song's message carries
+     * only where its PDF is, so the PDFs take no messages of their own.
      */
-    const val PAIR_PDF_BYTES = 60_000L
+    const val INTERNET_PDF_BYTES = 30L * 1024 * 1024
+    const val PAIR_PDF_BYTES = 15L * 1024 * 1024
+    /** How long the server keeps an attachment: whoever receives later gets the songs without their PDFs. */
+    const val INTERNET_PDF_HOURS = 3
 
-    /**
-     * The PDF's bytes in one internet message. A message is 4,000 characters of encrypted base64 (the server takes 4 KB):
-     * that is at most 2,972 bytes of plain text, and a chunk of the PDF written in base64 and deflated takes about its
-     * own size plus ~100 bytes of framing. 2,400 leaves room for that (checked with real encryption in the tests).
-     */
-    const val INTERNET_PDF_CHUNK = 2_400
+    /** Do the PDFs in [sizes] go over the internet together (each within the PDF limit, all within [budget])? */
+    fun internetPdfsFit(sizes: List<Long>, budget: Long = INTERNET_PDF_BYTES): Boolean =
+        sizes.all { it <= MAX_PDF_BYTES } && sizes.sum() <= budget
 
-    /** The messages a PDF of [bytes] needs over the internet: one per [INTERNET_PDF_CHUNK]. */
-    fun internetPdfMessages(bytes: Long): Int = ((bytes + INTERNET_PDF_CHUNK - 1) / INTERNET_PDF_CHUNK).toInt()
+    /** The messages a send by code needs: the sender's card, the lists and each song (a PDF rides in its song's message). */
+    fun internetMessages(lists: Int, songs: Int): Int = 1 + lists + songs
 
-    /** The messages all the PDFs in [sizes] need (each PDF has its own chunks). */
-    fun internetPdfMessages(sizes: List<Long>): Int = sizes.sumOf { internetPdfMessages(it) }
-
-    /** The messages a send by code needs: the sender's card, the lists, each song and each PDF's chunks. */
-    fun internetMessages(lists: Int, songs: Int, pdfSizes: List<Long> = emptyList()): Int = 1 + lists + songs + internetPdfMessages(pdfSizes)
-
-    /** Messages left for PDFs after the card, the lists and the songs (what the screen says the server still accepts). */
-    fun internetMessagesFree(lists: Int, songs: Int): Int = (MAX_INTERNET_MESSAGES - 1 - lists - songs).coerceAtLeast(0)
-
-    /** Does a send by code fit? [lists]: setlists (loose songs are one list); [songs]: songs carried along; [pdfSizes]: the PDFs going too. */
-    fun internetFits(lists: Int, songs: Int, pdfSizes: List<Long> = emptyList()): Boolean =
-        internetMessages(lists, songs, pdfSizes) <= MAX_INTERNET_MESSAGES && songs <= MAX_SONGS
+    /** Does a send by code fit? [lists]: setlists (loose songs are one list); [songs]: songs carried along. */
+    fun internetFits(lists: Int, songs: Int): Boolean = internetMessages(lists, songs) <= MAX_INTERNET_MESSAGES && songs <= MAX_SONGS
 
     /** Does a send to the band on the network fit? */
     fun bandFits(sets: Int): Boolean = sets <= MAX_BAND_SETS

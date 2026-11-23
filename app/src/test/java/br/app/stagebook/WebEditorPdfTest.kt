@@ -41,14 +41,12 @@ class WebEditorPdfTest {
     private val counter = Pages()
 
     @Before fun setUp() {
-        repo = LibraryRepository(context, CoroutineScope(SupervisorJob() + Dispatchers.IO))
-        runBlocking { withTimeout(5_000) { repo.loaded.first { it } } }
+        repo = testRepo()
     }
 
     private fun api() = WebEditorApi(repo, pdfs = { pdfs }, inspector = PdfInspector(counter), workDir = { context.cacheDir })
 
-    private fun call(api: WebEditorApi, method: String, path: String, body: String = "", file: File? = null) =
-        api.handle(HttpRequest(method, path.substringBefore('?'), path.substringAfter('?', "").split('&').filter { it.isNotEmpty() }.associate { it.substringBefore('=') to it.substringAfter('=') }, body = body.toByteArray(), file = file), device)!!
+    private fun call(api: WebEditorApi, method: String, path: String, body: String = "", file: File? = null) = api.send(method, path, body, file, device)
 
     private fun upload(bytes: ByteArray = "%PDF-1.4\n".toByteArray() + ByteArray(3_000)) = File(context.cacheDir, "up-${System.nanoTime()}.part").apply { writeBytes(bytes) }
 
@@ -127,6 +125,18 @@ class WebEditorPdfTest {
         assertEquals(2, repo.song(id)!!.pdfCrops.size)
         call(api, "PUT", "/api/songs/$id/pdf-view", """{"crops":[]}""")
         assertTrue(repo.song(id)!!.pdfCrops.isEmpty())
+    }
+
+    @Test fun `pages left off the stage are real pages, never all of them, and go with the PDF`() {
+        val (api, id) = withPdf()
+        assertEquals(200, call(api, "PUT", "/api/songs/$id/pdf-view", """{"hidden":[4,1,1,99,-2]}""").status)
+        assertEquals(listOf(1, 4), repo.song(id)!!.pdfHidden)
+        assertTrue(call(api, "GET", "/api/songs/$id").text().contains("\"pdfHidden\":[1,4]"))
+        // all six hidden: refused, what was kept stays
+        call(api, "PUT", "/api/songs/$id/pdf-view", """{"hidden":[0,1,2,3,4,5]}""")
+        assertEquals(listOf(1, 4), repo.song(id)!!.pdfHidden)
+        call(api, "DELETE", "/api/songs/$id/pdf")
+        assertTrue(repo.song(id)!!.pdfHidden.isEmpty())
     }
 
     @Test fun `a page from before these fields saves the song without wiping them`() {

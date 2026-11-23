@@ -3,7 +3,7 @@ package br.app.stagebook
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.junit4.v2.createComposeRule
 import br.app.stagebook.domain.MixerConfig
 import br.app.stagebook.ui.settings.MIXER_SAVE_MS
 import br.app.stagebook.ui.settings.rememberMixerDraft

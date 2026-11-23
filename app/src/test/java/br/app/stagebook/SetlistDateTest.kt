@@ -1,7 +1,7 @@
 package br.app.stagebook
 
 import androidx.compose.ui.test.assertIsDisplayed
-import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -23,7 +23,6 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
-import kotlinx.serialization.json.Json
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Rule
@@ -41,9 +40,8 @@ class SetlistDateTest {
     @After fun stop() { scopes.forEach { it.cancel() }; scopes.clear() }
 
     private fun repo(): LibraryRepository {
-        val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO).also { scopes += it }
-        return LibraryRepository(ApplicationProvider.getApplicationContext<android.app.Application>(), scope)
-            .also { r -> runBlocking { withTimeout(5_000) { r.loaded.first { it } }; r.restore(emptyList(), emptyList()) } }
+        val scope = testScope().also { scopes += it }
+        return testRepo(ApplicationProvider.getApplicationContext<android.app.Application>(), scope = scope, empty = true)
     }
 
     private fun row(id: String, date: String) = SetlistRowUi(id, id, 0, date)
@@ -72,7 +70,7 @@ class SetlistDateTest {
     }
 
     @Test fun `a setlist saved before the day existed reads with no day`() {
-        val old = Json { ignoreUnknownKeys = true }.decodeFromString<Setlist>("""{"id":"1","name":"Antigo","items":["a"]}""")
+        val old = lenientJson.decodeFromString<Setlist>("""{"id":"1","name":"Antigo","items":["a"]}""")
         assertEquals("", old.date)
     }
 

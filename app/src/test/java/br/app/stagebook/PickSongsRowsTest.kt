@@ -2,7 +2,7 @@ package br.app.stagebook
 
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
-import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
@@ -50,8 +50,7 @@ class PickSongsRowsTest {
         Dispatchers.setMain(UnconfinedTestDispatcher())   // the search waits for the typing to stop on its clock
         try {
             runBlocking {
-                val repo = LibraryRepository(context, CoroutineScope(SupervisorJob() + Dispatchers.IO))
-                withTimeout(5_000) { repo.loaded.first { it } }
+                val repo = testRepo()
                 val ids = listOf(
                     Song(title = "Primeira", author = " Banda Fictícia ", year = "1985", text = "{key: Em}\n{tempo: 120}\n{capo: 2}\nlinha", track = "a.ogg"),
                     Song(title = "Segunda", author = "Trio Imaginário", year = "1999", text = "{key: G}\nlinha"),
@@ -98,8 +97,7 @@ class PickSongsRowsTest {
         Dispatchers.setMain(UnconfinedTestDispatcher())
         try {
             runBlocking {
-                val repo = LibraryRepository(context, CoroutineScope(SupervisorJob() + Dispatchers.IO))
-                withTimeout(5_000) { repo.loaded.first { it } }
+                val repo = testRepo()
                 val ids = listOf(Song(title = "A", text = "linha"), Song(title = "B", text = "linha"), Song(title = "C", text = "linha")).map(repo::saveSong)
                 val set = repo.createSetlist("Show").also { repo.addToSetlist(it, listOf(ids[0])) }
                 val vm = PickSongsViewModel(repo, SavedStateHandle(mapOf("setId" to set)))
@@ -132,8 +130,7 @@ class PickSongsRowsTest {
     }
 
     private fun pickerWithOneChecked(): Triple<PickSongsViewModel, LibraryRepository, Pair<String, String>> = runBlocking {
-        val repo = LibraryRepository(context, CoroutineScope(SupervisorJob() + Dispatchers.IO))
-        withTimeout(5_000) { repo.loaded.first { it } }
+        val repo = testRepo()
         val ids = listOf(Song(title = "A", text = "linha"), Song(title = "B", text = "linha")).map(repo::saveSong)
         val set = repo.createSetlist("Show").also { repo.addToSetlist(it, listOf(ids[0])) }
         val vm = PickSongsViewModel(repo, SavedStateHandle(mapOf("setId" to set)))
@@ -153,8 +150,12 @@ class PickSongsRowsTest {
                     br.app.stagebook.ui.drawer.LocalDrawer provides br.app.stagebook.ui.drawer.DrawerControl({}, { closed++ }),
                 ) { StagebookTheme { br.app.stagebook.ui.setlists.PickSongsRoute({}, vm) } }
             }
+            // the checked song comes through the view model's flow: the screen knows it once the count arrives
+            compose.waitUntil(5_000) { vm.uiState.value.selectedCount == 1 }
             compose.waitForIdle()
-            assertEquals("the menu asks the screen before it closes", true, guard.asks?.invoke())
+            var asked: Boolean? = null
+            compose.runOnUiThread { asked = guard.asks?.invoke() }
+            assertEquals("the menu asks the screen before it closes", true, asked)
             compose.waitForIdle()
             compose.onNodeWithText("Adicionar as 1 músicas marcadas", substring = true).assertIsDisplayed()
             assertEquals("nothing went in yet", 1, repo.library.value.setlist(ids.first)!!.items.size)
@@ -179,8 +180,13 @@ class PickSongsRowsTest {
                     br.app.stagebook.ui.drawer.LocalDrawer provides br.app.stagebook.ui.drawer.DrawerControl({}, { closed++ }),
                 ) { StagebookTheme { br.app.stagebook.ui.setlists.PickSongsRoute({}, vm) } }
             }
+            // the checked song comes through the view model's flow: the screen knows it once the count arrives
+            compose.waitUntil(5_000) { vm.uiState.value.selectedCount == 1 }
             compose.waitForIdle()
-            guard.asks?.invoke(); compose.waitForIdle()
+            var asked: Boolean? = null
+            compose.runOnUiThread { asked = guard.asks?.invoke() }
+            assertEquals("the menu asks the screen before it closes", true, asked)
+            compose.waitForIdle()
             compose.onNodeWithText("Descartar").performClick()
             compose.waitForIdle()
             assertEquals(1, repo.library.value.setlist(ids.first)!!.items.size)
@@ -193,7 +199,7 @@ class PickSongsRowsTest {
     @Test fun `with nothing checked the menu closes without a question`() {
         Dispatchers.setMain(UnconfinedTestDispatcher())
         try {
-            val repo = runBlocking { LibraryRepository(context, CoroutineScope(SupervisorJob() + Dispatchers.IO)).also { withTimeout(5_000) { it.loaded.first { l -> l } } } }
+            val repo = runBlocking { LibraryRepository(context, testScope()).also { withTimeout(5_000) { it.loaded.first { l -> l } } } }
             val set = repo.createSetlist("Show")
             val vm = PickSongsViewModel(repo, SavedStateHandle(mapOf("setId" to set)))
             val guard = br.app.stagebook.ui.drawer.DrawerGuard()

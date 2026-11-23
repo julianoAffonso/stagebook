@@ -25,12 +25,8 @@ class BandInternetLockTest {
     private val context = ApplicationProvider.getApplicationContext<android.app.Application>()
 
     @Test fun `the accepted code is saved after the running sync, not lost`() = runBlocking {
-        val repo = LibraryRepository(context, CoroutineScope(SupervisorJob() + Dispatchers.IO))
-        withTimeout(5_000) { repo.loaded.first { it } }
-        val link = br.app.stagebook.data.BandLink(
-            context, br.app.stagebook.data.DeviceIdentity(context), br.app.stagebook.data.BandTrust(context),
-            br.app.stagebook.data.StageGate(), br.app.stagebook.data.BandInbox(context), repo,
-        )
+        val repo = testRepo()
+        val link = testLink(repo = repo)
         val band = BandInternet(
             context, br.app.stagebook.data.SetlistCloud(repo, br.app.stagebook.data.DeviceIdentity(context)),
             br.app.stagebook.data.BandTrust(context), br.app.stagebook.data.DeviceIdentity(context),
@@ -49,11 +45,9 @@ class BandInternetLockTest {
     }
 
     @Test fun `only codes from the last day are asked over the internet`() {
-        val repo = LibraryRepository(context, CoroutineScope(SupervisorJob() + Dispatchers.IO))
+        val repo = LibraryRepository(context, testScope())
         val identity = br.app.stagebook.data.DeviceIdentity(context)
-        val link = br.app.stagebook.data.BandLink(
-            context, identity, br.app.stagebook.data.BandTrust(context), br.app.stagebook.data.StageGate(), br.app.stagebook.data.BandInbox(context), repo,
-        )
+        val link = testLink(repo = repo, identity = identity)
         val band = BandInternet(
             context, br.app.stagebook.data.SetlistCloud(repo, identity), br.app.stagebook.data.BandTrust(context), identity,
             br.app.stagebook.data.BandInbox(context), br.app.stagebook.data.Connectivity(context), link,

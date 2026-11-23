@@ -12,7 +12,7 @@ import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.SemanticsNodeInteraction
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.hasText
-import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
@@ -68,13 +68,7 @@ class StageBreakPhoneTest {
         compose.waitForIdle()
     }
 
-    private fun forward() {
-        compose.runOnUiThread {
-            pedal.dispatch(KeyEvent(0, 0, KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_PAGE_DOWN, 0))
-            pedal.dispatch(KeyEvent(0, 0, KeyEvent.ACTION_UP, KeyEvent.KEYCODE_PAGE_DOWN, 0))
-        }
-        compose.waitForIdle()
-    }
+    private fun forward() = pressPedal(compose, pedal)
 
     private fun text(text: String, substring: Boolean = false) = compose.onNodeWithText(text, substring = substring, useUnmergedTree = true).assertIsDisplayed()
     private fun SemanticsNodeInteraction.bounds(): Rect = fetchSemanticsNode().boundsInRoot

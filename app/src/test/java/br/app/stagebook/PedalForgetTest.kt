@@ -5,7 +5,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.test.assertCountEquals
-import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
@@ -50,15 +50,8 @@ class PedalForgetTest {
     private val b = KeyEvent.KEYCODE_B
 
     @Test fun `forgetting takes the button off the list with its command, and pressing it lists it again`() = runBlocking {
-        val repo = LibraryRepository(context, CoroutineScope(Dispatchers.IO))
-        withTimeout(15_000) { repo.loaded.first { it } }
-        val vm = SettingsViewModel(
-            repo, context, AppUpdater(context),
-            br.app.stagebook.data.MidiPedal(context, repo, CoroutineScope(Dispatchers.IO)),
-            br.app.stagebook.data.Backup(context, repo, br.app.stagebook.data.TrackStore(context)),
-            br.app.stagebook.data.MetronomeSound(context), br.app.stagebook.data.MidiOut(context, repo, CoroutineScope(Dispatchers.IO)),
-            br.app.stagebook.player.StagePlayer(context, repo),
-        )
+        val repo = testRepo()
+        val vm = testSettingsVm(repo)
         suspend fun until(ok: (Look) -> Boolean) = withTimeout(15_000) { repo.library.first { ok(it.look) } }.look
 
         vm.onKey(PedalPress(a, down = true))

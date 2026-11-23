@@ -31,7 +31,7 @@ class WebEditorApi(
     private val inspector: br.app.stagebook.data.PdfInspector = br.app.stagebook.data.PdfInspector(),
     // a page of a song's PDF as an image, for the crop window (the renderer can't draw in the tests: they pass their own)
     private val pageImage: (java.io.File, Int) -> ByteArray? = { f, n -> br.app.stagebook.data.PdfPreview.jpeg(f, n) },
-    private val workDir: () -> java.io.File = { java.io.File(System.getProperty("java.io.tmpdir")) },
+    private val workDir: () -> java.io.File = { java.io.File(System.getProperty("java.io.tmpdir") ?: ".") },
 ) {
     /** The band, for Import → Sync with the band / Received from the band. */
     class Band(val items: () -> List<br.app.stagebook.data.BandInbox.Item>, val sync: () -> Unit)
@@ -53,6 +53,7 @@ class WebEditorApi(
         val author: String = "",
         val year: String = "",
         val tempo: String = "",
+        val duration: String = "",   // the song's length as the app shows it ("3:45"; "" = none): `{duration}`, user 22/11
         val text: String = "",
         val track: String = "",   // the backing track file ("" = none); read only, changed by its own calls
         val trackName: String = "",   // the track's own name, as the app shows it
@@ -73,6 +74,11 @@ class WebEditorApi(
         val tags: List<String> = emptyList(),
         // the song's MIDI on entering and leaving the stage, as the app's editor sets it (user, 07/11)
         val midi: br.app.stagebook.domain.SongMidi? = null,
+        // the PDF's pages left off the stage, by file page (user, 22/11); read only, like the trims
+        val pdfHidden: List<Int> = emptyList(),
+        // the stage shows the lyrics the PDF song kept in place of the PDF; offered only when it kept some (user, 22/11)
+        val pdfText: Boolean = false,
+        val keptLyrics: Boolean = false,
     )
 
     @Serializable
@@ -124,7 +130,7 @@ class WebEditorApi(
     /** What the page keeps after sending a PDF: the file, its name, pages and size. */
     /** The PDF's look: null leaves it as it is. [invert] is this song's own choice; [crops] replaces the trims. */
     @Serializable
-    data class PdfView(val invert: Boolean? = null, val crops: List<br.app.stagebook.data.model.PdfCrop>? = null)
+    data class PdfView(val invert: Boolean? = null, val crops: List<br.app.stagebook.data.model.PdfCrop>? = null, val hidden: List<Int>? = null, val text: Boolean? = null)
 
     /** The key a step of [semitones] from [key] gives (C when there is none), for a PDF song, which has no chords to move. */
     @Serializable
@@ -148,6 +154,7 @@ class WebEditorApi(
     data class ImportResult(
         val status: String, val title: String = "", val author: String = "", val year: String = "", val tempo: String = "", val text: String = "",
         val key: String = "", val capo: Int = 0,
+        val duration: String = "",   // the length the page or the file says ("3:45"): hidden from the text like the key, so it travels apart
     )
 
     @Serializable
@@ -207,7 +214,7 @@ class WebEditorApi(
         return json.encodeToString(
             repository.library.value.songs
                 // the app's order (accents and case ignored): "À Francesa" with the A's, not after Z (device test B-22)
-                .sortedBy { br.app.stagebook.domain.TextKey.of(it.title) }
+                .map { br.app.stagebook.domain.TextKey.of(it.title) to it }.sortedBy { it.first }.map { it.second }   // the key once per song, not per comparison
                 .map { item(it, day) },
         )
     }
@@ -231,8 +238,9 @@ class WebEditorApi(
         val file = s.pdf.takeIf { it.isNotEmpty() }?.let { pdfs()?.file(it) }?.takeIf { it.isFile }
         val pages = file?.let { (inspector.check(it) as? br.app.stagebook.data.PdfCheck.Ok)?.pages } ?: 0
         return SongData(
-            s.id, s.title, s.author, s.year, meta.tempoText, br.app.stagebook.domain.InternalMarks.split(Chords.hideMeta(s.text)).first, s.track, s.trackName,
-            s.pdf, s.pdfName, pages, file?.length() ?: 0L, s.pdfInvert ?: repository.library.value.look.pdfInvert, s.pdfCrops, meta.key, meta.capo, s.tags, s.midi ?: br.app.stagebook.domain.SongMidi(),
+            s.id, s.title, s.author, s.year, meta.tempoText, meta.durationText, br.app.stagebook.domain.InternalMarks.split(Chords.hideMeta(s.text)).first, s.track, s.trackName,
+            s.pdf, s.pdfName, pages, file?.length() ?: 0L, s.pdfInvert ?: repository.library.value.look.pdfInvert, s.pdfCrops, meta.key, meta.capo, s.tags, s.midi ?: br.app.stagebook.domain.SongMidi(), pdfHidden = s.pdfHidden,
+            pdfText = s.pdfText, keptLyrics = br.app.stagebook.domain.KeptLyrics.has(s.text),
         )
     }
 
@@ -251,7 +259,11 @@ class WebEditorApi(
         // what the editor doesn't show stays (stage zoom, backing track)
         val base = id?.let(repository::song) ?: Song()
         // the key the chords imply is saved, as in the app's editor (31/10: one app, the same rules on the computer)
-        val text = Chords.withDetectedKey(Chords.setDirective(Chords.fromChordsOverLyrics(withMeta(br.app.stagebook.domain.InternalMarks.restore(d.text, base.text), d.key, d.capo)), "tempo", d.tempo.filter(Char::isDigit).take(3)))
+        val tempoSet = Chords.setDirective(Chords.fromChordsOverLyrics(withMeta(br.app.stagebook.domain.InternalMarks.restore(d.text, base.text), d.key, d.capo)), "tempo", d.tempo.filter(Char::isDigit).take(3))
+        // the length typed in the page: "3:45", or digits read as m:ss like the app's field ("345" = 3:45); anything
+        // unreadable leaves it empty
+        val length = Chords.parseDuration(if (':' in d.duration) d.duration else Chords.durationFromDigits(d.duration))
+        val text = Chords.withDetectedKey(Chords.setDirective(tempoSet, "duration", if (length > 0) Chords.formatDuration(length) else ""))
         val tags = br.app.stagebook.domain.Tags.apply(emptyList(), d.tags.filter { it.isNotBlank() }, emptyList())
         val saved = repository.saveSong(base.copy(id = id.orEmpty(), title = title, author = d.author.trim(), year = d.year.trim(), text = text, tags = tags,
             // a page from before MIDI sends none: the song keeps its own; the values are held to MIDI's ranges here too
@@ -306,6 +318,7 @@ class WebEditorApi(
                         found.year, Chords.directive(found.text, "tempo").orEmpty(),
                         Chords.hideMeta(Chords.setDirective(Chords.setDirective(Chords.setDirective(found.text, "title", ""), "artist", ""), "subtitle", "")),
                         Chords.key(found.text), Chords.capo(found.text),
+                        Chords.meta(found.text).durationText,
                     ),
                 ),
             )
@@ -429,7 +442,7 @@ class WebEditorApi(
             val shown = req.query["name"].orEmpty().substringAfterLast('/').substringAfterLast('\\').filter { !it.isISOControl() }.trim()
                 .take(br.app.stagebook.domain.BandContent.MAX_PDF_NAME).ifEmpty { "PDF" }
             // a new PDF has other pages: the old one's highlighter marks go
-            repository.updateSong(id) { it.copy(pdf = saved.name, pdfName = shown, pdfMarks = emptyList(), pdfCrops = emptyList(), pdfPage = 0, pdfScale = 1f, pdfPanX = 0f, pdfPanY = 0f) }
+            repository.updateSong(id) { it.copy(pdf = saved.name, pdfName = shown, pdfMarks = emptyList(), pdfCrops = emptyList(), pdfHidden = emptyList(), pdfPage = 0, pdfScale = 1f, pdfPanX = 0f, pdfPanY = 0f, pdfText = false) }
             if (song.pdf != saved.name) store.remove(song.pdf)
             return ok(json.encodeToString(PdfSet(saved.name, shown, saved.pages, saved.bytes)))
         } finally {
@@ -449,9 +462,12 @@ class WebEditorApi(
         val v = runCatching { json.decodeFromString<PdfView>(req.text()) }.getOrNull() ?: return HttpResponse.status(400)
         // each trim held to the page and to the least size, one per page, at most one more than the PDF has pages
         val crops = v.crops?.filter { it.page == br.app.stagebook.data.model.PdfCrop.ALL || it.page in 0 until br.app.stagebook.data.PdfInspector.MAX_PAGES }?.map(br.app.stagebook.domain.PdfCrops::valid)?.filterNot { it.isWhole }?.distinctBy { it.page }?.take(MAX_CROPS)
-        repository.updateSong(id) { it.copy(pdfInvert = v.invert ?: it.pdfInvert, pdfCrops = crops ?: it.pdfCrops) }
+        // the hidden pages: real pages of this PDF, and never all of them (one always shows on the stage)
+        val pages = pdfs()?.file(song.pdf)?.takeIf { it.isFile }?.let { (inspector.check(it) as? br.app.stagebook.data.PdfCheck.Ok)?.pages } ?: 0
+        val hidden = v.hidden?.filter { it in 0 until pages }?.distinct()?.sorted()?.takeIf { it.size < pages }
+        repository.updateSong(id) { it.copy(pdfInvert = v.invert ?: it.pdfInvert, pdfCrops = crops ?: it.pdfCrops, pdfHidden = hidden ?: it.pdfHidden, pdfText = (v.text ?: it.pdfText) && br.app.stagebook.domain.KeptLyrics.has(it.text)) }
         val now = repository.song(id) ?: return HttpResponse.status(404)
-        return ok(json.encodeToString(PdfView(now.pdfInvert ?: repository.library.value.look.pdfInvert, now.pdfCrops)))
+        return ok(json.encodeToString(PdfView(now.pdfInvert ?: repository.library.value.look.pdfInvert, now.pdfCrops, now.pdfHidden, now.pdfText)))
     }
 
     private fun pdfPage(id: String, req: HttpRequest): HttpResponse {
@@ -464,7 +480,7 @@ class WebEditorApi(
     private fun pdfDelete(id: String): HttpResponse {
         val store = pdfs() ?: return HttpResponse.status(404)
         val song = repository.song(id) ?: return HttpResponse.status(404)
-        repository.updateSong(id) { it.copy(pdf = "", pdfName = "", pdfMarks = emptyList(), pdfInvert = null, pdfCrops = emptyList(), pdfPage = 0, pdfScale = 1f, pdfPanX = 0f, pdfPanY = 0f) }
+        repository.updateSong(id) { it.copy(pdf = "", pdfName = "", pdfMarks = emptyList(), pdfInvert = null, pdfCrops = emptyList(), pdfHidden = emptyList(), pdfPage = 0, pdfScale = 1f, pdfPanX = 0f, pdfPanY = 0f, pdfText = false) }
         store.remove(song.pdf)
         return HttpResponse.status(204)
     }

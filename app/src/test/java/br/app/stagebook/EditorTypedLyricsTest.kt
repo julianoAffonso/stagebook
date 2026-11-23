@@ -5,7 +5,7 @@ import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.hasText
-import androidx.compose.ui.test.junit4.createAndroidComposeRule
+import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -57,9 +57,8 @@ class EditorTypedLyricsTest {
 
     private fun open(look: Look) {
         val context = ApplicationProvider.getApplicationContext<android.app.Application>()
-        val scope = CoroutineScope(Dispatchers.IO)
-        repo = LibraryRepository(context, scope)
-        runBlocking { withTimeout(5_000) { repo.loaded.first { it } } }
+        val scope = testScope()
+        repo = testRepo(scope = scope)
         vm = SongEditorViewModel(repo, SongMetadata(repo, MusicBrainz(), scope), ImportDraft(), SavedStateHandle(mapOf("fromImport" to false)), br.app.stagebook.data.ImportQueue(repo), br.app.stagebook.data.TrackStore(context), br.app.stagebook.data.EditorQueue())
         runBlocking { withTimeout(5_000) { while (vm.uiState.loading) kotlinx.coroutines.delay(10) } }
         compose.setContent {

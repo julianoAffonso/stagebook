@@ -1,13 +1,22 @@
 #!/bin/bash
 # Simulates the audio engine on the Mac with a fake USB interface (8 outputs) and compares it with the version
 # validated on the mixing desk.
-#   tools/engine-sim/run.sh <44.1 kHz backing .ogg> <48 kHz backing .ogg> [folder for the desk .wav files]
+#   tools/engine-sim/run.sh [<44.1 kHz backing .ogg> <48 kHz backing .ogg> [folder for the desk .wav files]]
 # Real tracks (copyrighted: never in git), one at 44.1 kHz and one at 48 kHz.
 # Needs: clang, python3, a JDK (jni.h).
 # Doesn't replace the desk test: it proves the generated sound is the same and tests drops, leaks and load.
 set -euo pipefail
 HERE=$(cd "$(dirname "$0")" && pwd)
 ROOT=$(cd "$HERE/../.." && pwd)
+# With no tracks given it makes its own, out of noise (synthetic.py; kept in the cache folder for the next run).
+if [ $# -lt 2 ]; then
+    MADE="${XDG_CACHE_HOME:-$HOME/.cache}/stagebook-engine-sim"
+    if [ ! -s "$MADE/t44100.ogg" ] || [ ! -s "$MADE/t48000.ogg" ]; then
+        mkdir -p "$MADE"
+        python3 "$HERE/synthetic.py" "$MADE" || { echo "no tracks given, and making them needs numpy and soundfile (pip install numpy soundfile)" >&2; exit 2; }
+    fi
+    set -- "$MADE/t44100.ogg" "$MADE/t48000.ogg"
+fi
 OGG=$(cd "$(dirname "$1")" && pwd)/$(basename "$1")
 OGG48=$(cd "$(dirname "$2")" && pwd)/$(basename "$2")
 WORK=$(mktemp -d)

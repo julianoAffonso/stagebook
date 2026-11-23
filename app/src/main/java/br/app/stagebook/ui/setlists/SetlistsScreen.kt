@@ -95,6 +95,7 @@ fun SetlistsRoute(
         onReceived = onReceived,
         onSync = onSync,
         onDelete = viewModel::delete,
+        onDeleteMany = viewModel::deleteMany,
         onRename = viewModel::rename,
         onShare = onShare,
         conduct = conductButton,
@@ -129,10 +130,11 @@ fun SetlistsScreen(
     onDismissCloud: () -> Unit = {},
     codeActions: br.app.stagebook.ui.share.CodeActions = br.app.stagebook.ui.share.CodeActions({}, {}),
     band: Int = 0,
-    onSendBand: (ids: List<String>, withSongs: Boolean) -> Unit = { _, _ -> },
+    onSendBand: (ids: List<String>, withSongs: Boolean, wifiOnly: Boolean) -> Unit = { _, _, _ -> },
     onBandSearch: (Boolean) -> Unit = {},
     songsIn: (List<String>) -> Int = { 0 },
     pdfSizesIn: (List<String>) -> List<Long> = { emptyList() },   // the PDFs the chosen setlists would carry: the internet says if they fit
+    onDeleteMany: (List<String>) -> Unit = { it.forEach(onDelete) },   // the chosen ones deleted in one save
     onScan: () -> Unit = {},
     online: Boolean = false,
     internetOn: Boolean = true,
@@ -241,18 +243,11 @@ fun SetlistsScreen(
                 }
             }
             // at the bottom, as SongbookPro: the + (a new setlist, then the ways to bring one in) and the checklist for the boxes
-            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            br.app.stagebook.ui.components.ListBottomBar(selecting, stringResource(R.string.select_sets), { pickMode = !pickMode; if (!pickMode) selected = emptyList() }) {
                 br.app.stagebook.ui.share.AddMenuButton(
                     online, onScan, onReceiveCode, onNew = { creating = true }, newLabel = R.string.sets_new, received = received,
                     onReceived = onReceived, onSync = onSync, internetOn = internetOn, localNet = localNet,
                 )
-                androidx.compose.foundation.layout.Spacer(Modifier.weight(1f))
-                IconButton(onClick = { pickMode = !pickMode; if (!pickMode) selected = emptyList() }) {
-                    Icon(
-                        AppIcons.Checklist, stringResource(R.string.select_sets),
-                        tint = if (selecting) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
-                    )
-                }
             }
         }
     }
@@ -288,16 +283,16 @@ fun SetlistsScreen(
     }
     if (sharing) {
         br.app.stagebook.ui.share.ShareSheet(
-            songs = songsIn(selected),
+            songs = remember(selected) { songsIn(selected) },
             online = online,
             internetOn = internetOn,
             onQr = null,   // a QR holds one setlist: several go by code or to the band
             onInternet = { withSongs -> sharing = false; onShareInternet(selected, withSongs); selected = emptyList() },
             onDismiss = { sharing = false },
             band = band,
-            onBand = { withSongs -> sharing = false; onSendBand(selected, withSongs); selected = emptyList() },
+            onBand = { withSongs, wifiOnly -> sharing = false; onSendBand(selected, withSongs, wifiOnly); selected = emptyList() },
             onSearch = onBandSearch,
-            limits = br.app.stagebook.ui.share.ShareLimits(lists = selected.size, songs = songsIn(selected), setlists = true, pdfSizes = pdfSizesIn(selected)),
+            limits = remember(selected) { br.app.stagebook.ui.share.ShareLimits(lists = selected.size, songs = songsIn(selected), setlists = true, pdfSizes = pdfSizesIn(selected)) },   // looks at the disk: once per choice
         )
     }
     cloud?.let { br.app.stagebook.ui.share.CloudDialog(it, onDismissCloud, codeActions.share, codeActions.copy) }
@@ -305,7 +300,7 @@ fun SetlistsScreen(
         ConfirmDialog(
             message = pluralStringResource(R.plurals.sets_delete_many_confirm, selected.size, selected.size),
             confirmLabel = stringResource(R.string.action_delete),
-            onConfirm = { selected.forEach(onDelete); selected = emptyList() },
+            onConfirm = { onDeleteMany(selected); selected = emptyList() },
             onDismiss = { deletingMany = false },
         )
     }

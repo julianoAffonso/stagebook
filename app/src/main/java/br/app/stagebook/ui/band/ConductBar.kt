@@ -410,9 +410,9 @@ fun ConductBar(
             val besideTitle = small && (canAsk || waits || ui is ConductUi.Conducting)
             val lacksInText = small && hasLacks
             val textTap = if (lacksInText) Modifier.clickable(onClickLabel = seeLacks) { showLacks = true } else Modifier
-            // each line is one line, and what gets cut is the name in it (a setlist, a device, a song): on a phone
-            // with bigger text the break's line wrapped and a long title pushed its own sentence off (two devices,
-            // 13/11)
+            // what gets cut is the name in each line (a setlist, a device, a song), never its sentence: on a phone with
+            // bigger text the break's line wrapped and a long title pushed its own sentence off (two devices, 13/11).
+            // The detail is one line; the leader's setlist name may take two (user, 22/11)
             val title = when (ui) {
                 is ConductUi.Conducting -> cutLine(R.string.conduct_conducting, ui.set)
                 is ConductUi.Following -> when {
@@ -446,7 +446,11 @@ fun ConductBar(
                 else -> null
             }
             val leading = @Composable { Icon(if (alert) AppIcons.Warning else AppIcons.Group, null) }
-            val titleLine = @Composable { CutLine(title, MaterialTheme.typography.titleSmall, "conductTitle") }
+            // the leader's setlist name takes a second line before it is cut (user, 22/11: "Conduzindo · Teste inte…" said
+            // too little on a phone); the strip grows only when the name is long. A follower's title stays one line: beside
+            // Ask and Leave there's little room, and two lines made every follower's strip taller
+            val titleLines = if (ui is ConductUi.Conducting) 2 else 1
+            val titleLine = @Composable { CutLine(title, MaterialTheme.typography.titleSmall, "conductTitle", lines = titleLines) }
             val detailLine = @Composable {
                 if (detail != null) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -548,7 +552,7 @@ private fun ActionsBesideTitle(
     }
 }
 
-/** A strip line in three pieces: only [cut] gives way when the line doesn't fit; [start] and [end] stay whole. */
+/** A strip line in three pieces: only [cut] gives way when the line doesn't fit (on up to its lines); [start] and [end] stay whole. */
 @Immutable
 internal data class CutText(val start: String = "", val cut: String, val end: String = "") {
     val whole: String get() = start + cut + end
@@ -568,11 +572,11 @@ private fun cutLine(id: Int, name: String, first: String? = null): CutText {
 }
 
 @Composable
-private fun CutLine(text: CutText, style: androidx.compose.ui.text.TextStyle, tag: String, modifier: Modifier = Modifier) {
+private fun CutLine(text: CutText, style: androidx.compose.ui.text.TextStyle, tag: String, modifier: Modifier = Modifier, lines: Int = 1) {
     // read and found as the one sentence it is
     Row(modifier.semantics { this.text = androidx.compose.ui.text.AnnotatedString(text.whole) }) {
         if (text.start.isNotEmpty()) Text(text.start, Modifier.clearAndSetSemantics { testTag = tag + "Start" }, style = style, maxLines = 1, softWrap = false)
-        Text(text.cut, Modifier.weight(1f, fill = false).clearAndSetSemantics { testTag = tag + "Cut" }, style = style, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        Text(text.cut, Modifier.weight(1f, fill = false).clearAndSetSemantics { testTag = tag + "Cut" }, style = style, maxLines = lines, overflow = TextOverflow.Ellipsis)
         if (text.end.isNotEmpty()) Text(text.end, Modifier.clearAndSetSemantics { testTag = tag + "End" }, style = style, maxLines = 1, softWrap = false)
     }
 }

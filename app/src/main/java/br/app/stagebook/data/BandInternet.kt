@@ -202,14 +202,15 @@ class BandInternet @Inject constructor(
     private suspend fun syncInternet() {
         recentCodes(myCodes().map { it.code to it.until }, now()).forEach { runCatching { checkAcks(it) } }
         accepted().forEach { runCatching { cloud.ack(it.code) } }   // repeats the "ok" until the welcome arrives
-        val seen = prefs.getStringSet(KEY_SEEN, emptySet()).orEmpty().toMutableSet()
+        val seenBefore = prefs.getStringSet(KEY_SEEN, emptySet()).orEmpty()
+        val seen = seenBefore.toMutableSet()
         var out = outbox()
         var acc = accepted()
         val since = mutableMapOf<String, String>()   // each member's cursor, written once at the end (audit 01/11)
         try {
             trust.members.value.forEach { m ->
                 val key = pairKey(m) ?: return@forEach
-                val got = cloud.fetchPair(key, prefs.getString("$KEY_SINCE${m.id}", null)) ?: return@forEach
+                val got = cloud.fetchPair(key, prefs.getString("$KEY_SINCE${m.id}", null)) { pid -> "${m.id}|$pid" in seen } ?: return@forEach
                 // they asked for songs missing from the setlist I sent (T12): answers with the ones I have, in a songs
                 // package
                 got.requests.forEach { wanted -> answerRequest(key, m.id, wanted) }
@@ -235,8 +236,12 @@ class BandInternet @Inject constructor(
             saveOut(out)
             prefs.edit {
                 putString(KEY_ACCEPTED, json.encodeToString(ListSerializer(Accepted.serializer()), acc))
-                putStringSet(KEY_SEEN, seen.toList().takeLast(MAX_SEEN).toSet())
+                // the newest ones stay: a set has no order, and "the last 300" of it dropped any (audit 22/11)
+                putStringSet(KEY_SEEN, (seenBefore.toList() + (seen - seenBefore)).takeLast(MAX_SEEN).toSet())
                 since.forEach { (id, last) -> putString("$KEY_SINCE$id", last) }
+                // someone who left the band leaves no cursor behind (they only added up)
+                val members = trust.members.value.map { it.id }.toSet()
+                prefs.all.keys.filter { it.startsWith(KEY_SINCE) && it.removePrefix(KEY_SINCE) !in members }.forEach { remove(it) }
             }
         }
     }

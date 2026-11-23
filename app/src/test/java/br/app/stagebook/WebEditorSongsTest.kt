@@ -33,8 +33,7 @@ class WebEditorSongsTest {
     private val device = WebEditorAuth.Device("d", "Chrome · Windows", "h", 0)
 
     @Before fun setUp() = runBlocking {
-        repo = LibraryRepository(context, CoroutineScope(SupervisorJob() + Dispatchers.IO))
-        withTimeout(5_000) { repo.loaded.first { it } }
+        repo = testRepo()
         api = WebEditorApi(repo, afterSave = { completed += it })
     }
 

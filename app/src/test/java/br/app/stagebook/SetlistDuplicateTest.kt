@@ -1,6 +1,6 @@
 package br.app.stagebook
 
-import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -35,8 +35,7 @@ class SetlistDuplicateTest {
 
     @Test fun `the copy has the songs and breaks, a new id and today's day, and comes first`() {
         runBlocking {
-            val repo = LibraryRepository(context, CoroutineScope(SupervisorJob() + Dispatchers.IO))
-            withTimeout(5_000) { repo.loaded.first { it } }
+            val repo = testRepo()
             val ids = listOf("A", "B", "C").map { repo.saveSong(Song(title = it, text = "x")) }
             val set = repo.createSetlist("Sábado", date = "2020-01-01").also { repo.addToSetlist(it, ids); repo.addBreak(it) }
             val copy = repo.duplicateSetlist(set, "Sábado (cópia)")!!

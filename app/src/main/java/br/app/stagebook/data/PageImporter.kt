@@ -99,9 +99,11 @@ class PageImporter @Inject constructor(
             if (artist.isBlank()) artist = m.artist
             if (m.year.isNotEmpty()) year = m.year
         }
-        // no BPM on the page or in the text: Deezer suggests one (the musician checks it in Song details)
-        if (net && Chords.tempo(text) == 0 && meta.title.isNotEmpty()) deezer.lookupWithin(meta.title, artist, LOOKUP_TIMEOUT_MS)?.let { b ->
-            text = Chords.setDirective(text, "tempo", b.toString())
+        // no BPM or no length on the page or in the text: Deezer suggests them, from the same lookup (the musician checks
+        // them in Song details; the length adds up in the setlist's sets, user 22/11)
+        if (net && (Chords.tempo(text) == 0 || Chords.duration(text) == 0) && meta.title.isNotEmpty()) deezer.factsWithin(meta.title, artist, LOOKUP_TIMEOUT_MS)?.let { f ->
+            if (f.bpm > 0 && Chords.tempo(text) == 0) text = Chords.setDirective(text, "tempo", f.bpm.toString())
+            if (f.seconds > 0 && Chords.duration(text) == 0) text = Chords.setDirective(text, "duration", Chords.formatDuration(f.seconds))
         }
         // essential mode turns the lookups off on purpose: only a missing connection is worth a notice
         return PageImport.Song(meta.title, artist, year, text, offline = internetOn && !online)

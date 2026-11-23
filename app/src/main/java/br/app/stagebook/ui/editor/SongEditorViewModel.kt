@@ -57,6 +57,9 @@ data class EditorPdf(
     val file: java.io.File? = null,   // the PDF itself, for the card's preview of its first page
     val invert: Boolean = false,      // its colours turned over on the stage (this song's, or what Settings says)
     val crops: List<br.app.stagebook.data.model.PdfCrop> = emptyList(),   // the trims of its pages (this device)
+    val hidden: List<Int> = emptyList(),   // its pages left off the stage, by file page (user, 22/11)
+    val keptLyrics: Boolean = false,   // the song kept lyrics or chords: the card offers to show them on the stage
+    val asText: Boolean = false,       // the stage shows those lyrics in place of the PDF
 )
 
 /** How the editor exits: close, or (when batch importing into a setlist) open the next song or the finished setlist. */
@@ -129,6 +132,11 @@ class SongEditorViewModel @Inject constructor(
             ?: route.songId?.let(repository::song)?.pdfCrops.orEmpty(),
     )
         private set
+    /** The PDF's pages left off the stage (user, 22/11); a new song's wait here, like the trims. */
+    var pdfHidden by mutableStateOf(
+        savedStateHandle.get<IntArray>(KEY_PDF_HIDDEN)?.toList() ?: route.songId?.let(repository::song)?.pdfHidden.orEmpty(),
+    )
+        private set
     private var pdfPages by mutableStateOf(0)
     private var pdfBytes by mutableStateOf(0L)
     // the PDF on the disk, for the card's preview: looked for off the main thread when the PDF changes, never when the card is
@@ -143,11 +151,19 @@ class SongEditorViewModel @Inject constructor(
      * [EditorPdf.lost]). Made of state only: the screen reads it while composing, and it went to the disk on every read
      * (audit 16/11).
      */
+    // looked for once per text: the screen asks for the card at every composition
+    private var keptFor: Pair<String, Boolean>? = null
+    private fun keptLyrics(text: String): Boolean =
+        keptFor?.takeIf { it.first === text }?.second ?: br.app.stagebook.domain.KeptLyrics.has(text).also { keptFor = text to it }
+
     val pdfInfo: EditorPdf? get() = if (!isPdf) null else EditorPdf(
         pdfName, pdfPages, pdfBytes, lost = pdf.isEmpty(),
         file = pdfFile,
         invert = pdfInvert ?: repository.library.value.look.pdfInvert,
         crops = pdfCrops,
+        hidden = pdfHidden,
+        keptLyrics = keptLyrics(uiState.text),
+        asText = pdfText,
     )
 
     init {
@@ -177,7 +193,7 @@ class SongEditorViewModel @Inject constructor(
         if (result !is br.app.stagebook.data.PdfAttach.Saved) return result
         val shown = store.displayName(uri).ifBlank { "PDF" }
         val old = pdf
-        if (route.songId != null) repository.updateSong(songId) { it.copy(pdf = result.name, pdfName = shown, pdfMarks = emptyList(), pdfCrops = emptyList(), pdfPage = 0, pdfScale = 1f, pdfPanX = 0f, pdfPanY = 0f) }
+        if (route.songId != null) repository.updateSong(songId) { it.copy(pdf = result.name, pdfName = shown, pdfMarks = emptyList(), pdfCrops = emptyList(), pdfHidden = emptyList(), pdfPage = 0, pdfScale = 1f, pdfPanX = 0f, pdfPanY = 0f, pdfText = false) }
         if (old != result.name) store.remove(old)
         val file = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { store.file(result.name).takeIf { it.isFile } }
         keepPdf(result.name, shown, result.pages, result.bytes, file)
@@ -201,6 +217,26 @@ class SongEditorViewModel @Inject constructor(
         savedStateHandle[KEY_PDF_CROPS] = cropsJson.encodeToString(pdfCrops)
     }
 
+    /** Page [page] (file page) shown again on the stage, or left off; the last page shown stays. Kept at once for a saved song. */
+    fun togglePdfPage(page: Int) {
+        val count = pdfPages
+        if (route.songId != null) {
+            repository.updateSong(songId) { it.copy(pdfHidden = br.app.stagebook.domain.PdfHidden.toggle(it.pdfHidden, page, count)) }
+            pdfHidden = repository.song(songId)?.pdfHidden.orEmpty()
+        } else pdfHidden = br.app.stagebook.domain.PdfHidden.toggle(pdfHidden, page, count)
+        savedStateHandle[KEY_PDF_HIDDEN] = pdfHidden.toIntArray()
+    }
+
+    // the stage shows the kept lyrics in place of the PDF (user, 22/11)
+    private var pdfText by mutableStateOf(savedStateHandle.get<Boolean>(KEY_PDF_TEXT) ?: route.songId?.let(repository::song)?.pdfText ?: false)
+
+    /** The stage shows the song's kept lyrics and chords in place of its PDF: kept at once for a saved song. */
+    fun showPdfText(on: Boolean) {
+        pdfText = on
+        savedStateHandle[KEY_PDF_TEXT] = on
+        if (route.songId != null) repository.updateSong(songId) { it.copy(pdfText = on) }
+    }
+
     /** The colours turned over for this song's PDF: kept at once for a saved song, like the track. */
     fun setPdfInvert(on: Boolean) {
         pdfInvert = on
@@ -211,10 +247,14 @@ class SongEditorViewModel @Inject constructor(
     /** Takes the PDF out: the file goes and the lyrics are the song again. */
     fun removePdf() {
         pdfInvert = null
+        pdfText = false
+        savedStateHandle.remove<Boolean>(KEY_PDF_TEXT)
         pdfCrops = emptyList()
+        pdfHidden = emptyList()
         savedStateHandle.remove<String>(KEY_PDF_CROPS)
+        savedStateHandle.remove<IntArray>(KEY_PDF_HIDDEN)
         savedStateHandle.remove<Boolean>(KEY_PDF_INVERT)
-        if (route.songId != null) repository.updateSong(songId) { it.copy(pdf = "", pdfName = "", pdfMarks = emptyList(), pdfInvert = null, pdfCrops = emptyList(), pdfPage = 0, pdfScale = 1f, pdfPanX = 0f, pdfPanY = 0f) }
+        if (route.songId != null) repository.updateSong(songId) { it.copy(pdf = "", pdfName = "", pdfMarks = emptyList(), pdfInvert = null, pdfCrops = emptyList(), pdfHidden = emptyList(), pdfPage = 0, pdfScale = 1f, pdfPanX = 0f, pdfPanY = 0f, pdfText = false) }
         pdfs?.remove(pdf)
         keepPdf("", "", 0, 0L, null)
     }
@@ -226,7 +266,9 @@ class SongEditorViewModel @Inject constructor(
         pdfBytes = bytes
         pdfFile = file
         pdfCrops = emptyList()   // another file: the old trims were of other pages
+        pdfHidden = emptyList()
         savedStateHandle.remove<String>(KEY_PDF_CROPS)
+        savedStateHandle.remove<IntArray>(KEY_PDF_HIDDEN)
         savedStateHandle[KEY_PDF] = name
         savedStateHandle[KEY_PDF_NAME] = shown
     }
@@ -240,6 +282,10 @@ class SongEditorViewModel @Inject constructor(
         if (route.songId != null) repository.updateSong(songId) { it.copy(track = name, trackName = shown) }
         if (old != name) tracks.remove(old)
         keepTrack(name, shown)
+        // a song with no length takes the track's (user, 22/11): one that has a length keeps it
+        if (Chords.duration(uiState.text) == 0) tracks.seconds(name).takeIf { it > 0 }?.let { s ->
+            update(text = Chords.setDirective(uiState.text, "duration", Chords.formatDuration(s)))
+        }
         return true
     }
 
@@ -311,6 +357,11 @@ class SongEditorViewModel @Inject constructor(
     private var finished = false   // double tap on Save/Delete: only the first counts
     val onDone = done.receiveAsFlow()
 
+    // declared before the init below: with the library already read the loading runs inside the constructor, and fields
+    // initialised after it were written over ("leave without saving?" with nothing changed) or still null (audit 22/11)
+    private var original = SongEditorUiState()
+    private val midiJson = kotlinx.serialization.json.Json { ignoreUnknownKeys = true }
+
     init {
         viewModelScope.launch {
             repository.loaded.first { it }
@@ -349,7 +400,6 @@ class SongEditorViewModel @Inject constructor(
         }
     }
 
-    private var original = SongEditorUiState()
 
     private fun SongEditorUiState.edited(title: String, author: String, year: String, text: String, tags: List<String> = this.tags, midi: br.app.stagebook.domain.SongMidi = this.midi): SongEditorUiState {
         val next = copy(title = title, author = author, year = year, text = text, tags = tags, midi = midi)
@@ -383,7 +433,6 @@ class SongEditorViewModel @Inject constructor(
         savedStateHandle[KEY_MIDI] = midiJson.encodeToString(br.app.stagebook.domain.SongMidi.serializer(), m)
     }
 
-    private val midiJson = kotlinx.serialization.json.Json { ignoreUnknownKeys = true }
 
     /** Stage look (editor preview). */
     val look: StateFlow<Look> = repository.library.map { it.look }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), repository.library.value.look)
@@ -408,6 +457,9 @@ class SongEditorViewModel @Inject constructor(
 
     /** BPM in the song details (empty removes it); the metronome starts at it. */
     fun setTempo(bpm: String) = update(text = Chords.setDirective(uiState.text, "tempo", bpm.filter(Char::isDigit).take(3)))
+
+    /** The song's length, typed as digits ("345" → 3:45, user 22/11): kept as `{duration}`, which the setlist adds up. */
+    fun setDuration(typed: String) = update(text = Chords.setDirective(uiState.text, "duration", Chords.durationFromDigits(typed)))
 
     fun save() {
         if (finished) return
@@ -437,7 +489,7 @@ class SongEditorViewModel @Inject constructor(
         val id = repository.saveSong(base.copy(id = songId, track = track, trackName = trackName, // a saved song's PDF, colours and trims were saved in their own windows (and may have changed from the computer): its
             // own values stay; a new song takes what the editor holds
             pdf = if (route.songId != null) base.pdf else pdf, pdfName = if (route.songId != null) base.pdfName else pdfName,
-            pdfInvert = if (route.songId != null) base.pdfInvert else pdfInvert, pdfCrops = if (route.songId != null) base.pdfCrops else pdfCrops, pdfMarks = if (pdf == base.pdf) base.pdfMarks else emptyList(), title = title, author = s.author.trim(), year = s.year.trim(), tags = s.tags, midi = s.midi.takeUnless { it.isEmpty() }, text = Chords.withDetectedKey(Chords.fromChordsOverLyrics(br.app.stagebook.domain.InternalMarks.restore(s.text, base.text)))))   // chords are saved as ChordPro; the key the editor shows is saved too (31/10)
+            pdfInvert = if (route.songId != null) base.pdfInvert else pdfInvert, pdfCrops = if (route.songId != null) base.pdfCrops else pdfCrops, pdfHidden = if (route.songId != null) base.pdfHidden else pdfHidden, pdfText = if (route.songId != null) base.pdfText else pdfText, pdfMarks = if (pdf == base.pdf) base.pdfMarks else emptyList(), title = title, author = s.author.trim(), year = s.year.trim(), tags = s.tags, midi = s.midi.takeUnless { it.isEmpty() }, text = Chords.withDetectedKey(Chords.fromChordsOverLyrics(br.app.stagebook.domain.InternalMarks.restore(s.text, base.text)))))   // chords are saved as ChordPro; the key the editor shows is saved too (31/10)
         metadata.completeLater(id)   // artist or year blank: MusicBrainz fills them in
         return id
     }
@@ -454,6 +506,7 @@ class SongEditorViewModel @Inject constructor(
         const val KEY_TAGS = "editor_tags"
         const val KEY_MIDI = "editor_midi"
         const val KEY_PDF_CROPS = "editor_pdf_crops"
+        const val KEY_PDF_HIDDEN = "pdf_hidden"
         const val KEY_IMPORTED = "editor_imported"
         const val KEY_NEW_ID = "editor_new_id"
         const val KEY_TRACK = "editor_track"
@@ -461,5 +514,6 @@ class SongEditorViewModel @Inject constructor(
         const val KEY_PDF = "editor_pdf"
         const val KEY_PDF_NAME = "editor_pdf_name"
         const val KEY_PDF_INVERT = "editor_pdf_invert"
+        const val KEY_PDF_TEXT = "editor_pdf_text"
     }
 }

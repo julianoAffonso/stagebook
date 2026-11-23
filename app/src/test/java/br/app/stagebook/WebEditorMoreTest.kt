@@ -34,12 +34,10 @@ class WebEditorMoreTest {
     private val device = WebEditorAuth.Device("d", "Chrome · Windows", "h", 0)
 
     @Before fun setUp() {
-        repo = LibraryRepository(context, CoroutineScope(SupervisorJob() + Dispatchers.IO))
-        runBlocking { withTimeout(5_000) { repo.loaded.first { it } } }
+        repo = testRepo()
     }
 
-    private fun call(api: WebEditorApi, method: String, path: String, body: String = "", file: File? = null) =
-        api.handle(HttpRequest(method, path.substringBefore('?'), path.substringAfter('?', "").split('&').filter { it.isNotEmpty() }.associate { it.substringBefore('=') to it.substringAfter('=') }, body = body.toByteArray(), file = file), device)!!
+    private fun call(api: WebEditorApi, method: String, path: String, body: String = "", file: File? = null) = api.send(method, path, body, file, device)
 
     @Test fun `there is no automatic search from the computer - Google blocks it, user 01-11`() {
         assertEquals(null, WebEditorApi(repo).handle(HttpRequest("POST", "/api/search", emptyMap(), body = """{"q":"hazard"}""".toByteArray()), device))

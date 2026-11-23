@@ -44,9 +44,8 @@ class ShowStoreBehaviorTest {
     @After fun reset() { scopes.forEach { it.cancel() }; scopes.clear(); TimeZone.setDefault(savedZone) }
 
     private val context = ApplicationProvider.getApplicationContext<android.app.Application>()
-    private fun scope() = CoroutineScope(SupervisorJob() + Dispatchers.IO).also { scopes += it }
-    private fun repo() = LibraryRepository(context, scope())
-        .also { r -> runBlocking { withTimeout(5_000) { r.loaded.first { it } }; r.restore(emptyList(), emptyList()) } }
+    private fun scope() = testScope().also { scopes += it }
+    private fun repo() = testRepo(scope = scope(), empty = true)
 
     private fun LibraryRepository.songs(vararg titles: String) = titles.map { saveSong(Song(title = it, author = "x", text = "{key: G}\n$it")) }
 

@@ -109,7 +109,7 @@ class SetlistsViewModel @Inject constructor(
     }
 
     /** All the chosen setlists to everyone in the band on the network, one tap. */
-    fun sendBand(ids: List<String>, withSongs: Boolean) = share.sendBandMany { ids.mapNotNull { setlistCloud.setlistPackage(it, withSongs) } }
+    fun sendBand(ids: List<String>, withSongs: Boolean, wifiOnly: Boolean = false) = share.sendBandMany(wifiOnly) { ids.mapNotNull { setlistCloud.setlistPackage(it, withSongs) } }
 
     fun bandSearch(on: Boolean) = share.bandSearch(on)
     fun dismissCloud() = share.dismissCloud()
@@ -139,6 +139,7 @@ class SetlistsViewModel @Inject constructor(
     }
 
     fun delete(id: String) = repository.deleteSetlist(id)
+    fun deleteMany(ids: List<String>) = repository.deleteSetlists(ids)
 
     fun onQueryChange(q: String) { query.value = q }
 

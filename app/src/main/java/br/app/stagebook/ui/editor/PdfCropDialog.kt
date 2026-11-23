@@ -91,10 +91,7 @@ fun PdfCropDialog(
     val frame = remember(scope, current) { CropFrameState(current) }
     val open by pdf.file?.let { rememberPdfOpen(it) } ?: remember { mutableStateOf<PdfOpen>(PdfOpen.Failed) }
     val ready = open as? PdfOpen.Ready
-    val image by produceState<ImageBitmap?>(null, ready, page) {
-        value = null   // the frame of the new page must not sit on the picture of the old one
-        value = ready?.let { r -> runCatching { r.pages.bitmap(page.coerceIn(0, r.pages.pageCount - 1), 900).asImageBitmap() }.getOrNull() }
-    }
+    val image by br.app.stagebook.ui.stage.rememberPdfPageImage(ready?.pages, page, CROP_PAGE_WIDTH)
     val shape = image?.let { it.width.toFloat() / it.height } ?: PAGE_SHAPE
 
     Dialog(onDismissRequest = onDismiss, properties = DialogProperties(usePlatformDefaultWidth = false)) {
@@ -231,3 +228,4 @@ private val HANDLE_ROOM = 12.dp
 
 internal const val CROP_FRAME_TAG = "pdf_crop_frame"
 private const val PAGE_SHAPE = 2f / 3f   // a page of paper, until the real one is drawn
+private const val CROP_PAGE_WIDTH = 900

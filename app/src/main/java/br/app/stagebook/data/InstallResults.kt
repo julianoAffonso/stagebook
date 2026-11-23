@@ -23,6 +23,7 @@ object InstallResults {
     private val _notices = MutableSharedFlow<InstallNotice>(replay = 1, extraBufferCapacity = 4, onBufferOverflow = BufferOverflow.DROP_OLDEST)
 
     /** Each notice is said once: the screen that takes it keeps the one arriving after from hearing it again. */
+    @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)   // each notice shows once: the replay is cleared on delivery
     val notices: Flow<InstallNotice> = _notices.onEach { _notices.resetReplayCache() }
 
     /** A session failed in this launch: the next try uses the system installer screen instead of another session. */
@@ -59,6 +60,7 @@ object InstallResults {
     }
 
     // as in a fresh launch (tests: this object outlives each of them)
+    @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
     internal fun reset() { sessionFailed = false; session = NO_SESSION; _notices.resetReplayCache(); _waiting.value = false; leftWhileWaiting = false }
 
     const val ACTION = "br.app.stagebook.INSTALL_RESULT"

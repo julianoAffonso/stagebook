@@ -74,6 +74,7 @@ static int g_in_pkts = IN_PKTS_SHORT;   // what is submitted now
                                       // import and screens at the same time, the decoder fell behind and stuttered;
                                       // 19/10/2026)
 #define FADE_FRAMES 240               // 5 ms fade on play/pause
+#define FADE_OUT_MAX_MS 10000         // the longest fade on stop the engine takes
 
 // ---- shared state ----
 // g_vmx: the file (stb_vorbis) and the resampler; opening, seeking and decoding take time (disk).
@@ -295,6 +296,10 @@ static void mb_reset_locked(void) /* with g_mx */ {
 static long g_base_ms = 0;           // position (ms) of the last seek
 static long g_consumed = 0;           // output frames played since the seek
 static float g_fade = 0.0f;           // 0..1, ramp to avoid clicks
+// The ramp down when the person pauses or stops (user, 22/11: a fade on stop, set in Settings); FADE_FRAMES = only the
+// anti-click. Any other way down (end of the file, the output held) keeps the anti-click.
+static volatile int g_fade_out_frames = FADE_FRAMES;
+#define FADE_DOWN_STEP (g_playing ? 1.0f / FADE_FRAMES : 1.0f / g_fade_out_frames)
 
 // resampler (Catmull-Rom): history of 4 source frames
 static float g_hist[4][LANES_MAX];
@@ -498,7 +503,8 @@ static void *dec_main(void *arg) {
     while (!g_dec_stop) {
         pthread_mutex_lock(&g_vmx);
         pthread_mutex_lock(&g_mx);
-        int active = src_ok(&g_src) && g_playing && !g_eof;
+        // a fade on stop longer than the ring (1 s) keeps reading while the volume goes down, or it went silent early
+        int active = src_ok(&g_src) && (g_playing || g_fade > 0.0f) && !g_eof;
         int work = active && ring_space_locked() > 2048;
         pthread_mutex_unlock(&g_mx);
         // while playing, the ring (1 s) only drains 2048 frames in ~43 ms: 5 ms of slack is plenty; stopped, 20 ms
@@ -741,8 +747,11 @@ static void *usb_main(void *arg) {
             for (int f = 0; f < nf; f++) { \
                 float lane[LANES_MAX] = {0}; \
                 int want_play = g_playing && !tail && !hold; \
-                if (want_play && g_fade < 1.0f) g_fade += 1.0f / FADE_FRAMES; \
-                if (!want_play && g_fade > 0.0f) g_fade -= 1.0f / FADE_FRAMES; \
+                /* the volume only starts up once there is sound to play: after a seek the decoder takes a few ms to bring it, \
+                   and rising over nothing made the first sound come in at full level (simulator, 22/11) */ \
+                if (want_play && g_fade < 1.0f && (g_fade > 0.0f || g_ring_n > 0)) g_fade += 1.0f / FADE_FRAMES; \
+                /* the stream ending or held is never the slow fade: the anti-click, so the tail is silence */ \
+                if (!want_play && g_fade > 0.0f) g_fade -= (tail || hold) ? 1.0f / FADE_FRAMES : FADE_DOWN_STEP; \
                 if (g_fade < 0) g_fade = 0; if (g_fade > 1) g_fade = 1; \
                 if (g_fade > 0) { if (ring_pop_locked(lane)) g_consumed++; else if (want_play && !g_eof) st_underrun++; } \
                 if (want_play && g_ring_n < st_ring_min) st_ring_min = g_ring_n; \
@@ -1052,8 +1061,8 @@ static aaudio_data_callback_result_t dev_cb(AAudioStream *st, void *ud, void *da
     for (int f = 0; f < nf; f++) {
         float lane[LANES_MAX] = {0};
         int want_play = g_playing;
-        if (want_play && g_fade < 1.0f) g_fade += 1.0f / FADE_FRAMES;
-        if (!want_play && g_fade > 0.0f) g_fade -= 1.0f / FADE_FRAMES;
+        if (want_play && g_fade < 1.0f && (g_fade > 0.0f || g_ring_n > 0)) g_fade += 1.0f / FADE_FRAMES;   // as on the USB path
+        if (!want_play && g_fade > 0.0f) g_fade -= FADE_DOWN_STEP;
         if (g_fade < 0) g_fade = 0; if (g_fade > 1) g_fade = 1;
         if (g_fade > 0 && ring_pop_locked(lane)) g_consumed++;
         float outv[OUTS_MAX];
@@ -1077,6 +1086,7 @@ static void dev_error(AAudioStream *st, void *ud, aaudio_result_t err) {
 }
 
 static void dev_close(void) {
+    g_fade_out_frames = FADE_FRAMES;   // the 5 ms anti-click, not the user's fade: the 20 ms below are for it
     g_playing = 0; g_meter_on = 0;
     usleep(20000);   // the 5 ms fade finishes before closing: no click
     if (g_dev) { AAudioStream_requestStop(g_dev); AAudioStream_close(g_dev); g_dev = NULL; }
@@ -1100,6 +1110,8 @@ JNIEXPORT jboolean JNICALL FN(start)(JNIEnv *e, jclass c, jint fd, jint ep, jint
         g_dec_stop = 1; pthread_join(g_dec_thr, NULL);
         g_fd = -1;
     }
+    // a stream that died while audible left the volume up: the new one starts from silence, or the probe played music
+    pthread_mutex_lock(&g_mx); g_fade = 0; pthread_mutex_unlock(&g_mx);
     free_parked();   // the previous connection is closed by now (PlayerService closes it before connecting again)
     g_in_starved_out = 0;
     g_in_ep = (in_ep >= 0 && in_fb > 0) ? in_ep : -1; g_in_maxpkt = in_maxpkt; g_in_fb = in_fb;
@@ -1121,6 +1133,8 @@ JNIEXPORT void JNICALL FN(stop)(JNIEnv *e, jclass c) {
     if (g_dev) { dev_close(); return; }
 #endif
     if (!g_usb_running && g_fd < 0) return;
+    // closing the stream is never the user's slow fade: the tail has to be silence, or the interface whines (audit 22/11)
+    g_fade_out_frames = FADE_FRAMES;
     g_playing = 0; g_meter_on = 0;
     g_usb_stop = 1;
     pthread_join(g_usb_thr, NULL);
@@ -1140,6 +1154,7 @@ JNIEXPORT jboolean JNICALL FN(startDevice)(JNIEnv *e, jclass c, jint deviceId, j
 #ifdef ENGINE_HAS_DEVICE
     if (g_usb_running || g_dev) return g_dev ? JNI_TRUE : JNI_FALSE;
     g_probing = 0;   // the device path has no input to judge: never held
+    pthread_mutex_lock(&g_mx); g_fade = 0; pthread_mutex_unlock(&g_mx);   // from silence, as the USB path
     AAudioStreamBuilder *b = NULL;
     if (AAudio_createStreamBuilder(&b) != AAUDIO_OK) return JNI_FALSE;
     AAudioStreamBuilder_setSampleRate(b, OUT_RATE);
@@ -1196,6 +1211,13 @@ JNIEXPORT jlong JNICALL FN(load)(JNIEnv *e, jclass c, jstring jpath) {
     pthread_mutex_unlock(&g_vmx);
     (*e)->ReleaseStringUTFChars(e, jpath, path);
     return dur_ms;
+}
+
+// How long the volume takes to go down when the person pauses or stops; 0 or less = only the 5 ms anti-click.
+JNIEXPORT void JNICALL FN(setFadeOut)(JNIEnv *e, jclass c, jint ms) {
+    if (ms > FADE_OUT_MAX_MS) ms = FADE_OUT_MAX_MS;   // a huge value overflowed into a negative step: the volume went up
+    long f = ms > 0 ? (long)ms * OUT_RATE / 1000 : 0;
+    g_fade_out_frames = f > FADE_FRAMES ? (int)f : FADE_FRAMES;
 }
 
 JNIEXPORT void JNICALL FN(play)(JNIEnv *e, jclass c) { g_playing = 1; }
@@ -1482,6 +1504,28 @@ static int measure(const char *path, int mask, float *lufs, float *peak, float *
     *peak = (float)pk;
     if (peak_click) *peak_click = (float)pkc;
     return 1;
+}
+
+// Where the first sound of the file is, in ms (user, 22/11: skip the silence before the song): the first frame where any
+// channel goes over [threshold] (linear). Reads only up to that frame, at most [maxMs]; -1 if the file didn't open.
+JNIEXPORT jlong JNICALL FN(leadingSilence)(JNIEnv *e, jclass c, jstring jpath, jfloat threshold, jlong maxMs) {
+    const char *path = (*e)->GetStringUTFChars(e, jpath, NULL);
+    int err = 0, ch = 0, fs = 0;
+    long len = 0;
+    src_t v = src_open(path, &err, &fs, &ch, &len);
+    (*e)->ReleaseStringUTFChars(e, jpath, path);
+    if (!src_ok(&v)) return -1;
+    long limit = (long)(maxMs * fs / 1000), at = 0, found = -1;
+    float buf[4096 * 8];
+    int got;
+    while (found < 0 && at < limit && (got = src_read(&v, ch, buf, 4096)) > 0) {
+        for (int i = 0; i < got && found < 0; i++)
+            for (int k = 0; k < ch; k++) if (fabsf(buf[i * ch + k]) > threshold) { found = at + i; break; }
+        at += got;
+    }
+    src_close(&v);
+    if (found < 0) found = at < limit ? 0 : limit;   // all silent: start at the start
+    return (jlong)(found * 1000L / fs);
 }
 
 // Loudness of a set of channels (bits in mask): {lufs, peak}, or null.

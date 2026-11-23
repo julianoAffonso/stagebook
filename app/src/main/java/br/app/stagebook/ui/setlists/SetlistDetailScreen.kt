@@ -143,6 +143,7 @@ fun SetlistDetailRoute(
         onHideQr = viewModel::hideQr,
         onMove = viewModel::move,
         onRemove = viewModel::remove,
+        onRemoveMany = viewModel::removeMany,
         onDeleteSetlist = viewModel::delete,   // the setlist goes away and the LaunchedEffect above comes back
         onAddBreak = viewModel::addBreak,
         onRemoveBreak = viewModel::removeBreak,
@@ -180,7 +181,7 @@ fun SetlistDetailScreen(
     onShareCode: (br.app.stagebook.ui.share.CloudUi.Sent) -> Unit = {},
     onCopyCode: (code: String) -> Unit = {},
     band: Int = 0,
-    onSendBand: (withSongs: Boolean) -> Unit = {},
+    onSendBand: (withSongs: Boolean, wifiOnly: Boolean) -> Unit = { _, _ -> },
     onBandSearch: (Boolean) -> Unit = {},
     onAddBreak: () -> Unit = {},
     onRemoveBreak: (position: Int) -> Unit = {},   // the break before the song at that position
@@ -194,6 +195,7 @@ fun SetlistDetailScreen(
     startEditing: Boolean = false,   // opens in editing (tests, and a setlist just created)
     onRestore: (songIds: List<String>, breaks: List<Int>) -> Unit = { _, _ -> },   // "Discard": the setlist as it was when editing began
     toList: Int = 0,   // a new number = the Setlists tab tapped again: go back to the list (as Back would)
+    onRemoveMany: (List<Pair<Int, String>>) -> Unit = { picks -> picks.sortedByDescending { it.first }.forEach { (i, id) -> onRemove(i, id) } },   // the chosen songs out in one save
 ) {
     val wide = wideLists()
     var renaming by rememberSaveable { mutableStateOf(false) }
@@ -362,7 +364,7 @@ fun SetlistDetailScreen(
                                     )
                                     Column {
                                         // with breaks, each block says its number and how many songs it has
-                                        if (mark.block > 0) BlockHeader(mark.block, mark.blockSongs)
+                                        if (mark.block > 0) BlockHeader(mark.block, mark.blockSongs, mark.blockSeconds, mark.blockUnknown)
                                         when (row) {
                                             is SetRow.Break -> SetlistBreakRow(
                                                 handle = if (editing) handle else null,
@@ -453,8 +455,8 @@ fun SetlistDetailScreen(
             else pluralStringResource(R.plurals.set_remove_many_confirm, selected.size, selected.size),
             stringResource(R.string.set_remove),
             {
-                // from the end, so the positions of the others don't move; the repository checks each is still there
-                items.withIndex().filter { it.value.key in selected }.sortedByDescending { it.index }.forEach { onRemove(it.index, it.value.songId) }
+                // all at once: the repository checks each is still at its place
+                onRemoveMany(items.withIndex().filter { it.value.key in selected }.map { it.index to it.value.songId })
                 selected = emptyList()
             },
             { removingMany = false },
@@ -466,12 +468,12 @@ fun SetlistDetailScreen(
             songs = uiState.items.count { !it.missing },
             online = online,
             internetOn = internetOn,
-            limits = br.app.stagebook.ui.share.ShareLimits(lists = 1, songs = uiState.items.count { !it.missing }, setlists = true, pdfSizes = pdfSizes()),
+            limits = br.app.stagebook.ui.share.ShareLimits(lists = 1, songs = uiState.items.count { !it.missing }, setlists = true, pdfSizes = remember(uiState.items) { pdfSizes() }),   // looks at the disk: once per setlist, not per composition
             onQr = { sharing = false; onShowQr() },
             onInternet = { withSongs -> sharing = false; onSendInternet(withSongs) },
             onDismiss = { sharing = false; doneSharing() },
             band = band,
-            onBand = { withSongs -> sharing = false; onSendBand(withSongs) },
+            onBand = { withSongs, wifiOnly -> sharing = false; onSendBand(withSongs, wifiOnly) },
             onSearch = onBandSearch,
         )
     }
@@ -516,7 +518,7 @@ private sealed interface SetRow {
 }
 
 /** What a row shows besides itself: how many songs come before it and, on the first song of a block, the block. */
-private class RowMark(val songsBefore: Int, val block: Int, val blockSongs: Int)
+private class RowMark(val songsBefore: Int, val block: Int, val blockSongs: Int, val blockSeconds: Int = 0, val blockUnknown: Int = 0)
 
 private fun setRows(items: List<SetItemUi>, breaks: List<Int>): List<SetRow> {
     var n = 0
@@ -539,16 +541,22 @@ private fun rowMarks(rows: List<SetRow>): List<RowMark> {
         // the first song after a break (or of the setlist) opens a block
         val opens = headers && row is SetRow.Song && (i == 0 || rows[i - 1] is SetRow.Break)
         if (opens) block++
-        val inBlock = if (opens) rows.subList(i, rows.size).takeWhile { it is SetRow.Song }.size else 0
-        RowMark(songs, if (opens) block else 0, inBlock).also { if (row is SetRow.Song) songs++ }
+        val blockRows = if (opens) rows.subList(i, rows.size).takeWhile { it is SetRow.Song }.filterIsInstance<SetRow.Song>() else emptyList()
+        RowMark(songs, if (opens) block else 0, blockRows.size, blockRows.sumOf { it.item.seconds }, blockRows.count { it.item.seconds == 0 })
+            .also { if (row is SetRow.Song) songs++ }
     }
 }
 
-/** "SET 1 · 3 songs", over the first song of each block. */
+/**
+ * "SET 1 · 3 songs · 12 min", over the first song of each block (user, 22/11: the length of each set). Songs with no
+ * length are said apart ("+ 1 with no length"), so the minutes never pass for the whole block.
+ */
 @Composable
-private fun BlockHeader(block: Int, songs: Int, modifier: Modifier = Modifier) {
+private fun BlockHeader(block: Int, songs: Int, seconds: Int = 0, unknown: Int = 0, modifier: Modifier = Modifier) {
+    val length = if (seconds == 0) "" else " · " + br.app.stagebook.ui.components.lengthLabel(seconds) +
+        (if (unknown > 0) " " + pluralStringResource(R.plurals.set_block_unknown, unknown, unknown) else "")
     Text(
-        pluralStringResource(R.plurals.set_block, songs, block, songs),
+        pluralStringResource(R.plurals.set_block, songs, block, songs) + length,
         style = MaterialTheme.typography.labelLarge,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
         modifier = modifier.padding(start = Spacing.m, top = Spacing.s, bottom = Spacing.s),

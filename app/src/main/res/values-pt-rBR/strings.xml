@@ -124,6 +124,81 @@
         <item quantity="many">%d intervalos</item>
         <item quantity="other">%d intervalos</item>
     </plurals>
+    <string name="editor_duration">Duração</string>
+    <string name="length_minutes">%1$d min</string>
+    <string name="length_hours_minutes">%1$d h %2$d min</string>
+    <plurals name="set_block_unknown">
+        <item quantity="one">+ %d sem duração</item>
+        <item quantity="many">+ %d sem duração</item>
+        <item quantity="other">+ %d sem duração</item>
+    </plurals>
+    <string name="pdf_pages_title">Páginas no palco</string>
+    <string name="pdf_pages_of">%1$d de %2$d</string>
+    <string name="pdf_pages_hint">Toque numa página para tirá-la do palco, e de novo para trazê-la de volta. O arquivo não muda.</string>
+    <plurals name="pdf_pages_shown">
+        <item quantity="one">%1$d de %2$d página no palco</item>
+        <item quantity="many">%1$d de %2$d páginas no palco</item>
+        <item quantity="other">%1$d de %2$d páginas no palco</item>
+    </plurals>
+    <string name="pdf_page_label">Página %d</string>
+    <string name="pdf_page_shown">no palco</string>
+    <string name="pdf_page_hidden">escondida</string>
+    <string name="enrich_title">Completar dados das músicas</string>
+    <string name="enrich_start">Buscar o que falta</string>
+    <string name="enrich_stop">Parar</string>
+    <string name="enrich_running">Buscando a música %1$d de %2$d</string>
+    <string name="enrich_running_again">Tentando de novo: música %1$d de %2$d</string>
+    <string name="enrich_leave">Pode sair desta tela.</string>
+    <string name="enrich_offline">Sem internet agora. Tente de novo quando estiver conectado.</string>
+    <string name="enrich_nothing">Todas as músicas têm artista, ano, BPM e duração.</string>
+    <plurals name="enrich_missing">
+        <item quantity="one">%d música sem artista, ano, BPM ou duração.</item>
+        <item quantity="many">%d músicas sem artista, ano, BPM ou duração.</item>
+        <item quantity="other">%d músicas sem artista, ano, BPM ou duração.</item>
+    </plurals>
+    <plurals name="enrich_tried">
+        <item quantity="one">%d música continua sem algum dado. Os serviços não acharam.</item>
+        <item quantity="many">%d músicas continuam sem algum dado. Os serviços não acharam.</item>
+        <item quantity="other">%d músicas continuam sem algum dado. Os serviços não acharam.</item>
+    </plurals>
+    <plurals name="enrich_tried_inside">
+        <item quantity="one">%d delas já foi procurada, sem resultado.</item>
+        <item quantity="many">%d delas já foram procuradas, sem resultado.</item>
+        <item quantity="other">%d delas já foram procuradas, sem resultado.</item>
+    </plurals>
+    <string name="enrich_again">Procurar de novo</string>
+    <plurals name="enrich_done">
+        <item quantity="one">Pronto. %d música ganhou dados novos.</item>
+        <item quantity="many">Pronto. %d músicas ganharam dados novos.</item>
+        <item quantity="other">Pronto. %d músicas ganharam dados novos.</item>
+    </plurals>
+    <string name="history_title">O que foi tocado</string>
+    <string name="history_empty">Nada tocado ainda. Uma música conta depois de um minuto no palco, uma vez por dia de show.</string>
+    <string name="history_month">Este mês</string>
+    <string name="history_year">12 meses</string>
+    <string name="history_all">Tudo</string>
+    <string name="history_export">Exportar planilha (CSV)</string>
+    <string name="history_failed">Não deu para salvar a planilha.</string>
+    <string name="history_file">tocadas</string>
+    <string name="history_col_date">Data</string>
+    <string name="history_col_song">Música</string>
+    <string name="history_col_artist">Artista</string>
+    <string name="history_col_setlist">Setlist</string>
+    <plurals name="history_summary">
+        <item quantity="one">%d música tocada</item>
+        <item quantity="many">%d músicas tocadas</item>
+        <item quantity="other">%d músicas tocadas</item>
+    </plurals>
+    <plurals name="history_days">
+        <item quantity="one">em %d dia de show.</item>
+        <item quantity="many">em %d dias de show.</item>
+        <item quantity="other">em %d dias de show.</item>
+    </plurals>
+    <plurals name="history_done">
+        <item quantity="one">Planilha salva com %d música.</item>
+        <item quantity="many">Planilha salva com %d músicas.</item>
+        <item quantity="other">Planilha salva com %d músicas.</item>
+    </plurals>
     <plurals name="set_block">
         <item quantity="one">BLOCO %1$d · %2$d música</item>
         <item quantity="many">BLOCO %1$d · %2$d músicas</item>
@@ -202,6 +277,10 @@
     <string name="about_tagline">Letras, cifras e backing tracks para tocar ao vivo, sozinho ou com a banda.</string>
     <string name="about_privacy">Privacidade</string>
     <string name="about_privacy_text">Suas músicas, setlists e ajustes ficam neste aparelho. O que vai para a banda ou pela internet vai protegido, e ninguém no caminho consegue ler. Sem conta, sem propaganda, sem rastreio.</string>
+    <string name="about_credits">Serviços e bibliotecas</string>
+    <string name="about_services_text">O Stagebook não tem servidor próprio. Com a internet ligada, ele usa:\n• MusicBrainz: artista e ano\n• API do Deezer: BPM e duração\n• ntfy.sh: envios por 3 palavras e caixa da banda, cifrados\n• GitHub Releases: versões novas\n• Os sites que você abre no navegador da importação</string>
+    <string name="about_libraries_text">Feito com bibliotecas de código aberto: Kotlin, kotlinx.coroutines e kotlinx.serialization, Jetpack Compose e Material 3, AndroidX e CameraX, Hilt, Reorderable, ZXing e PdfBox-Android (Apache 2.0); stb_vorbis, dr_mp3 e dr_wav (domínio público ou MIT).</string>
+    <string name="kw_credits">serviços bibliotecas licenças créditos services libraries licenses credits open source</string>
     <string name="about_open_source">Código disponível</string>
     <string name="about_open_source_text">O Stagebook é gratuito e qualquer um pode ver o código. Use à vontade, até em show pago, e ajude a melhorar. Só não vale copiar para fazer um app concorrente.</string>
     <string name="about_see_code">Ver o código</string>
@@ -300,7 +379,7 @@
     <string name="essential_player">Player de faixas</string>
     <string name="essential_player_detail">Backing tracks, interface de áudio USB e mixer</string>
     <string name="essential_extras">Metrônomo e extras dos acordes</string>
-    <string name="essential_extras_detail">Som e detalhes do acorde, metrônomo, Now Playing e MIDI das músicas</string>
+    <string name="essential_extras_detail">Som e detalhes do acorde, metrônomo, Now Playing, tela externa e MIDI das músicas</string>
     <string name="essential_banner">Modo essencial ligado</string>
     <string name="essential_alert_title">Modo essencial ligado</string>
     <string name="essential_alert_text">Ficam a letra, a cifra, os diagramas dos acordes e o pedal. O que está desligado:</string>
@@ -448,6 +527,21 @@
     <string name="settings_chord_play_both">Os dois</string>
     <string name="announce_title">Avisar a música tocando</string>
     <string name="announce_switch">Enviar a música atual para OBS e outros</string>
+    <string name="external_title">Tela externa</string>
+    <string name="external_help">Com uma TV ou projetor ligado, por cabo ou sem fio, a música aparece lá na mesma página do palco.</string>
+    <string name="external_show">Na tela externa</string>
+    <string name="external_off">Nada (o Android espelha o tablet)</string>
+    <string name="external_lyrics">Só letra</string>
+    <string name="external_chords">Letra e cifra</string>
+    <string name="external_pdf">Letra, cifra e PDF</string>
+    <string name="external_detail">Música em PDF: em Letra, cifra e PDF aparecem as páginas. Nas outras opções aparece a letra guardada na música, ou o nome se ela não tiver.</string>
+    <string name="external_idle">Com o palco fechado</string>
+    <string name="external_idle_logo">Logo do Stagebook</string>
+    <string name="external_idle_black">Tela preta</string>
+    <string name="external_idle_image">Minha imagem</string>
+    <string name="external_image_change">Trocar a imagem</string>
+    <string name="external_image_refused">Esse arquivo não é uma imagem, ou passa de 20 MB.</string>
+    <string name="kw_external">tela externa tv projetor hdmi espelhar external screen tv projector hdmi mirror cast</string>
     <string name="announce_help">Quando a música muda, o palco avisa programas como OBS e Resolume o que está tocando, com artista, tom e BPM. A letra nunca vai.</string>
     <string name="metro_shown">Mostrar no palco</string>
     <string name="metro_title">Metrônomo</string>
@@ -602,7 +696,7 @@
     <string name="settings_midi_out_help">As músicas podem enviar MIDI quando aparecem no palco e quando você sai delas, para trocar um preset ou uma cena. Escolha aqui para onde vai. Um aparelho Bluetooth aparece na lista depois de conectado em Conectar pedal ou aparelho MIDI. Mesa ou placa de som na USB não aparece, porque abrir o MIDI dela tiraria a interface de áudio do player.</string>
     <string name="settings_midi_out_device">Enviar para</string>
     <string name="settings_midi_out_none">Nenhum lugar</string>
-    <string name="settings_midi_out_find_bt">Não achou o seu aparelho Bluetooth? Conecte-o em Conectar pedal ou aparelho MIDI.</string>
+    <string name="settings_midi_out_find_bt">Não achou o seu aparelho Bluetooth? Conecte-o em %1$s.</string>
     <string name="settings_midi_out_away">%1$s, desconectado</string>
     <string name="settings_midi_usb_help">Desligado, o Stagebook não usa o USB e deixa ele livre para uma interface de áudio.</string>
     <string name="settings_midi_scanning">Procurando…</string>
@@ -846,6 +940,8 @@
         <item quantity="many">Mandar para a banda (%1$d aparelhos)</item>
         <item quantity="other">Mandar para a banda (%1$d aparelhos)</item>
     </plurals>
+    <string name="share_band_wifi_only">Só deste Wi-Fi</string>
+    <string name="share_band_wifi_only_hint">Nada vai pela internet: quem está neste Wi-Fi recebe agora, os outros não.</string>
     <string name="share_band_hint">Quem está neste Wi-Fi recebe na hora. Os outros recebem pela internet quando abrirem o app, em até 12 horas. Cada um confere antes de entrar.</string>
     <plurals name="share_band_sent">
         <item quantity="one">Enviado para %1$d aparelho da banda</item>
@@ -940,6 +1036,8 @@
     <string name="editor_pdf_remove">Remover PDF</string>
     <string name="editor_pdf_missing">O PDF não está neste aparelho. Anexe de novo.</string>
     <string name="editor_pdf_note">Esta música é um PDF. Não dá para editar o PDF; no palco você pode marcá-lo com o marca-texto.</string>
+    <string name="editor_pdf_as_text">Mostrar a letra no palco</string>
+    <string name="editor_pdf_as_text_detail">Esta música guardou letra ou cifra. Ligado, o palco mostra isso no lugar do PDF.</string>
     <string name="editor_pdf_ask_lyrics">Esta música já tem letra. Ela fica guardada e volta se você remover o PDF.</string>
     <string name="editor_pdf_remove_confirm">Remover o PDF desta música? O arquivo é apagado deste aparelho e a letra volta.</string>
     <plurals name="editor_pdf_facts">
@@ -1069,6 +1167,14 @@
     <string name="metro_out_together">Pela rota do Android, este aparelho manda o clique para a interface USB junto com a música.</string>
     <string name="metro_out_hint">Para escolher uma saída da interface USB, espete-a com o player ligado.</string>
     <string name="usb_via_android">Tocar pela interface através do Android</string>
+    <string name="track_ends_title">Começo e fim</string>
+    <string name="stop_fade">Fade ao parar</string>
+    <string name="stop_fade_none">Sem fade</string>
+    <string name="stop_fade_seconds">%1$s s</string>
+    <string name="stop_fade_detail">Ao parar ou pausar a faixa, o volume desce nesse tempo.</string>
+    <string name="trim_silence">Pular o silêncio do começo</string>
+    <string name="trim_silence_detail">A faixa começa no primeiro som.</string>
+    <string name="kw_fade">fade parar silêncio começo fade stop silence start trim</string>
     <string name="usb_via_android_detail">Use só se a interface conectar e o som não sair ou sair picotado. O som passa pelo áudio do Android, que pode engasgar.</string>
     <string name="usb_route_auto_android">O app ligou esta chave para %1$s, porque o som falhou várias vezes no motor do Stagebook.</string>
     <string name="usb_route_auto_engine">O app desligou esta chave para %1$s, porque o som não saiu pelo Android.</string>
@@ -1161,10 +1267,10 @@
         <item quantity="other">Mais %d setlists vieram juntos e ficaram em Recebidos da banda.</item>
     </plurals>
     <string name="share_internet_limit">Muita coisa para enviar pela internet de uma vez. Mande em mais de uma vez.</string>
-    <string name="share_internet_pdf_limit">Os PDFs precisam de %1$d mensagens de 4 KB, e o servidor da internet aceita %2$d por envio (sobram %3$d depois das músicas). As músicas vão sem o PDF. Para enviá-lo, use a banda na mesma rede.</string>
+    <string name="share_internet_pdf_limit">Os PDFs somam %1$d MB, e pela internet vão até %2$d MB por envio (%3$d MB cada). As músicas vão sem o PDF. Para enviá-lo, use a banda na mesma rede.</string>
     <string name="share_band_pdf_budget">Os PDFs somam %1$d MB e um envio à banda leva até %2$d MB: os que não couberem vão sem o PDF.</string>
-    <string name="share_band_pdf_note">Os PDFs vão para quem está nesta rede; um membro da banda que está longe recebe os pequenos (até 60 KB no total) e a música sem os outros.</string>
-    <string name="share_internet_pdf_fits">Os PDFs vão junto: %1$d das %2$d mensagens que o servidor aceita.</string>
+    <string name="share_band_pdf_note">Os PDFs vão para quem está nesta rede. Um membro da banda que está longe recebe pela internet, onde eles ficam só por %1$d horas.</string>
+    <string name="share_internet_pdf_fits">Os PDFs vão junto, compactados. O servidor guarda eles só por %1$d horas: quem abrir depois recebe as músicas sem o PDF.</string>
     <string name="share_internet_limit_titles">Muita coisa para enviar pela internet de uma vez. Desligue “Levar as músicas” ou mande menos setlists.</string>
     <string name="share_band_limit">Muitos setlists de uma vez. Mande em mais de uma vez.</string>
     <string name="settings_lyrics_card">Letra</string>
@@ -1292,6 +1398,18 @@
     <string name="hide_internet">Só aparece com a internet ligada</string>
     <string name="hide_scroll">Só aparece no modo Rolar</string>
     <string name="hide_pages">Só aparece no modo Virar página</string>
+    <string name="sub_songs">Músicas</string>
+    <string name="sub_import">Importar de sites</string>
+    <string name="sub_copies">Cópias</string>
+    <string name="sub_band">Tocar com a banda</string>
+    <string name="sub_broadcast">Para fora do app</string>
+    <string name="sub_android">Ajustes do Android</string>
+    <string name="sub_computer">Computador</string>
+    <string name="sub_player">Backing track</string>
+    <string name="sub_page">Página</string>
+    <string name="sub_pedal">Pedal</string>
+    <string name="sub_show">Show</string>
+    <string name="hide_external_off">Só aparece quando a tela externa mostra algo</string>
     <string name="hide_sites_chords">Só aparece com o perfil Letra e cifra</string>
     <string name="hide_sites_lyrics">Só aparece com o perfil Só letra</string>
     <string name="hide_pt">Só aparece com o app em português</string>
@@ -1306,6 +1424,7 @@
     <string name="pdf_refused_too_big">Este PDF é grande demais. O limite é %1$d MB.</string>
     <string name="pdf_refused_password">Este PDF tem senha. Salve uma cópia sem senha e tente de novo.</string>
     <string name="pdf_refused_too_many_pages">Este PDF tem páginas demais. O limite é %1$d.</string>
+    <string name="pdf_refused_expired">O PDF não chegou. O servidor da internet guarda ele só por %1$d horas: peça para enviar de novo.</string>
     <string name="pdf_refused_unreadable">Não foi possível abrir este PDF. Ele pode estar danificado.</string>
     <string name="set_discard">Descartar</string>
     <string name="set_save_question">Salvar as alterações em “%1$s”?</string>

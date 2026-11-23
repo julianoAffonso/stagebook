@@ -1,5 +1,6 @@
 package br.app.stagebook.ui.editor
 
+import androidx.compose.ui.platform.testTag
 import br.app.stagebook.ui.components.ButtonTone
 import br.app.stagebook.ui.components.ActionButton
 import br.app.stagebook.ui.components.LocalAppMessage
@@ -151,6 +152,7 @@ fun SongEditorRoute(
         onTranspose = viewModel::transpose,
         onCapo = viewModel::setCapo,
         onTempo = viewModel::setTempo,
+        onDuration = viewModel::setDuration,
         look = look,
         track = viewModel.track.takeIf { look.playerMode },
         trackName = viewModel.trackName,
@@ -158,8 +160,10 @@ fun SongEditorRoute(
         onRemoveTrack = viewModel::removeTrack,
         pdf = viewModel.pdfInfo,
         onPdfInvert = viewModel::setPdfInvert,
+        onPdfText = viewModel::showPdfText,
         onSetPdfCrop = viewModel::setPdfCrop,
         onClearPdfCrop = viewModel::clearPdfCrop,
+        onTogglePdfPage = viewModel::togglePdfPage,
         onPickPdf = { pdfPicker.launch(br.app.stagebook.data.PdfStore.MIME) },
         onRemovePdf = viewModel::removePdf,
         allTags = remember { viewModel.allTags() },
@@ -194,6 +198,7 @@ fun SongEditorScreen(
     onCapo: (Int) -> Unit = {},
     look: Look = Look(),
     onTempo: (String) -> Unit = {},
+    onDuration: (String) -> Unit = {},
     track: String? = null,   // the song's backing track file ("" = none); null = can't pick here (new song or player off)
     onPickTrack: () -> Unit = {},
     onRemoveTrack: () -> Unit = {},
@@ -202,8 +207,10 @@ fun SongEditorScreen(
     onPickPdf: () -> Unit = {},
     onRemovePdf: () -> Unit = {},
     onPdfInvert: (Boolean) -> Unit = {},
+    onPdfText: (Boolean) -> Unit = {},   // the stage shows the kept lyrics in place of the PDF
     onSetPdfCrop: (br.app.stagebook.data.model.PdfCrop) -> Unit = {},
     onClearPdfCrop: (Int) -> Unit = {},
+    onTogglePdfPage: (Int) -> Unit = {},
     allTags: List<String> = emptyList(),
     onTags: (add: List<String>, remove: List<String>) -> Unit = { _, _ -> },
     midiOn: Boolean = false,   // the song's MIDI: a stage extra (essential mode hides it, T19) on a device with MIDI
@@ -222,6 +229,7 @@ fun SongEditorScreen(
     var askingPdf by rememberSaveable { mutableStateOf(false) }
     var removingPdf by rememberSaveable { mutableStateOf(false) }
     var cropping by rememberSaveable { mutableStateOf(false) }
+    var choosingPages by rememberSaveable { mutableStateOf(false) }
     val hasLyrics = remember(uiState.text) { Chords.hideMeta(uiState.text).isNotBlank() }
     val attachPdf = { if (pdf == null && hasLyrics) askingPdf = true else onPickPdf() }
     var previewing by rememberSaveable { mutableStateOf(false) }   // the song as it looks on stage
@@ -401,13 +409,13 @@ fun SongEditorScreen(
                 Crossfade(tab, Modifier.weight(1f).fillMaxWidth(), label = "editor tab") { current ->
                     when (current) {
                         EditorTab.DATA -> DataPane(
-                            uiState, look, onTitle, onAuthor, onYear, onTempo, onTranspose, onCapo,
+                            uiState, look, onTitle, onAuthor, onYear, onTempo, onDuration, onTranspose, onCapo,
                             track, trackName, onPickTrack, onRemoveTrack, midiOn, { midiOpen = true }, { tagging = true },
                             pdf, attachPdf, { removingPdf = true },
                         )
                         // a PDF song has no lyrics field: the card says what it is and offers to replace or remove it
                         EditorTab.LYRICS -> if (pdf != null) Box(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(Spacing.m), contentAlignment = Alignment.TopCenter) {
-                            PdfSongCard(pdf, onReplace = onPickPdf, onRemove = { removingPdf = true }, modifier = Modifier.widthIn(max = DATA_MAX_WIDTH), onInvert = onPdfInvert, onCrop = { cropping = true })
+                            PdfSongCard(pdf, onReplace = onPickPdf, onRemove = { removingPdf = true }, modifier = Modifier.widthIn(max = DATA_MAX_WIDTH), onInvert = onPdfInvert, onCrop = { cropping = true }, onPages = { choosingPages = true }, onAsText = onPdfText)
                         } else Column(Modifier.fillMaxSize()) {
                             // one line of one-tap buttons: the highlighter, the sections and the chords (the lyrics have the rest)
                             ToolStrip(
@@ -467,6 +475,7 @@ fun SongEditorScreen(
         br.app.stagebook.ui.components.TagsDialog(options, initial, onTags) { tagging = false }
     }
     if (cropping && pdf != null) PdfCropDialog(pdf, onSetPdfCrop, onClearPdfCrop) { cropping = false }
+    if (choosingPages && pdf != null) PdfPagesDialog(pdf, onTogglePdfPage) { choosingPages = false }
     if (askingPdf) {
         ConfirmDialog(stringResource(R.string.editor_pdf_ask_lyrics), stringResource(R.string.editor_pdf_attach), { onPickPdf() }, { askingPdf = false }, destructive = false)
     }
@@ -541,6 +550,7 @@ private fun DataPane(
     onAuthor: (String) -> Unit,
     onYear: (String) -> Unit,
     onTempo: (String) -> Unit,
+    onDuration: (String) -> Unit,
     onTranspose: (Int) -> Unit,
     onCapo: (Int) -> Unit,
     track: String?,
@@ -561,6 +571,7 @@ private fun DataPane(
             Row(horizontalArrangement = Arrangement.spacedBy(Spacing.s)) {
                 YearField(uiState, onYear, Modifier.weight(1f))
                 TempoField(uiState, onTempo, Modifier.weight(1f))
+                DurationField(uiState, onDuration, Modifier.weight(1f))
             }
             // key and capo (chords profile; keyboard has no capo, as before)
             if (look.chords) {
@@ -757,6 +768,23 @@ private fun TempoField(uiState: SongEditorUiState, onTempo: (String) -> Unit, mo
     )
 }
 
+/** The song's length (`{duration}`, user 22/11): typed as digits, shown as m:ss; the setlist adds the songs up. */
+@Composable
+private fun DurationField(uiState: SongEditorUiState, onDuration: (String) -> Unit, modifier: Modifier) {
+    OutlinedTextField(
+        value = uiState.meta.durationText,
+        onValueChange = onDuration,
+        label = { Text(stringResource(R.string.editor_duration)) },
+        placeholder = { Text("3:45") },
+        singleLine = true,
+        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+        shape = MaterialTheme.shapes.small,
+        modifier = modifier.testTag(DURATION_FIELD_TAG),
+    )
+}
+
+internal const val DURATION_FIELD_TAG = "durationField"
+
 internal object ToolStripProbe { @Volatile var drawn = 0 }   // tests: how many times the strip was composed
 
 /**
@@ -827,19 +855,12 @@ private fun EditorPreview(text: String, look: Look) {
     val chordLook = ChordLook(look.chords, look.chordScale, Color(look.chordColor))
     val lines = remember(text, look, names) { stageLines(Chords.fromChordsOverLyrics(text), names, Color(look.sectionColor), look.showSections, chordLook, look.sectionScale, Color(look.highlightColor), look.sectionFont.family).map { it.text } }
     val font = minOf(look.fontSp, 28f)
-    val style = TextStyle(
-        color = Color(look.fg),
-        fontSize = font.sp,
-        lineHeight = (font * 1.25f).sp,
-        fontWeight = if (look.bold) FontWeight.Bold else FontWeight.Normal,
-        fontFamily = look.font.family,
-        lineHeightStyle = LineHeightStyle(LineHeightStyle.Alignment.Center, LineHeightStyle.Trim.None),
-    )
+    val style = br.app.stagebook.ui.stage.stageTextStyle(look, font)
     Surface(color = Color(look.bg), shape = MaterialTheme.shapes.small, modifier = Modifier.fillMaxWidth()) {
         ChordText(
             joinLines(lines),
             style = style,
-            chordStyle = style.copy(color = Color(look.chordColor), fontSize = (font * look.chordScale).sp, fontWeight = FontWeight.Bold, fontFamily = look.chordFont.family, lineHeight = TextUnit.Unspecified),
+            chordStyle = br.app.stagebook.ui.stage.stageChordStyle(style, look),
             modifier = Modifier.padding(Spacing.m),
         )
     }

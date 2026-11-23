@@ -51,6 +51,7 @@ data class SetItemUi(
     val hasTrack: Boolean = false,
     val hasPdf: Boolean = false,
     val state: SetlistShow.State = SetlistShow.State.NONE,   // where the show is (this device only)
+    val seconds: Int = 0,   // the song's length (`{duration}`), 0 = none: the blocks add them up (user, 22/11)
 )
 
 @Immutable
@@ -114,7 +115,12 @@ class SetlistDetailViewModel @Inject constructor(
     fun bandSearch(on: Boolean) = share.bandSearch(on)
 
     /** Sends the setlist (with the songs, if [withSongs]) to everyone in the band on the network now. */
-    fun sendBand(withSongs: Boolean) = share.sendBand { setlistCloud.setlistPackage(setId, withSongs) }
+    fun sendBand(withSongs: Boolean, wifiOnly: Boolean = false) = share.sendBand(wifiOnly) { setlistCloud.setlistPackage(setId, withSongs) }
+
+    // each song's key, tempo, capo and length, kept while its text is the same (read by the one flow below)
+    private val metaKept = java.util.concurrent.ConcurrentHashMap<String, Pair<String, br.app.stagebook.domain.SongMeta>>()
+    private fun metaOf(id: String, text: String): br.app.stagebook.domain.SongMeta =
+        metaKept[id]?.takeIf { it.first == text }?.second ?: Chords.meta(text).also { metaKept[id] = text to it }
 
     val uiState: StateFlow<SetlistDetailUiState> = combine(repository.loaded, repository.library, show.marks, show.breaks, conduct.role) { loaded, lib, marks, breaks, role ->
         val set = lib.setlist(setId)
@@ -127,11 +133,13 @@ class SetlistDetailViewModel @Inject constructor(
             items = set?.items.orEmpty().mapIndexed { i, id ->
                 val n = seen.merge(id, 1, Int::plus)!!
                 val song = lib.song(id)
-                val meta = Chords.meta(song?.text.orEmpty())   // one pass, not three (key, tempo and capo)
+                // one pass, not three (key, tempo and capo), and only when the song's text changed: every song turned on the
+                // stage, zoom saved or word from the leader read all the setlist's lyrics again (audit 22/11)
+                val meta = metaOf(id, song?.text.orEmpty())
                 SetItemUi(
                     if (n == 1) id else "$id#$n", id, song?.title.orEmpty(), song?.artistLine().orEmpty(), song == null,
                     songKey = meta.key, bpm = meta.tempo, capo = meta.capo,
-                    hasTrack = song?.track?.isNotEmpty() == true, hasPdf = song?.pdf?.isNotEmpty() == true, state = states[i],
+                    hasTrack = song?.track?.isNotEmpty() == true, hasPdf = song?.pdf?.isNotEmpty() == true, state = states[i], seconds = meta.duration,
                 )
             },
             breaks = set?.breaks.orEmpty(),
@@ -173,6 +181,9 @@ class SetlistDetailViewModel @Inject constructor(
         removed = index to set
         repository.removeItem(setId, index, songId)
     }
+
+    /** Several songs out in one save (the chosen ones: no "Undo", as before). */
+    fun removeMany(picks: List<Pair<Int, String>>) = repository.removeItems(setId, picks)
 
     // the setlist as it was before the last song left, for the message's "Undo"
     private var removed: Pair<Int, br.app.stagebook.data.model.Setlist>? = null

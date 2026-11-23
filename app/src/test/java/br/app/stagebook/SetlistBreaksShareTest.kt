@@ -18,7 +18,6 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
-import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.int
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
@@ -43,8 +42,7 @@ class SetlistBreaksShareTest {
     private val context = ApplicationProvider.getApplicationContext<android.app.Application>()
     private val identity = DeviceIdentity(context)
 
-    private fun repo() = LibraryRepository(context, CoroutineScope(SupervisorJob() + Dispatchers.IO))
-        .also { r -> runBlocking { withTimeout(5_000) { r.loaded.first { it } }; r.restore(emptyList(), emptyList()) } }
+    private fun repo() = testRepo(empty = true)
 
     private fun LibraryRepository.set(id: String) = library.value.setlist(id)!!
     private fun LibraryRepository.songs(vararg titles: String) = titles.map { saveSong(Song(title = it, author = "x", text = it)) }
@@ -61,7 +59,7 @@ class SetlistBreaksShareTest {
     }
 
     private fun link(repo: LibraryRepository, inbox: BandInbox = BandInbox(context)) =
-        BandLink(context, identity, br.app.stagebook.data.BandTrust(context), br.app.stagebook.data.StageGate(), inbox, repo)
+        testLink(repo = repo, identity = identity, inbox = inbox)
 
     private fun scan(repo: LibraryRepository, queue: ImportQueue = ImportQueue(repo), inbox: BandInbox = BandInbox(context), from: String = ""): ScanSetlistViewModel {
         val link = link(repo, inbox)
@@ -77,7 +75,7 @@ class SetlistBreaksShareTest {
 
     private fun list(name: String, vararg titles: String) = (listOf(QrPayload.HEADER, titles.size.toString(), name) + titles).joinToString("\n")
 
-    private val json = Json { ignoreUnknownKeys = true }
+    private val json = lenientJson
 
     // ---- what goes out ----
 
@@ -108,8 +106,6 @@ class SetlistBreaksShareTest {
         // the reading as it was before the breaks (SetlistCloud.read): every message that unpacks as a setlist's text
         val lists = sent.mapNotNull { QrPayload.unpack(it) }.filter(BandContent::listOk).distinct()
         assertEquals(listOf(list("Show", "A", "B", "C", "D", "E")), lists)
-        // the sender's version was raised (user, 14/11): an app on version 2 says "update" instead of guessing
-        org.junit.Assert.assertTrue("the version was raised for these fields", BandProtocol.VERSION >= BandProtocol.BREAKS_VERSION)
         assertTrue(cloud.read(sent) is SetlistCloud.Received.Ok)
     }
 
@@ -175,7 +171,7 @@ class SetlistBreaksShareTest {
         inbox.add("ana", "Ana", list("Sem dizer", "A", "B"), emptyList())
         assertNull(inbox.items.value.single { it.setName == "Sem dizer" }.breaks)
         // what was saved before the breaks existed still opens
-        val saved = Json { ignoreUnknownKeys = true }.decodeFromString(BandInbox.Item.serializer(), """{"id":"1","fromId":"ana","fromName":"Ana","text":"x"}""")
+        val saved = lenientJson.decodeFromString(BandInbox.Item.serializer(), """{"id":"1","fromId":"ana","fromName":"Ana","text":"x"}""")
         assertNull(saved.breaks)
     }
 

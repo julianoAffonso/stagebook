@@ -3,7 +3,7 @@ package br.app.stagebook
 import androidx.compose.foundation.layout.width
 import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.hasText
-import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithText
@@ -87,9 +87,5 @@ class MidiDialogTest {
         assertTrue("the type's name fits its field", layoutOf(kind).size.width <= fieldWidth)
     }
 
-    private fun layoutOf(node: androidx.compose.ui.test.SemanticsNodeInteraction): androidx.compose.ui.text.TextLayoutResult {
-        val layouts = ArrayList<androidx.compose.ui.text.TextLayoutResult>()
-        node.fetchSemanticsNode().config[androidx.compose.ui.semantics.SemanticsActions.GetTextLayoutResult].action!!(layouts)
-        return layouts.single()
-    }
+    private fun layoutOf(node: androidx.compose.ui.test.SemanticsNodeInteraction) = node.textLayout()
 }

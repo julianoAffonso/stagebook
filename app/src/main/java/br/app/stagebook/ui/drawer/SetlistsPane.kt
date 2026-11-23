@@ -57,16 +57,20 @@ fun SetlistsPane(
         }
     }
     NavHost(inner, startDestination = SetlistsList, enterTransition = { fadeIn() }, exitTransition = { fadeOut() }) {
-        composable<SetlistsList> { list { id, share -> inner.navigate(SetlistDetail(id, share)) } }
+        // only while the screen is in front, as the app's own navigation does: a screen fading out still takes taps, and
+        // a double tap on "back" popped the list too (the tab went blank), on a row opened two setlists (audit 22/11)
+        composable<SetlistsList> { entry -> list { id, share -> if (entry.inFront()) inner.navigate(SetlistDetail(id, share)) } }
         composable<SetlistDetail> { entry ->
             SetlistDetailRoute(
-                onBack = { inner.popBackStack() },
-                onAddSongs = { inner.navigate(PickSongs(it)) },
+                onBack = { if (entry.inFront()) inner.popBackStack<SetlistDetail>(inclusive = true) },
+                onAddSongs = { if (entry.inFront()) inner.navigate(PickSongs(it)) },
                 onPlayAt = onPlay,
                 openShare = remember { entry.toRoute<SetlistDetail>().share },
                 toList = detailToList,
             )
         }
-        composable<PickSongs> { PickSongsRoute(onDone = { inner.popBackStack() }) }
+        composable<PickSongs> { entry -> PickSongsRoute(onDone = { if (entry.inFront()) inner.popBackStack<PickSongs>(inclusive = true) }) }
     }
 }
+
+private fun androidx.navigation.NavBackStackEntry.inFront(): Boolean = lifecycle.currentState.isAtLeast(androidx.lifecycle.Lifecycle.State.RESUMED)

@@ -24,6 +24,10 @@ final class Engine {
     static native long load(String path);
     static native void play();
     static native void pause();
+    /** How long the volume takes to go down when the person pauses or stops; 0 = only the 5 ms anti-click. */
+    static native void setFadeOut(int ms);
+    /** Where the file's first sound is, in ms (over [threshold], linear), read up to [maxMs]; -1 if it didn't open. */
+    static native long leadingSilence(String path, float threshold, long maxMs);
     static native void seek(long ms);
     static native long position();
     // backing equalizer: 5 bands (80, 250, 1k, 3.5k, 10k Hz), gains in dB

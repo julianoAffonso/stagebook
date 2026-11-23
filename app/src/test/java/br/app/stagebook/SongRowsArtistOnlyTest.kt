@@ -6,7 +6,7 @@ import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
-import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
@@ -67,8 +67,7 @@ class SongRowsArtistOnlyTest {
 
     /** A library of three songs, the first with everything a row shows, all in the setlist "Show". */
     private fun library(extra: List<Song> = emptyList()): Parts {
-        val repo = LibraryRepository(context, CoroutineScope(SupervisorJob() + Dispatchers.IO))
-        runBlocking { withTimeout(5_000) { repo.loaded.first { it } } }
+        val repo = testRepo()
         val ids = listOf(
             Song(title = "Primeira", author = " Banda Fictícia ", year = "1985", text = "{key: Em}\n{tempo: 120}\n{capo: 2}\nlinha", track = "a.ogg"),
             Song(title = "Segunda", author = "Trio Imaginário", year = "1999", text = "{key: G}\nlinha"),
@@ -79,15 +78,15 @@ class SongRowsArtistOnlyTest {
         val identity = DeviceIdentity(context)
         val trust = BandTrust(context)
         val inbox = BandInbox(context)
-        val link = BandLink(context, identity, trust, StageGate(), inbox, repo)
+        val link = testLink(repo = repo, identity = identity, trust = trust, inbox = inbox)
         val cloud = SetlistCloud(repo, identity)
         val connectivity = Connectivity(context)
         val internet = BandInternet(context, cloud, trust, identity, inbox, connectivity, link)
-        val show = SetlistShowStore(context, repo, CoroutineScope(SupervisorJob() + Dispatchers.IO))
+        val show = SetlistShowStore(context, repo, testScope())
         return Parts(
             repo, ids, set,
             SongsViewModel(repo, connectivity, cloud, link, trust, internet, br.app.stagebook.data.PdfImporter(repo, br.app.stagebook.data.PdfStore(context), br.app.stagebook.data.PdfInspector())),
-            SetlistDetailViewModel(repo, SavedStateHandle(mapOf("setId" to set)), cloud, connectivity, link, trust, internet, BandConduct(link, repo, identity), show),
+            SetlistDetailViewModel(repo, SavedStateHandle(mapOf("setId" to set)), cloud, connectivity, link, trust, internet, testConduct(repo = repo, link = link, identity = identity), show),
         )
     }
 

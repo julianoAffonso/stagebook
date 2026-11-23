@@ -108,7 +108,7 @@ object Chords {
         return lines.joinToString("\n")
     }
 
-    private val meta = setOf("key", "capo", "tempo")
+    private val meta = setOf("key", "capo", "tempo", "duration")
 
     /** Song BPM (ChordPro `{tempo: 120}`); 0 = none. */
     fun tempo(text: String): Int = directive(text, "tempo")?.filter(Char::isDigit)?.toIntOrNull()?.takeIf { it in MIN_TEMPO..MAX_TEMPO } ?: 0
@@ -130,6 +130,7 @@ object Chords {
     /** The edited lyrics with the key, capo and BPM already read from the text before ([meta]). */
     fun withMeta(edited: String, from: SongMeta): String {
         var t = hideMeta(edited)
+        from.durationText.takeIf { it.isNotEmpty() }?.let { t = setDirective(t, "duration", it) }
         from.tempo.takeIf { it > 0 }?.let { t = setDirective(t, "tempo", it.toString()) }
         from.capo.takeIf { it > 0 }?.let { t = setDirective(t, "capo", it.toString()) }
         from.key.takeIf { it.isNotEmpty() }?.let { t = setDirective(t, "key", it) }
@@ -143,6 +144,7 @@ object Chords {
         var key: String? = null
         var capo: String? = null
         var tempo: String? = null
+        var duration: String? = null
         for (line in text.lineSequence()) {
             val m = directiveIn(line) ?: continue
             val value = m.groupValues[2].trim()
@@ -150,16 +152,53 @@ object Chords {
                 "key" -> if (key == null) key = value
                 "capo" -> if (capo == null) capo = value
                 "tempo" -> if (tempo == null) tempo = value
+                "duration" -> if (duration == null) duration = value
             }
-            if (key != null && capo != null && tempo != null) break
+            if (key != null && capo != null && tempo != null && duration != null) break
         }
         return SongMeta(
             key.orEmpty(),
             capo?.toIntOrNull()?.coerceIn(0, 12) ?: 0,
             tempo.orEmpty(),
             tempo?.filter(Char::isDigit)?.toIntOrNull()?.takeIf { it in MIN_TEMPO..MAX_TEMPO } ?: 0,
+            duration.orEmpty(),
+            parseDuration(duration),
         )
     }
+
+    /** The song's length in seconds (ChordPro `{duration: 3:45}`, user 22/11); 0 = none. */
+    fun duration(text: String): Int = parseDuration(directive(text, "duration"))
+
+    /** "3:45", "1:02:30" or plain seconds ("225") → seconds; anything else, or over [MAX_DURATION_S], is 0 (none). */
+    fun parseDuration(value: String?): Int {
+        val v = value?.trim().orEmpty()
+        if (v.isEmpty()) return 0
+        val parts = v.split(':')
+        if (parts.size > 3 || parts.any { p -> p.isEmpty() || !p.all(Char::isDigit) }) return 0
+        // too many digits for a number is no duration: toInt threw, and every list reading the song fell with it (audit 22/11)
+        val n = parts.map { it.toIntOrNull() ?: return 0 }
+        if (n.drop(1).any { it >= 60 }) return 0
+        val s = n.fold(0) { acc, x -> acc * 60 + x }
+        return s.takeIf { it in 1..MAX_DURATION_S } ?: 0
+    }
+
+    /** Seconds as the field shows them: "3:45", "1:02:30". */
+    fun formatDuration(seconds: Int): String {
+        val h = seconds / 3600
+        val m = seconds / 60 % 60
+        val s = seconds % 60
+        return if (h > 0) "%d:%02d:%02d".format(h, m, s) else "%d:%02d".format(m, s)
+    }
+
+    /** What is typed in the field, digits only, as m:ss ("345" → "3:45", "45" → "0:45"): the keyboard has no colon. */
+    fun durationFromDigits(digits: String): String {
+        val d = digits.filter(Char::isDigit).trimStart('0').take(4)
+        if (d.isEmpty()) return ""
+        val padded = d.padStart(3, '0')
+        return padded.dropLast(2).trimStart('0').ifEmpty { "0" } + ":" + padded.takeLast(2)
+    }
+
+    const val MAX_DURATION_S = 3 * 3600
 
     // chords the user took off the stage chord list (ChordPro extension: x_ directives belong to apps)
     private const val HIDE = "x_hide_chords"
@@ -236,7 +275,7 @@ object Chords {
             // dropped the frets from the song; audit 03/11)
             val lyric = next != null && next.isNotBlank() && !isChordLine(next) && !isDirective(next) && Sections.detect(next) == null &&
                 positions(line).none { (_, t) -> shapeToken.matches(t) }
-            out += if (lyric) merge(line, next!!) else chordsOnly(line)
+            out += if (lyric) merge(line, next) else chordsOnly(line)
             i += if (lyric) 2 else 1
         }
         return out.joinToString("\n")
@@ -462,4 +501,4 @@ object Chords {
 }
 
 /** A song's key, capo and BPM ([Chords.meta]); [tempoText] is the directive as written (the field shows it). */
-data class SongMeta(val key: String = "", val capo: Int = 0, val tempoText: String = "", val tempo: Int = 0)
+data class SongMeta(val key: String = "", val capo: Int = 0, val tempoText: String = "", val tempo: Int = 0, val durationText: String = "", val duration: Int = 0)
