@@ -454,7 +454,7 @@ class StageViewModel @Inject constructor(
             loading = !loaded,
             songs = ids.map { id ->
                 val s = lib.song(id)
-                StageSong(s?.title.orEmpty(), s?.subtitle().orEmpty(), s?.text.orEmpty(), s == null, id, s?.zoom ?: 1f, s?.track.orEmpty(), s?.mix, if (s?.audioLost == true) s.trackName else "", s?.zooms.orEmpty(), artist = s?.artistLine().orEmpty(), pdf = s?.takeUnless { it.pdfText }?.pdf.orEmpty(), pdfMarks = s?.pdfMarks.orEmpty(), pdfInvert = s?.pdfInvert, pdfCrops = s?.pdfCrops.orEmpty(), pdfHidden = s?.pdfHidden.orEmpty(), pdfPage = s?.pdfPage ?: 0, pdfView = s?.let { br.app.stagebook.domain.PdfView(it.pdfScale, it.pdfPanX, it.pdfPanY) } ?: br.app.stagebook.domain.PdfView())
+                StageSong(s?.title.orEmpty(), s?.subtitle().orEmpty(), s?.text.orEmpty(), s == null, id, s?.zoom ?: 1f, s?.track.orEmpty(), s?.mix, if (s?.audioLost == true) s.trackName else "", s?.zooms.orEmpty(), artist = s?.artistLine().orEmpty(), pdf = s?.takeUnless { it.pdfAsText }?.pdf.orEmpty(), pdfMarks = s?.pdfMarks.orEmpty(), pdfInvert = s?.pdfInvert, pdfCrops = s?.pdfCrops.orEmpty(), pdfHidden = s?.pdfHidden.orEmpty(), pdfPage = s?.pdfPage ?: 0, pdfView = s?.let { br.app.stagebook.domain.PdfView(it.pdfScale, it.pdfPanX, it.pdfPanY) } ?: br.app.stagebook.domain.PdfView())
             },
             look = lib.look,
             breaks = set?.breaks.orEmpty(),

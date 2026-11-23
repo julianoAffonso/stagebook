@@ -27,17 +27,20 @@ object MirrorLines {
     fun pdfPart(count: Int, blank: (Int) -> Boolean, pages: Int, page: Int): IntRange {
         if (count <= 0) return IntRange.EMPTY
         val n = pages.coerceIn(1, count)
-        val p = page.coerceIn(0, n - 1)
-        val reach = (count / n / 2).coerceAtLeast(0)
-        fun cut(k: Int): Int {   // where part k starts
-            if (k <= 0) return 0
-            if (k >= n) return count
+        // more pages than lines: the pages share the parts in order, in place of all the extra ones showing the last
+        val p = (if (pages > n) page.toLong() * n / pages else page.toLong()).toInt().coerceIn(0, n - 1)
+        val reach = count / n / 2
+        // where each part starts: near a blank line when there is one, and always after the part before (two cuts on
+        // the same blank line left a page with nothing, audit 22/11)
+        val starts = IntArray(n + 1)
+        starts[n] = count
+        for (k in 1 until n) {
             val at = k * count / n
-            val near = (0..reach).asSequence().flatMap { d -> sequenceOf(at - d, at + d) }.firstOrNull { it in 1 until count && blank(it) }
-            return near?.plus(1)?.coerceAtMost(count) ?: at   // the part starts after the blank line
+            val near = (0..reach).asSequence().flatMap { d -> sequenceOf(at - d, at + d) }.firstOrNull { it in 1 until count && blank(it) }?.plus(1)
+            val least = starts[k - 1] + 1          // the part before keeps a line
+            val most = count - (n - k)             // and every part after gets one
+            starts[k] = (near?.takeIf { it in least..most } ?: at).coerceIn(least, most)
         }
-        val from = cut(p)
-        val to = maxOf(from, cut(p + 1))
-        return from until to
+        return starts[p] until starts[p + 1]
     }
 }

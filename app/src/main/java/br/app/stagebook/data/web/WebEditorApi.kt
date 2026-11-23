@@ -463,7 +463,7 @@ class WebEditorApi(
         // the hidden pages: real pages of this PDF, and never all of them (one always shows on the stage)
         val pages = pdfs()?.file(song.pdf)?.takeIf { it.isFile }?.let { (inspector.check(it) as? br.app.stagebook.data.PdfCheck.Ok)?.pages } ?: 0
         val hidden = v.hidden?.filter { it in 0 until pages }?.distinct()?.sorted()?.takeIf { it.size < pages }
-        repository.updateSong(id) { it.copy(pdfInvert = v.invert ?: it.pdfInvert, pdfCrops = crops ?: it.pdfCrops, pdfHidden = hidden ?: it.pdfHidden, pdfText = v.text ?: it.pdfText) }
+        repository.updateSong(id) { it.copy(pdfInvert = v.invert ?: it.pdfInvert, pdfCrops = crops ?: it.pdfCrops, pdfHidden = hidden ?: it.pdfHidden, pdfText = (v.text ?: it.pdfText) && br.app.stagebook.domain.KeptLyrics.has(it.text)) }
         val now = repository.song(id) ?: return HttpResponse.status(404)
         return ok(json.encodeToString(PdfView(now.pdfInvert ?: repository.library.value.look.pdfInvert, now.pdfCrops, now.pdfHidden, now.pdfText)))
     }

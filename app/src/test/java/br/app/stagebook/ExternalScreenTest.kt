@@ -83,10 +83,17 @@ class ExternalScreenTest {
         assertEquals((0 until 10).toList(), parts.flatMap { it.toList() })
         // the cuts fall right after the blank lines: each page starts a verse
         assertEquals(listOf("a", "d", "g"), parts.filter { !it.isEmpty() }.map { lines[it.first] })
-        // more pages than lines: every line still shows, and the pages past the end keep the last part (never an empty TV)
+        // more pages than lines: every line still shows, in order, and no page is left empty
         val many = (0 until 20).map { MirrorLines.pdfPart(10, { false }, 20, it) }
         assertEquals((0 until 10).toList(), many.flatMap { it.toList() }.distinct())
         assertTrue(many.none { it.isEmpty() })
+        assertEquals(many.map { it.first }, many.map { it.first }.sorted())
+        // one blank line for two cuts (audit 22/11): no page with nothing, for any size and page count
+        for (count in 1..40) for (pages in 1..12) for (blankAt in 0 until count) {
+            val parts = (0 until minOf(pages, count)).map { MirrorLines.pdfPart(count, { it == blankAt }, minOf(pages, count), it) }
+            assertTrue("count=$count pages=$pages blank=$blankAt: $parts", parts.none { it.isEmpty() })
+            assertEquals((0 until count).toList(), parts.flatMap { it.toList() })
+        }
         assertEquals(0..9, MirrorLines.pdfPart(10, { false }, 1, 0))
     }
 

@@ -69,6 +69,12 @@ data class Song(
     // the stage shows the lyrics and chords kept in the song instead of its PDF (user, 22/11); goes with the PDF
     val pdfText: Boolean = false,
 ) {
+    /**
+     * The stage shows the kept lyrics in place of the PDF: asked for ([pdfText]) and with lyrics to show. Read here, not
+     * the flag alone: a text emptied later (the editor on the computer, the MCP) left the stage with nothing (audit 22/11).
+     */
+    val pdfAsText: Boolean get() = pdfText && br.app.stagebook.domain.KeptLyrics.has(text)
+
     /** The audio didn't come with the song (a backup without the tracks, Android's own copy): only its name is here. */
     val audioLost: Boolean get() = track.isEmpty() && trackName.isNotEmpty()
 

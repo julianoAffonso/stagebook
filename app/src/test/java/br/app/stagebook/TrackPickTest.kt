@@ -51,4 +51,27 @@ class TrackPickTest {
         assertEquals("Acima do Sol", TrackPick.baseTitle("Acima do Sol Ao Vivo"))
         assertEquals("Wonderwall", TrackPick.baseTitle("Wonderwall - Remastered"))
     }
+
+    // audit 22/11: the first version compared the pieces of the names by "contains"
+    @Test fun `artists that only share a name, or one inside the other, are not the same`() {
+        assertFalse(TrackPick.sameArtist("Henrique & Juliano", "Henrique & Diego"))
+        assertFalse(TrackPick.sameArtist("Hugo & Guilherme", "Guilherme & Santiago"))
+        assertFalse(TrackPick.sameArtist("Jorge & Mateus", "Matheus & Kauan"))
+        assertFalse(TrackPick.sameArtist("Asia", "Sia"))
+        assertFalse(TrackPick.sameArtist("Shakira", "Ira"))
+        assertFalse(TrackPick.sameArtist("Michael Jackson", "AC/DC"))
+        assertFalse(TrackPick.sameArtist("Tones and I", "Iron Maiden"))
+        assertTrue(TrackPick.sameArtist("AC/DC", "AC/DC"))
+        assertTrue(TrackPick.sameArtist("Beatles", "The Beatles"))
+        assertTrue(TrackPick.sameArtist("Paralamas do Sucesso", "Os Paralamas do Sucesso"))
+        assertTrue(TrackPick.sameArtist("Ira!", "Ira! e Pitty"))
+    }
+
+    @Test fun `a part of a song is not another part, and with no artist only the very same title counts`() {
+        val wall = listOf(Result(1, "Another Brick in the Wall (Part 1)", "Pink Floyd"), Result(2, "Another Brick in the Wall (Part 2)", "Pink Floyd"))
+        assertEquals(2L, TrackPick.best(wall, "Another Brick In The Wall (Part 2)", "Pink Floyd"))
+        assertEquals("Shine On You Crazy Diamond (Pts. 6-9)", TrackPick.baseTitle("Shine On You Crazy Diamond (Pts. 6-9) (Remastered)"))
+        assertNull(TrackPick.best(listOf(Result(1, "Hurt (Live)", "Someone")), "Hurt", ""))
+        assertEquals(1L, TrackPick.best(listOf(Result(1, "Hurt", "Someone")), "Hurt", ""))
+    }
 }

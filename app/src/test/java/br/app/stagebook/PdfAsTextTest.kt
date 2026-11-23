@@ -75,6 +75,9 @@ class PdfAsTextTest {
         val again = testStage(context, repo, SavedStateHandle(mapOf("songId" to id, "start" to 0)))
         assertEquals("p.pdf", withTimeout(5_000) { again.uiState.first { it.songs.isNotEmpty() && !it.loading } }.songs.single().pdf)
         assertFalse(repo.song(id)!!.withoutPdf().pdfText)
+        // the switch on and the lyrics gone: the stage shows the PDF, never nothing
+        assertFalse(Song(title = "x", pdf = "p.pdf", pdfText = true, text = "{key: G}").pdfAsText)
+        assertTrue(Song(title = "x", pdf = "p.pdf", pdfText = true, text = "[G]La").pdfAsText)
     }
 
     @Test fun `the editor on the computer has the same switch, offered and kept the same way`() {
@@ -91,5 +94,10 @@ class PdfAsTextTest {
         // the invert switch alone leaves it as it was
         call("PUT", "/api/songs/$id/pdf-view", """{"invert":true}""")
         assertTrue(repo.song(id)!!.pdfText)
+        // a song with nothing kept can't have it turned on from the computer
+        val bare = repo.saveSong(Song(title = "Só PDF", text = ""))
+        repo.updateSong(bare) { it.copy(pdf = "q.pdf", pdfName = "q.pdf") }
+        call("PUT", "/api/songs/$bare/pdf-view", """{"text":true}""")
+        assertFalse(repo.song(bare)!!.pdfText)
     }
 }
