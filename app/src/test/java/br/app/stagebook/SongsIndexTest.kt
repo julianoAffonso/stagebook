@@ -11,6 +11,11 @@ import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.onAllNodesWithTag
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.width
+import androidx.compose.ui.unit.dp
+import br.app.stagebook.ui.components.LETTER_INDEX_TAG
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTouchInput
@@ -199,6 +204,31 @@ class SongsIndexTest {
         assertTrue("letter row ${box.height / dp} dp", box.height / dp >= 23f)
         val text = compose.onNode(hasAnyAncestor(hasTestTag("letter_index_B")), useUnmergedTree = true).fetchSemanticsNode().boundsInRoot
         assertTrue("letter ${text.height / dp} dp tall", text.height / dp >= 18f)
+    }
+
+    @Test fun `with little height the index draws fewer letters, none over another, and a finger still reaches the last`() {
+        val letters = ('A'..'Z').map { it.toString() }
+        val picked = mutableListOf<Int>()
+        compose.setContent {
+            StagebookTheme {
+                // the list with the keyboard open on a tablet: about 250 dp for 26 letters
+                androidx.compose.foundation.layout.Box(androidx.compose.ui.Modifier.height(250.dp).width(60.dp)) {
+                    br.app.stagebook.ui.components.LetterIndex(letters, shown = true, onLetter = { picked += it }, onHeld = {})
+                }
+            }
+        }
+        val drawn = letters.mapNotNull { l ->
+            compose.onAllNodesWithTag(LETTER_INDEX_TAG + "_" + l).fetchSemanticsNodes().firstOrNull()?.let { l to it.boundsInRoot }
+        }
+        assertTrue("every letter was squeezed in: ${drawn.size}", drawn.size in 2..13)
+        assertEquals("A", drawn.first().first)
+        val density = compose.density.density
+        // (the last one may stand for fewer letters, and be a little shorter)
+        drawn.dropLast(1).forEach { (l, box) -> assertTrue("$l is ${box.height / density} dp tall", box.height / density >= 20f - 0.5f) }
+        drawn.zipWithNext().forEach { (a, b) -> assertTrue("${a.first} runs into ${b.first}", a.second.bottom <= b.second.top + 0.5f) }
+        // the bottom of the column is still the last letter
+        compose.onNodeWithTag(LETTER_INDEX_TAG).performTouchInput { down(androidx.compose.ui.geometry.Offset(centerX, height - 2f)); up() }
+        assertEquals(letters.lastIndex, picked.last())
     }
 
     @Test fun `the groups on screen come from the first and last items in view`() {
