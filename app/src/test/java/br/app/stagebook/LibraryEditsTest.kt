@@ -144,16 +144,20 @@ class LibraryEditsTest {
         val one = repo.createSetlist("Um").also { repo.addToSetlist(it, ids) }
         val two = repo.createSetlist("Dois")
         val three = repo.createSetlist("Três")
-        var changes = 0
-        val watch = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch { repo.library.collect { changes++ } }
-        awaitTrue { changes > 0 }
-        val before = changes
+        // counted from another thread: an atomic count, read only once the watcher has caught up
+        val changes = java.util.concurrent.atomic.AtomicInteger()
+        val watch = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch { repo.library.collect { changes.incrementAndGet() } }
+        awaitTrue { changes.get() > 0 }
+        kotlinx.coroutines.delay(200)   // what the set-up above wrote has all arrived
+        val before = changes.get()
+        // each step waits for the watcher to see it: on a slow machine two changes arrived as one, and the count said 1
         repo.removeItems(one, listOf(0 to ids[0], 2 to ids[2], 3 to "not this one"))
-        awaitTrue { repo.library.value.setlist(one)!!.items.size == 2 }
+        awaitTrue { repo.library.value.setlist(one)!!.items.size == 2 && changes.get() == before + 1 }
         org.junit.Assert.assertEquals(listOf(ids[1], ids[3]), repo.library.value.setlist(one)!!.items)
         repo.deleteSetlists(listOf(two, three))
-        awaitTrue { repo.library.value.sets.size == 1 }
+        awaitTrue { repo.library.value.sets.size == 1 && changes.get() == before + 2 }
+        kotlinx.coroutines.delay(200)   // a write per item would still be arriving
         watch.cancel()
-        org.junit.Assert.assertEquals("two changes, not one per item", 2, changes - before)
+        org.junit.Assert.assertEquals("two changes, not one per item", 2, changes.get() - before)
     }
 }

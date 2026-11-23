@@ -383,7 +383,9 @@ class ConductMissingSongsTest {
         assertEquals(id, (b.follower.role.value as Role.Following).songId)
         assertFalse((b.strip() as ConductUi.Following).missingHere)
         assertTrue("nothing to review", b.inbox.items.value.isEmpty())
-        // the other one sent isn't the song on stage: it enters with a short notice
+        // the other one sent isn't the song on stage: it enters with a short notice (said after the stage opens: waited
+        // for, it failed on a slow runner, 23/11)
+        await { b.notices.isNotEmpty() }
         assertEquals(listOf<Notice>(Notice.Arrived("Terceira", "Voz")), b.notices.toList())
         // the leader asks again who lacks what: the stage isn't opened twice
         await { "f" !in b.lackers() }
