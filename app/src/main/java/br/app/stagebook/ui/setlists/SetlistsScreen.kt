@@ -243,18 +243,11 @@ fun SetlistsScreen(
                 }
             }
             // at the bottom, as SongbookPro: the + (a new setlist, then the ways to bring one in) and the checklist for the boxes
-            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            br.app.stagebook.ui.components.ListBottomBar(selecting, stringResource(R.string.select_sets), { pickMode = !pickMode; if (!pickMode) selected = emptyList() }) {
                 br.app.stagebook.ui.share.AddMenuButton(
                     online, onScan, onReceiveCode, onNew = { creating = true }, newLabel = R.string.sets_new, received = received,
                     onReceived = onReceived, onSync = onSync, internetOn = internetOn, localNet = localNet,
                 )
-                androidx.compose.foundation.layout.Spacer(Modifier.weight(1f))
-                IconButton(onClick = { pickMode = !pickMode; if (!pickMode) selected = emptyList() }) {
-                    Icon(
-                        AppIcons.Checklist, stringResource(R.string.select_sets),
-                        tint = if (selecting) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
-                    )
-                }
             }
         }
     }

@@ -312,18 +312,11 @@ fun SongsScreen(
                 }
             }
             // at the bottom, as SongbookPro: the + with what is new (a song, the imports) and the checklist that turns the boxes on
-            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            br.app.stagebook.ui.components.ListBottomBar(selecting, stringResource(R.string.select_mode), { pickMode = !pickMode; if (!pickMode) selected = emptyList() }) {
                 br.app.stagebook.ui.share.AddMenuButton(
                     online, onScan, onReceiveCode, onNew = onNewSong, onPdfs = onImportPdfs, onPdfSites = onImportPdfSites, onSites = onImport, received = received, onReceived = onReceived,
                     onSync = onSync, internetOn = internetOn, localNet = localNet,
                 )
-                androidx.compose.foundation.layout.Spacer(Modifier.weight(1f))
-                androidx.compose.material3.IconButton(onClick = { pickMode = !pickMode; if (!pickMode) selected = emptyList() }) {
-                    Icon(
-                        AppIcons.Checklist, stringResource(R.string.select_mode),
-                        tint = if (selecting) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
-                    )
-                }
             }
         }
     }
@@ -361,15 +354,17 @@ fun SongsScreen(
             { deletingMany = false },
         )
     }
+    // what adding the chosen songs to a setlist ended in, said the same way from both windows
+    fun added(r: AddResult) = when (r) {
+        is AddResult.Added -> { message.show(addedMessage(r)); selected = emptyList() }
+        AddResult.Limit -> limit = true
+        AddResult.Gone -> message.show(res.getString(R.string.songs_set_gone))
+    }
     if (addingToSet) {
         SetPickDialog(uiState.sets, onPick = { id ->
             addingToSet = false
             if (id == null) naming = true
-            else when (val r = onAddToSetlist(selected, id, "")) {
-                is AddResult.Added -> { message.show(addedMessage(r)); selected = emptyList() }
-                AddResult.Limit -> limit = true
-                AddResult.Gone -> message.show(res.getString(R.string.songs_set_gone))
-            }
+            else added(onAddToSetlist(selected, id, ""))
         }, onDismiss = { addingToSet = false })
     }
     if (naming) {
@@ -378,11 +373,7 @@ fun SongsScreen(
             initial = "",
             placeholder = stringResource(R.string.sets_name_hint),
             onConfirm = { name ->
-                when (val r = onAddToSetlist(selected, null, name)) {
-                    is AddResult.Added -> { message.show(addedMessage(r)); selected = emptyList() }
-                    AddResult.Limit -> limit = true
-                    AddResult.Gone -> message.show(res.getString(R.string.songs_set_gone))
-                }
+                added(onAddToSetlist(selected, null, name))
             },
             onDismiss = { naming = false },
         )

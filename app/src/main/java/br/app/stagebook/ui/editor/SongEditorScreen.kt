@@ -855,19 +855,12 @@ private fun EditorPreview(text: String, look: Look) {
     val chordLook = ChordLook(look.chords, look.chordScale, Color(look.chordColor))
     val lines = remember(text, look, names) { stageLines(Chords.fromChordsOverLyrics(text), names, Color(look.sectionColor), look.showSections, chordLook, look.sectionScale, Color(look.highlightColor), look.sectionFont.family).map { it.text } }
     val font = minOf(look.fontSp, 28f)
-    val style = TextStyle(
-        color = Color(look.fg),
-        fontSize = font.sp,
-        lineHeight = (font * 1.25f).sp,
-        fontWeight = if (look.bold) FontWeight.Bold else FontWeight.Normal,
-        fontFamily = look.font.family,
-        lineHeightStyle = LineHeightStyle(LineHeightStyle.Alignment.Center, LineHeightStyle.Trim.None),
-    )
+    val style = br.app.stagebook.ui.stage.stageTextStyle(look, font)
     Surface(color = Color(look.bg), shape = MaterialTheme.shapes.small, modifier = Modifier.fillMaxWidth()) {
         ChordText(
             joinLines(lines),
             style = style,
-            chordStyle = style.copy(color = Color(look.chordColor), fontSize = (font * look.chordScale).sp, fontWeight = FontWeight.Bold, fontFamily = look.chordFont.family, lineHeight = TextUnit.Unspecified),
+            chordStyle = br.app.stagebook.ui.stage.stageChordStyle(style, look),
             modifier = Modifier.padding(Spacing.m),
         )
     }

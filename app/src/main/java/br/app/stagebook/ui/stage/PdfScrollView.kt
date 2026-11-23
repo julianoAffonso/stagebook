@@ -119,14 +119,8 @@ fun PdfScrollView(
                     return@LaunchedEffect
                 }
                 autoRan[0] = true
-                var last = androidx.compose.runtime.withFrameNanos { it }
-                while (true) {
-                    val now = androidx.compose.runtime.withFrameNanos { it }
-                    val v = (scroll.value + autoPxPerSecond * autoScrollNanos(now - last) / 1_000_000_000f).coerceAtMost(max)
-                    last = now
-                    scroll.snapTo(v)
-                    if (v >= max) { onAutoEndNow(); break }
-                }
+                runAutoScroll(scroll, max, autoPxPerSecond)
+                onAutoEndNow()
             }
             // read through a derived state: the scroll moves on every frame of the automatic scroll, and read here it made the
             // whole view compose again 60 times a second; like this, only when a page comes into view or leaves (audit 22/11)

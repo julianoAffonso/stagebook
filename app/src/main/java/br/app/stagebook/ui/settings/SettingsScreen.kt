@@ -1060,14 +1060,7 @@ private fun PageColumns(look: Look, actions: SettingsActions) {
 /** Stage preview with the chosen look (lyrics, section and chords), at size [font]. */
 @Composable
 private fun StagePreview(look: Look, font: Float, modifier: Modifier = Modifier, @StringRes sample: Int = R.string.settings_preview_text) {
-    val style = TextStyle(
-        color = Color(look.fg),
-        fontSize = font.sp,
-        lineHeight = (font * 1.25f).sp,
-        fontWeight = if (look.bold) FontWeight.Bold else FontWeight.Normal,
-        fontFamily = look.font.family,
-        lineHeightStyle = LineHeightStyle(LineHeightStyle.Alignment.Center, LineHeightStyle.Trim.None),
-    )
+    val style = br.app.stagebook.ui.stage.stageTextStyle(look, font)
     ChordText(
         lyricsAnnotated(
             stringResource(sample),
@@ -1080,7 +1073,7 @@ private fun StagePreview(look: Look, font: Float, modifier: Modifier = Modifier,
             Color(look.highlightColor),
         ),
         style = style,
-        chordStyle = style.copy(color = Color(look.chordColor), fontSize = (font * look.chordScale).sp, fontWeight = FontWeight.Bold, fontFamily = look.chordFont.family, lineHeight = TextUnit.Unspecified),
+        chordStyle = br.app.stagebook.ui.stage.stageChordStyle(style, look),
         modifier = modifier,
     )
 }

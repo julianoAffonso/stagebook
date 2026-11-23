@@ -81,9 +81,7 @@ fun PdfPagesDialog(pdf: EditorPdf, onToggle: (page: Int) -> Unit, onDismiss: () 
 
 @Composable
 private fun PageThumb(pages: PdfPages?, page: Int, hidden: Boolean, invert: Boolean, onTap: () -> Unit) {
-    val image by produceState<ImageBitmap?>(null, pages, page) {
-        value = pages?.let { runCatching { it.bitmap(page, THUMB_WIDTH).asImageBitmap() }.getOrNull() }
-    }
+    val image by br.app.stagebook.ui.stage.rememberPdfPageImage(pages, page, THUMB_WIDTH)
     val state = stringResource(if (hidden) R.string.pdf_page_hidden else R.string.pdf_page_shown)
     val label = stringResource(R.string.pdf_page_label, page + 1)
     Column(

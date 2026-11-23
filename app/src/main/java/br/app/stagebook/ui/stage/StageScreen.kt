@@ -656,17 +656,7 @@ fun StageScreen(
     }
     // the song's line under the finger (null: the chord list or a line the stage made, nothing to highlight)
     fun sourceLine(line: Int?): Int? = line?.let { pageLines.getOrNull(it)?.source }?.takeIf { it >= 0 }
-    fun styleFor(z: Float) = TextStyle(
-        color = fg,
-        fontSize = (look.fontSp * z).sp,
-        lineHeight = (look.fontSp * z * 1.25f).sp,
-        fontWeight = if (look.bold) FontWeight.Bold else FontWeight.Normal,
-        fontFamily = look.font.family,
-        // without cutting the breathing room of the first/last line: a line measured alone has the same height as
-        // inside the text, and the sum of the lines is the page's real height
-        lineHeightStyle = LineHeightStyle(LineHeightStyle.Alignment.Center, LineHeightStyle.Trim.None),
-        hyphens = Hyphens.None,
-    )
+    fun styleFor(z: Float) = stageTextStyle(look, look.fontSp * z, fg)
     // no cache: what it measures is kept in the stage's own remember (the default kept 8 whole-song layouts; audit 01/11)
     val measurer = rememberTextMeasurer(cacheSize = 0)
     var pageCount by remember { mutableIntStateOf(1) }
@@ -1413,7 +1403,7 @@ fun StageScreen(
                 style,
                 columns,
                 // chord: bold, in its color and size, following the lyrics zoom
-                style.copy(color = chordLook.color, fontSize = style.fontSize * chordLook.scale, fontWeight = FontWeight.Bold, fontFamily = look.chordFont.family, lineHeight = TextUnit.Unspecified),
+                stageChordStyle(style, look, chordLook.color, chordLook.scale),
             ) }
             val chordPx = with(LocalDensity.current) { shown.chordStyle.fontSize.toPx() }
             // scroll: the lyrics move up to the current step; when the step changes (within the song), the line where
@@ -1453,15 +1443,8 @@ fun StageScreen(
                     return@LaunchedEffect
                 }
                 autoRan[0] = true
-                var last = androidx.compose.runtime.withFrameNanos { it }
-                while (true) {
-                    val now = androidx.compose.runtime.withFrameNanos { it }
-                    // a long gap between frames (screen off, a stall) doesn't jump the text ahead (audit 01/11)
-                    val v = (scrollY.value + autoPx * autoScrollNanos(now - last) / 1_000_000_000f).coerceAtMost(maxScroll.toFloat())
-                    last = now
-                    scrollY.snapTo(v)
-                    if (v >= maxScroll) { autoOn = false; break }
-                }
+                runAutoScroll(scrollY, maxScroll.toFloat(), autoPx)
+                autoOn = false
             }
             var flash by remember(index) { mutableStateOf<IntRange?>(null) }   // y..y+height of the lit line, on screen
             LaunchedEffect(index, stopAt) {
@@ -1944,6 +1927,23 @@ private data class PageContent(
 internal fun metroBeatAt(sinceStart: Long, periodNanos: Long): Int = ((sinceStart + METRO_EARLY_NANOS) / periodNanos).toInt()
 
 /** The time auto-scroll moves the text for, between two frames: at most [MAX_SCROLL_FRAME_NANOS]. */
+/**
+ * Moves [scroll] down at [pxPerSecond], frame by frame, until [max]; returns when it gets there (cancelled when the
+ * automatic scroll is turned off). The lyrics and the PDF in scroll mode run this same loop (audit 22/11: each had its
+ * own copy, and they had already come apart).
+ */
+internal suspend fun runAutoScroll(scroll: androidx.compose.animation.core.Animatable<Float, *>, max: Float, pxPerSecond: Float) {
+    var last = androidx.compose.runtime.withFrameNanos { it }
+    while (true) {
+        val now = androidx.compose.runtime.withFrameNanos { it }
+        // a long gap between frames (screen off, a stall) doesn't jump the text ahead (audit 01/11)
+        val v = (scroll.value + pxPerSecond * autoScrollNanos(now - last) / 1_000_000_000f).coerceAtMost(max)
+        last = now
+        scroll.snapTo(v)
+        if (v >= max) return
+    }
+}
+
 internal fun autoScrollNanos(sinceLast: Long): Long = sinceLast.coerceIn(0, MAX_SCROLL_FRAME_NANOS)
 
 private const val METRO_EARLY_NANOS = 20_000_000L
@@ -2167,6 +2167,38 @@ private fun TrackButton(
     }
 }
 
+/**
+ * A small window of the stage, held just above the icon that opened it: title, × to close, and [content] centred under
+ * them. One scaffold for the metronome, the automatic scroll, the key and capo and the show's length (audit 22/11: the
+ * same twenty lines in each). [hug] makes it as wide as its widest row.
+ */
+@Composable
+private fun StageWindow(title: String, onDismiss: () -> Unit, spacing: androidx.compose.ui.unit.Dp, hug: Boolean, content: @Composable androidx.compose.foundation.layout.ColumnScope.() -> Unit) {
+    // a window of ours is open: a follower isn't taken to the leader's other song until it closes (FollowToStage)
+    br.app.stagebook.ui.components.FollowBusyWhile()
+    val gap = with(LocalDensity.current) { Spacing.s.roundToPx() }
+    androidx.compose.ui.window.Popup(
+        popupPositionProvider = AboveAnchor(gap),
+        onDismissRequest = onDismiss,
+        properties = androidx.compose.ui.window.PopupProperties(focusable = true),
+    ) {
+        Surface(shape = MaterialTheme.shapes.large, color = MaterialTheme.colorScheme.surfaceContainerHigh, shadowElevation = 6.dp) {
+            Column(
+                Modifier.padding(Spacing.l).then(if (hug) Modifier.width(IntrinsicSize.Max) else Modifier),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(spacing),
+            ) {
+                // title and the × to close
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.s)) {
+                    Text(title, style = MaterialTheme.typography.titleLarge)
+                    IconButton(onClick = onDismiss) { Icon(AppIcons.Close, stringResource(R.string.action_close)) }
+                }
+                content()
+            }
+        }
+    }
+}
+
 /** The song's key ({key}) and capo ({capo}) at the top of the stage; nothing if the song has neither. */
 /**
  * Metronome (small window above the icon): BPM with − and + and play, which closes the window; the rest is in Settings.
@@ -2178,33 +2210,18 @@ private fun MetronomeDialog(
     onPlay: () -> Unit,
     onDismiss: () -> Unit,
 ) {
-    // a window of ours is open: a follower isn't taken to the leader's other song until it closes (FollowToStage)
-    br.app.stagebook.ui.components.FollowBusyWhile()
-    val gap = with(LocalDensity.current) { Spacing.s.roundToPx() }
-    androidx.compose.ui.window.Popup(
-        popupPositionProvider = AboveAnchor(gap),
-        onDismissRequest = onDismiss,
-        properties = androidx.compose.ui.window.PopupProperties(focusable = true),
-    ) {
-        Surface(shape = MaterialTheme.shapes.large, color = MaterialTheme.colorScheme.surfaceContainerHigh, shadowElevation = 6.dp) {
-            Column(Modifier.padding(Spacing.l).width(IntrinsicSize.Max), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(Spacing.s)) {
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.s)) {
-                    Text(stringResource(R.string.metro_title), style = MaterialTheme.typography.titleLarge)
-                    IconButton(onClick = onDismiss) { Icon(AppIcons.Close, stringResource(R.string.action_close)) }
-                }
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.m)) {
-                    IconButton(onClick = { onBpm(bpm - 1) }) { Icon(AppIcons.Remove, stringResource(R.string.metro_slower)) }
-                    Text(stringResource(R.string.metro_bpm, bpm), style = MaterialTheme.typography.headlineSmall)
-                    IconButton(onClick = { onBpm(bpm + 1) }) { Icon(AppIcons.Add, stringResource(R.string.metro_faster)) }
-                }
-                br.app.stagebook.ui.components.SettingsLinkText(
-                    stringResource(R.string.metro_in_settings), stringResource(R.string.metro_settings_link),
-                    br.app.stagebook.ui.settings.SettingsSection.PLAYER, style = MaterialTheme.typography.bodySmall,
-                )
-                IconButton(onClick = onPlay, modifier = Modifier.size(Sizes.touch + Spacing.m)) {
-                    Icon(AppIcons.PlayRounded, stringResource(R.string.metro_play), Modifier.size(Sizes.touch), tint = MaterialTheme.colorScheme.primary)
-                }
-            }
+    StageWindow(stringResource(R.string.metro_title), onDismiss, spacing = Spacing.s, hug = true) {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.m)) {
+            IconButton(onClick = { onBpm(bpm - 1) }) { Icon(AppIcons.Remove, stringResource(R.string.metro_slower)) }
+            Text(stringResource(R.string.metro_bpm, bpm), style = MaterialTheme.typography.headlineSmall)
+            IconButton(onClick = { onBpm(bpm + 1) }) { Icon(AppIcons.Add, stringResource(R.string.metro_faster)) }
+        }
+        br.app.stagebook.ui.components.SettingsLinkText(
+            stringResource(R.string.metro_in_settings), stringResource(R.string.metro_settings_link),
+            br.app.stagebook.ui.settings.SettingsSection.PLAYER, style = MaterialTheme.typography.bodySmall,
+        )
+        IconButton(onClick = onPlay, modifier = Modifier.size(Sizes.touch + Spacing.m)) {
+            Icon(AppIcons.PlayRounded, stringResource(R.string.metro_play), Modifier.size(Sizes.touch), tint = MaterialTheme.colorScheme.primary)
         }
     }
 }
@@ -2225,41 +2242,25 @@ private class AboveAnchor(private val gap: Int) : androidx.compose.ui.window.Pop
 /** Auto-scroll (small window right above the icon): speed from 1 to 10 and play/pause, which closes the window. */
 @Composable
 private fun AutoScrollDialog(on: Boolean, level: Int, onToggle: () -> Unit, onLevel: (Int) -> Unit, onDismiss: () -> Unit) {
-    // a window of ours is open: a follower isn't taken to the leader's other song until it closes (FollowToStage)
-    br.app.stagebook.ui.components.FollowBusyWhile()
-    val gap = with(LocalDensity.current) { Spacing.s.roundToPx() }
-    androidx.compose.ui.window.Popup(
-        popupPositionProvider = AboveAnchor(gap),
-        onDismissRequest = onDismiss,
-        properties = androidx.compose.ui.window.PopupProperties(focusable = true),
-    ) {
-        Surface(shape = MaterialTheme.shapes.large, color = MaterialTheme.colorScheme.surfaceContainerHigh, shadowElevation = 6.dp) {
-            Column(Modifier.padding(Spacing.l), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(Spacing.m)) {
-                // title and the × to close (play also closes)
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.s)) {
-                    Text(stringResource(R.string.stage_auto_title), style = MaterialTheme.typography.titleLarge)
-                    IconButton(onClick = onDismiss) { Icon(AppIcons.Close, stringResource(R.string.action_close)) }
-                }
-                Text(stringResource(R.string.stage_auto_speed, level), style = MaterialTheme.typography.bodyLarge)
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.l)) {
-                    IconButton(onClick = { onLevel(level - 1) }, enabled = level > 1) { Icon(AppIcons.Remove, stringResource(R.string.stage_auto_slower)) }
-                    // rounded, big play in the accent color with no background (user's request, 29/10); the touch
-                    // target stays big
-                    IconButton(onClick = onToggle, modifier = Modifier.size(Sizes.touch + Spacing.m)) {
-                        Icon(
-                            if (on) AppIcons.PauseRounded else AppIcons.PlayRounded,
-                            stringResource(if (on) R.string.stage_auto_pause else R.string.stage_auto_play),
-                            Modifier.size(Sizes.touch),
-                            tint = MaterialTheme.colorScheme.primary,
-                        )
-                    }
-                    IconButton(onClick = { onLevel(level + 1) }, enabled = level < br.app.stagebook.data.model.Look.MAX_AUTO_SCROLL) {
-                        Icon(AppIcons.Add, stringResource(R.string.stage_auto_faster))
-                    }
-                }
-                Text(stringResource(R.string.stage_auto_hint), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    StageWindow(stringResource(R.string.stage_auto_title), onDismiss, spacing = Spacing.m, hug = false) {
+        Text(stringResource(R.string.stage_auto_speed, level), style = MaterialTheme.typography.bodyLarge)
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.l)) {
+            IconButton(onClick = { onLevel(level - 1) }, enabled = level > 1) { Icon(AppIcons.Remove, stringResource(R.string.stage_auto_slower)) }
+            // rounded, big play in the accent color with no background (user's request, 29/10); the touch
+            // target stays big
+            IconButton(onClick = onToggle, modifier = Modifier.size(Sizes.touch + Spacing.m)) {
+                Icon(
+                    if (on) AppIcons.PauseRounded else AppIcons.PlayRounded,
+                    stringResource(if (on) R.string.stage_auto_pause else R.string.stage_auto_play),
+                    Modifier.size(Sizes.touch),
+                    tint = MaterialTheme.colorScheme.primary,
+                )
+            }
+            IconButton(onClick = { onLevel(level + 1) }, enabled = level < br.app.stagebook.data.model.Look.MAX_AUTO_SCROLL) {
+                Icon(AppIcons.Add, stringResource(R.string.stage_auto_faster))
             }
         }
+        Text(stringResource(R.string.stage_auto_hint), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }
 
@@ -2269,40 +2270,25 @@ private fun AutoScrollDialog(on: Boolean, level: Int, onToggle: () -> Unit, onLe
  */
 @Composable
 private fun KeyCapoDialog(text: String, showCapo: Boolean, onTranspose: (Int) -> Unit, onCapo: (Int) -> Unit, onDismiss: () -> Unit) {
-    // a window of ours is open: a follower isn't taken to the leader's other song until it closes (FollowToStage)
-    br.app.stagebook.ui.components.FollowBusyWhile()
-    val gap = with(LocalDensity.current) { Spacing.s.roundToPx() }
     val hasChords = remember(text) { Chords.hasChords(text) || Chords.fromChordsOverLyrics(text).let(Chords::hasChords) }
     val key = remember(text) { Chords.key(text).ifEmpty { Chords.detectKey(text) } }
     val capo = remember(text) { Chords.capo(text) }
-    androidx.compose.ui.window.Popup(
-        popupPositionProvider = BelowAnchor(gap),
-        onDismissRequest = onDismiss,
-        properties = androidx.compose.ui.window.PopupProperties(focusable = true),
-    ) {
-        Surface(shape = MaterialTheme.shapes.large, color = MaterialTheme.colorScheme.surfaceContainerHigh, shadowElevation = 6.dp) {
-            Column(Modifier.padding(Spacing.l).width(IntrinsicSize.Max), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(Spacing.s)) {
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.s)) {
-                    Text(stringResource(if (showCapo) R.string.stage_key_capo_title else R.string.editor_key), style = MaterialTheme.typography.titleLarge)
-                    IconButton(onClick = onDismiss) { Icon(AppIcons.Close, stringResource(R.string.action_close)) }
-                }
-                if (showCapo) Text(stringResource(R.string.editor_key), style = MaterialTheme.typography.bodyLarge)
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.m)) {
-                    IconButton(onClick = { onTranspose(-1) }, enabled = hasChords) { Icon(AppIcons.Remove, stringResource(R.string.editor_transpose_down)) }
-                    Text(key.ifEmpty { "–" }, style = MaterialTheme.typography.headlineSmall)
-                    IconButton(onClick = { onTranspose(1) }, enabled = hasChords) { Icon(AppIcons.Add, stringResource(R.string.editor_transpose_up)) }
-                }
-                if (showCapo) {
-                    Text(stringResource(R.string.editor_capo), style = MaterialTheme.typography.bodyLarge)
-                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.m)) {
-                        IconButton(onClick = { onCapo(capo - 1) }, enabled = capo > 0) { Icon(AppIcons.Remove, stringResource(R.string.editor_capo_down)) }
-                        Text(if (capo == 0) "0" else stringResource(R.string.editor_capo_fret, capo), style = MaterialTheme.typography.headlineSmall)
-                        IconButton(onClick = { onCapo(capo + 1) }, enabled = capo < 12) { Icon(AppIcons.Add, stringResource(R.string.editor_capo_up)) }
-                    }
-                }
-                Text(stringResource(R.string.stage_key_capo_saved), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    StageWindow(stringResource(if (showCapo) R.string.stage_key_capo_title else R.string.editor_key), onDismiss, spacing = Spacing.s, hug = true) {
+        if (showCapo) Text(stringResource(R.string.editor_key), style = MaterialTheme.typography.bodyLarge)
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.m)) {
+            IconButton(onClick = { onTranspose(-1) }, enabled = hasChords) { Icon(AppIcons.Remove, stringResource(R.string.editor_transpose_down)) }
+            Text(key.ifEmpty { "–" }, style = MaterialTheme.typography.headlineSmall)
+            IconButton(onClick = { onTranspose(1) }, enabled = hasChords) { Icon(AppIcons.Add, stringResource(R.string.editor_transpose_up)) }
+        }
+        if (showCapo) {
+            Text(stringResource(R.string.editor_capo), style = MaterialTheme.typography.bodyLarge)
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.m)) {
+                IconButton(onClick = { onCapo(capo - 1) }, enabled = capo > 0) { Icon(AppIcons.Remove, stringResource(R.string.editor_capo_down)) }
+                Text(if (capo == 0) "0" else stringResource(R.string.editor_capo_fret, capo), style = MaterialTheme.typography.headlineSmall)
+                IconButton(onClick = { onCapo(capo + 1) }, enabled = capo < 12) { Icon(AppIcons.Add, stringResource(R.string.editor_capo_up)) }
             }
         }
+        Text(stringResource(R.string.stage_key_capo_saved), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }
 
@@ -2589,10 +2575,7 @@ private fun StageClock(
 /** The show's length, half an hour at a time, and a restart of its counter: a small window over the clock. */
 @Composable
 internal fun ShowLengthWindow(length: Int, onStep: (up: Boolean) -> Unit, onRestart: () -> Unit, onDismiss: () -> Unit) {
-    // a window of ours is open: a follower isn't taken to the leader's other song until it closes (FollowToStage)
-    br.app.stagebook.ui.components.FollowBusyWhile()
     val density = LocalDensity.current
-    val gap = with(density) { Spacing.s.roundToPx() }
     // the length gets the room of its widest value, so − and + stay put as "1h" turns into "1h30" (S26, 07/11)
     val lengthStyle = MaterialTheme.typography.headlineSmall
     val measurer = rememberTextMeasurer()
@@ -2601,25 +2584,13 @@ internal fun ShowLengthWindow(length: Int, onStep: (up: Boolean) -> Unit, onRest
             .maxOf { measurer.measure(ShowTimer.lengthText(it), lengthStyle, maxLines = 1).size.width }
         with(density) { widest.toDp() }
     }
-    androidx.compose.ui.window.Popup(
-        popupPositionProvider = AboveAnchor(gap),
-        onDismissRequest = onDismiss,
-        properties = androidx.compose.ui.window.PopupProperties(focusable = true),
-    ) {
-        Surface(shape = MaterialTheme.shapes.large, color = MaterialTheme.colorScheme.surfaceContainerHigh, shadowElevation = 6.dp) {
-            Column(Modifier.padding(Spacing.l).width(IntrinsicSize.Max), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(Spacing.s)) {
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.s)) {
-                    Text(stringResource(R.string.stage_show_title), style = MaterialTheme.typography.titleLarge)
-                    IconButton(onClick = onDismiss) { Icon(AppIcons.Close, stringResource(R.string.action_close)) }
-                }
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.m)) {
-                    IconButton(onClick = { onStep(false) }, enabled = length > ShowTimer.MIN_MINUTES) { Icon(AppIcons.Remove, stringResource(R.string.stage_show_shorter)) }
-                    Text(ShowTimer.lengthText(length), Modifier.widthIn(min = lengthWidth), style = lengthStyle, textAlign = TextAlign.Center, maxLines = 1)
-                    IconButton(onClick = { onStep(true) }, enabled = length < ShowTimer.MAX_MINUTES) { Icon(AppIcons.Add, stringResource(R.string.stage_show_longer)) }
-                }
-                ActionButton(stringResource(R.string.stage_show_restart), onRestart, icon = AppIcons.Undo, tone = ButtonTone.Tonal)
-            }
+    StageWindow(stringResource(R.string.stage_show_title), onDismiss, spacing = Spacing.s, hug = true) {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.m)) {
+            IconButton(onClick = { onStep(false) }, enabled = length > ShowTimer.MIN_MINUTES) { Icon(AppIcons.Remove, stringResource(R.string.stage_show_shorter)) }
+            Text(ShowTimer.lengthText(length), Modifier.widthIn(min = lengthWidth), style = lengthStyle, textAlign = TextAlign.Center, maxLines = 1)
+            IconButton(onClick = { onStep(true) }, enabled = length < ShowTimer.MAX_MINUTES) { Icon(AppIcons.Add, stringResource(R.string.stage_show_longer)) }
         }
+        ActionButton(stringResource(R.string.stage_show_restart), onRestart, icon = AppIcons.Undo, tone = ButtonTone.Tonal)
     }
 }
 

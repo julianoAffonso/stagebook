@@ -325,12 +325,7 @@ fun ImportScreen(
                         // the page shows up whole: the keyboard closes on Go (device test B-03)
                         keyboardActions = KeyboardActions(onGo = { webView?.loadUrl(urlFor(address)); keyboard?.hide(); focus.clearFocus() }),
                         shape = MaterialTheme.shapes.medium,
-                        colors = TextFieldDefaults.colors(
-                            focusedContainerColor = MaterialTheme.colorScheme.surface,
-                            unfocusedContainerColor = MaterialTheme.colorScheme.surface,
-                            focusedIndicatorColor = Color.Transparent,
-                            unfocusedIndicatorColor = Color.Transparent,
-                        ),
+                        colors = br.app.stagebook.ui.components.searchFieldColors(),
                         modifier = Modifier.weight(1f),
                     )
                     IconButton(onClick = { webView?.loadUrl(urlFor(address)); keyboard?.hide(); focus.clearFocus() }) {

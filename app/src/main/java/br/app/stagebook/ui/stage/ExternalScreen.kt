@@ -212,7 +212,7 @@ private fun LyricsPart(frame: MirrorFrame, look: Look, fg: Color, part: (List<St
         val style = externalStyle(size, fg, look)
         ChordText(
             joined, style,
-            style.copy(color = chords.color, fontSize = style.fontSize * chords.scale, fontWeight = FontWeight.Bold, fontFamily = look.chordFont.family, lineHeight = TextUnit.Unspecified),
+            stageChordStyle(style, look, chords.color, chords.scale),
             Modifier.align(Alignment.Center),
         )
     }
@@ -261,15 +261,7 @@ private fun TitleCard(frame: MirrorFrame, fg: Color) {
     }
 }
 
-private fun externalStyle(size: TextUnit, fg: Color, look: Look) = TextStyle(
-    color = fg,
-    fontSize = size,
-    lineHeight = size * 1.25f,
-    fontWeight = if (look.bold) FontWeight.Bold else FontWeight.Normal,
-    fontFamily = look.font.family,
-    lineHeightStyle = LineHeightStyle(LineHeightStyle.Alignment.Center, LineHeightStyle.Trim.None),
-    hyphens = Hyphens.None,
-)
+private fun externalStyle(size: TextUnit, fg: Color, look: Look) = stageTextStyle(look, size.value, fg)
 
 /**
  * The largest font, in pixels, at which [text] fits [width] × [height] with no line wrapped. Lines are never wrapped on the
