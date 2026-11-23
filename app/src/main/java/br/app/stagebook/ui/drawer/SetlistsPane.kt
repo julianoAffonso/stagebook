@@ -33,7 +33,7 @@ fun SetlistsPane(
     onRequestHandled: () -> Unit,
     onPlay: (setId: String, index: Int) -> Unit,
     toList: Int = 0,   // a new number = the Setlists tab tapped again while it shows: back to the list
-    list: @Composable (open: (id: String, share: Boolean) -> Unit) -> Unit,
+    list: @Composable (open: (id: String, share: Boolean, edit: Boolean) -> Unit) -> Unit,
 ) {
     val inner = rememberNavController()
     LaunchedEffect(request) {
@@ -59,13 +59,14 @@ fun SetlistsPane(
     NavHost(inner, startDestination = SetlistsList, enterTransition = { fadeIn() }, exitTransition = { fadeOut() }) {
         // only while the screen is in front, as the app's own navigation does: a screen fading out still takes taps, and
         // a double tap on "back" popped the list too (the tab went blank), on a row opened two setlists (audit 22/11)
-        composable<SetlistsList> { entry -> list { id, share -> if (entry.inFront()) inner.navigate(SetlistDetail(id, share)) } }
+        composable<SetlistsList> { entry -> list { id, share, edit -> if (entry.inFront()) inner.navigate(SetlistDetail(id, share, edit)) } }
         composable<SetlistDetail> { entry ->
             SetlistDetailRoute(
                 onBack = { if (entry.inFront()) inner.popBackStack<SetlistDetail>(inclusive = true) },
                 onAddSongs = { if (entry.inFront()) inner.navigate(PickSongs(it)) },
                 onPlayAt = onPlay,
                 openShare = remember { entry.toRoute<SetlistDetail>().share },
+                startEditing = remember { entry.toRoute<SetlistDetail>().edit },
                 toList = detailToList,
             )
         }

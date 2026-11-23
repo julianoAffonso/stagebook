@@ -6,6 +6,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.test.junit4.StateRestorationTester
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
+import androidx.compose.ui.test.assertIsNotEnabled
+import androidx.compose.ui.test.assertCountEquals
+import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import br.app.stagebook.ui.setlists.SetItemUi
@@ -65,5 +68,18 @@ class SetlistDiscardTest {
         compose.onNodeWithContentDescription("Fechar").performClick()
         compose.waitForIdle()
         compose.onNodeWithText("também foi mudado de fora", substring = true).assertExists()
+    }
+
+    @Test fun `Edit setlist from the list's card opens it already editing, with nothing changed yet`() {
+        val state = SetlistDetailUiState(loading = false, name = "Show", items = listOf(SetItemUi("a", "a", "A", "", false), SetItemUi("b", "b", "B", "", false)))
+        compose.setContent { StagebookTheme { SetlistDetailScreen(state, null, {}, {}, {}, {}, {}, { _, _ -> }, onRemove = { _, _ -> }, onDeleteSetlist = {}, editOnOpen = true) } }
+        compose.waitForIdle()
+        // editing: the pencil gave way to Close and Save, and Save has nothing to save until something moves
+        compose.onAllNodesWithContentDescription("Editar setlist").assertCountEquals(0)
+        compose.onNodeWithContentDescription("Salvar").assertIsNotEnabled()
+        // unchanged, Close leaves the edit with no question (what it had was kept to compare)
+        compose.onNodeWithContentDescription("Fechar").performClick()
+        compose.waitForIdle()
+        compose.onNodeWithContentDescription("Editar setlist").assertExists()
     }
 }

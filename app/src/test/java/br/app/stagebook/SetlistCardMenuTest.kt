@@ -28,12 +28,13 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.GraphicsMode
 import org.robolectric.annotation.Config
 
-/** V19: the setlist card has no pencil, only a ⋮ with Play, Share, Edit name and date and Delete (in this order), and tapping the card opens the setlist in the drawer. */
+/** V19: the setlist card has no pencil, only a ⋮ (Play, Edit setlist, Share, Lead the band, Edit name and date, Duplicate, Delete, in this order), and tapping the card opens the setlist in the drawer. */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [35], qualifiers = "pt-rBR-w360dp-h800dp-port-xxhdpi", application = android.app.Application::class)
 class SetlistCardMenuTest {
     @get:Rule val compose = createComposeRule()
     private val log = mutableListOf<String>()
+    private var band = false   // there is a band to lead
     private val sets = listOf(SetlistRowUi("a", "Show de sábado", 5), SetlistRowUi("b", "Ensaio", 3))
 
     private fun screen(rows: List<SetlistRowUi> = sets, fontScale: Float = 1f) = compose.setContent {
@@ -42,6 +43,8 @@ class SetlistCardMenuTest {
                 SetlistsScreen(
                     SetlistsUiState(false, rows), {}, { log += "edit:$it" }, { log += "play:$it" }, { log += "delete:$it" },
                     onRename = { id, name -> log += "rename:$id:$name" }, onShare = { log += "share:$it" },
+                    conduct = br.app.stagebook.ui.setlists.ConductButtonUi(shown = band, armed = false),
+                    onEditSongs = { log += "songs:$it" }, onLead = { log += "lead:$it" }, onDuplicate = { id, name -> log += "copy:$id:$name" },
                 )
             }
         }
@@ -55,13 +58,28 @@ class SetlistCardMenuTest {
         compose.onAllNodesWithContentDescription("Mais opções").assertCountEquals(2)
     }
 
-    @Test fun `the menu has Play, Share, Edit and Delete in this order, and no Lead the band`() {
+    @Test fun `the menu has Play, Edit setlist, Share, Lead, Edit name, Duplicate and Delete in this order`() {
+        band = true
         screen(); open()
-        val names = listOf("Tocar", "Compartilhar", "Editar nome e data", "Apagar o setlist")
+        val names = listOf("Tocar", "Editar setlist", "Compartilhar", "Conduzir a banda", "Editar nome e data", "Duplicar", "Apagar o setlist")
         val tops = names.map { compose.onNodeWithText(it).getUnclippedBoundsInRoot().top }
         assertEquals(tops.sorted(), tops)
-        assertEquals(4, tops.toSet().size)
+        assertEquals(7, tops.toSet().size)
+    }
+
+    @Test fun `with no band to lead the menu has no Lead the band`() {
+        band = false
+        screen(); open()
+        compose.onNodeWithText("Duplicar").assertExists()
         compose.onAllNodesWithText("Conduzir a banda").assertCountEquals(0)
+    }
+
+    @Test fun `Edit setlist opens it editing, Lead leads it and Duplicate copies it with the copy's name`() {
+        band = true
+        screen(); open(); compose.onNodeWithText("Editar setlist").performClick()
+        open(); compose.onNodeWithText("Conduzir a banda").performClick()
+        open(); compose.onNodeWithText("Duplicar").performClick()
+        assertEquals(listOf("songs:a", "lead:a", "copy:a:Show de sábado (cópia)"), log)
     }
 
     @Test fun `the options use the app's icons and Delete is the red one`() {

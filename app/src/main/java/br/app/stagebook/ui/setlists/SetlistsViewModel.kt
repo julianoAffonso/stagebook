@@ -83,6 +83,12 @@ class SetlistsViewModel @Inject constructor(
      */
     fun play(id: String): br.app.stagebook.domain.StageStart = resume(id).also { conduct.startIfArmed(id, it.start) }
 
+    /** The card menu's "Lead the band": the same as arming the header's button and tapping this setlist. */
+    fun lead(id: String): br.app.stagebook.domain.StageStart { conduct.arm(); return play(id) }
+
+    /** The card menu's "Duplicate": a copy named [name], first in the list; its id, or null if the setlist is gone. */
+    fun duplicate(id: String, name: String): String? = repository.duplicateSetlist(id, name)
+
     /** Where tapping the setlist opens its stage: the song where the show stopped today, or the first. */
     fun resume(id: String): br.app.stagebook.domain.StageStart {
         val set = repository.library.value.setlist(id) ?: return br.app.stagebook.domain.StageStart(0, false)

@@ -264,4 +264,28 @@ class ConductArmedTest {
         assertTrue(conduct.startSetlist(setId, 1))
         assertEquals(1, (conduct.role.value as Role.Conducting).msg.index)
     }
+
+    // ---- the card's menu (user, 23/11) ----
+
+    @Test fun `Lead the band in a setlist's menu plays it and leads it at once, with no arming first`() {
+        member()
+        screen()
+        compose.onAllNodesWithContentDescription("Mais opções")[0].performClick()
+        compose.onNodeWithText("Conduzir a banda").performClick()
+        compose.waitForIdle()
+        assertEquals(listOf(setId), played)
+        assertEquals(setId, (conduct.role.value as Role.Conducting).setId)
+    }
+
+    @Test fun `Duplicate in a setlist's menu makes a copy with its songs, first in the list, and says so`() {
+        screen()
+        compose.onAllNodesWithContentDescription("Mais opções")[0].performClick()
+        compose.onNodeWithText("Duplicar").performClick()
+        compose.waitForIdle()
+        val sets = repo.library.value.sets
+        assertEquals(listOf("Show de sábado (cópia)", "Show de sábado"), sets.map { it.name })
+        assertEquals(sets[1].items, sets[0].items)
+        compose.onNodeWithText("Setlist duplicado").assertExists()
+        assertEquals(emptyList<String>(), opened)   // the list stays: the copy is there to be seen
+    }
 }
