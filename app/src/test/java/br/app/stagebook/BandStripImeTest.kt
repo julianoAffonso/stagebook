@@ -80,4 +80,24 @@ class BandStripImeTest {
         assertEquals("the screen ends where the strip starts", strip.top.value, screen.bottom.value, 1f)
         assertTrue(screen.bottom.value - screen.top.value > 300f)
     }
+
+    @Test fun `with the menu open the sheet reaches the keyboard - no gap of the strip's height above it`() {
+        compose.runOnUiThread { WindowCompat.setDecorFitsSystemWindows(compose.activity.window, false) }
+        compose.setContent {
+            StagebookTheme {
+                BandStripLayout(
+                    // the drawer open: the column is not lifted, the sheet lifts itself
+                    liftIme = false,
+                    screens = { Box(Modifier.fillMaxSize().imePadding().testTag("sheet")) },
+                    strip = { Box(Modifier.fillMaxWidth().height(60.dp).testTag("strip")) },
+                )
+            }
+        }
+        compose.waitForIdle()
+        val window = compose.activity.resources.displayMetrics
+        val density = window.density
+        keyboard(heightPx = (300 * density).toInt())
+        val sheet = compose.onNodeWithTag("sheet").getBoundsInRoot()
+        assertEquals("the sheet ends at the keyboard", (window.heightPixels / density) - 300f, sheet.bottom.value, 1f)
+    }
 }
