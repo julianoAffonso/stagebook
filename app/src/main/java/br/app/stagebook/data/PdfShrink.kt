@@ -17,14 +17,12 @@ import java.io.File
  */
 object PdfShrink {
     private const val MIN_SIDE = 256
-    const val MIN_BYTES = 2L * 1024 * 1024
     const val KEEP_RATIO = 0.7
     const val MAX_SIDE = 2000
     const val JPEG_QUALITY = 0.7f
 
-    /** [minBytes]: smaller files are left alone (0 on sending over the internet: every byte counts there); [out]: where the copy goes. */
-    fun shrunk(context: Context, file: File, minBytes: Long = MIN_BYTES, out: File = File(file.parentFile, file.name + ".small")): File? {
-        if (file.length() < minBytes) return null
+    /** The smaller copy of [file], next to it, or null when there is nothing to gain. Any size: a small PDF goes over the internet too. */
+    fun shrunk(context: Context, file: File, out: File = File(file.parentFile, file.name + ".small")): File? {
         return try {
             PDFBoxResourceLoader.init(context.applicationContext)
             val changed = PDDocument.load(file).use { doc ->

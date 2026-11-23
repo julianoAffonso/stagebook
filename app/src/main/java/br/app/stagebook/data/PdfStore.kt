@@ -32,9 +32,10 @@ class PdfStore @Inject constructor(@ApplicationContext private val context: Cont
         try {
             val input = context.contentResolver.openInputStream(uri) ?: return@withContext PdfAttach.Refused(PdfProblem.UNREADABLE)
             input.use { copyReason(it, tmp) }?.let { tmp.delete(); return@withContext PdfAttach.Refused(it) }
-            // a big PDF is made smaller first, and the smaller copy is kept only if it passes the same check (user, 22/11)
+            // made smaller first, whatever its size, and the smaller copy is kept only if it passes the same check
+            // (user, 22/11); marked, so sending it never tries again
             shrink(tmp, inspector)
-            finish(tmp, inspector)
+            finish(tmp, inspector).also { if (it is PdfAttach.Saved) markTried(it.name) }
         } catch (e: Exception) {
             // a revoked permission or a provider that throws is "this file won't do", never a crash
             if (e is kotlinx.coroutines.CancellationException) throw e
@@ -62,22 +63,26 @@ class PdfStore @Inject constructor(@ApplicationContext private val context: Cont
     }
 
     /**
-     * A smaller copy of the PDF [file] to send over the internet (user, 22/11: "compactar o PDF pra enviar"), in the cache;
-     * null when it doesn't come out much smaller (the file itself goes). Kept for [SEND_KEEP_MS] under the file's own
-     * name, size and date: a send to several band members shrinks each PDF once. The store deletes the old ones, here.
+     * Makes the stored PDF [file] smaller in its own place, once (user, 22/11: a PDF is compacted when it comes in, and
+     * sending compacted it again for nothing). Every PDF that comes in is already tried; this is for the ones that were
+     * here before that, on their first send. The smaller version takes the file's place only if it passes the same check;
+     * either way the file is marked as tried and never goes through this again.
      */
     @Synchronized
-    fun forSending(file: File, inspector: PdfInspector = PdfInspector()): File? {
-        val now = System.currentTimeMillis()
-        context.cacheDir.listFiles { f -> f.name.startsWith(SEND_PREFIX) && now - f.lastModified() > SEND_KEEP_MS }?.forEach { it.delete() }
-        val base = "$SEND_PREFIX${file.name}-${file.length()}-${file.lastModified()}"
-        val out = File(context.cacheDir, "$base.pdf")
-        val none = File(context.cacheDir, "$base.none")   // tried, and it didn't get smaller: not tried again for a while
-        if (out.isFile) return out
-        if (none.isFile) return null
-        val small = PdfShrink.shrunk(context, file, minBytes = 0, out = out)?.takeIf { inspector.check(it) is PdfCheck.Ok }
-        if (small == null) { out.delete(); runCatching { none.createNewFile() } }
-        return small
+    fun compactOnce(file: File, inspector: PdfInspector = PdfInspector()) {
+        if (!file.isFile || tried(file.name)) return
+        val small = PdfShrink.shrunk(context, file)
+        if (small != null && !(inspector.check(small) is PdfCheck.Ok && small.renameTo(file))) small.delete()
+        markTried(file.name)
+    }
+
+    // which PDFs were already tried: empty files outside the backup (lost, a PDF is tried once more and that is all)
+    private val triedDir get() = File(context.noBackupFilesDir, "pdf-compact").apply { mkdirs() }
+    private fun tried(name: String) = File(triedDir, name).exists()
+    private fun markTried(name: String) {
+        runCatching { File(triedDir, name).createNewFile() }
+        // the marks of PDFs that are gone go too
+        triedDir.list()?.filterNot { File(dir, it).exists() }?.forEach { File(triedDir, it).delete() }
     }
 
     private fun shrink(tmp: File, inspector: PdfInspector) {
@@ -127,8 +132,6 @@ class PdfStore @Inject constructor(@ApplicationContext private val context: Cont
         /** [file] for a screen that only needs to know where the PDF is (no store of its own). */
         fun fileIn(context: Context, name: String): File = File(dirIn(context), safeName(name) ?: UNSAFE)
         private const val UNSAFE = "unsafe-name.none"
-        private const val SEND_PREFIX = "send-"
-        const val SEND_KEEP_MS = 30 * 60_000L
 
         fun looksLikePdf(head: ByteArray): Boolean = head.size >= MAGIC.size && MAGIC.indices.all { head[it] == MAGIC[it] }
 

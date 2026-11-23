@@ -506,10 +506,10 @@ class SetlistCloud @Inject constructor(
      * encrypted with [key] (the server and whoever finds the address see nothing). Its address, or null when it didn't go.
      */
     private fun attach(topic: String, key: ByteArray, file: java.io.File): String? {
-        // the smaller copy is kept a while by the store: the same PDF going to five members was shrunk five times, with
-        // the band waiting behind it (audit 22/11)
-        val small = runCatching { pdfs?.forSending(file, inspector) }.getOrNull()
-        val bytes = try { (small ?: file).readBytes() } catch (e: java.io.IOException) { return null }
+        // what goes is the stored file: it was made smaller when it came in. One from before that is made smaller now, in
+        // its place, this once (user, 22/11)
+        runCatching { pdfs?.compactOnce(file, inspector) }
+        val bytes = try { file.readBytes() } catch (e: java.io.IOException) { return null }
         val body = ShareCode.encrypt(key, bytes).toByteArray()
         attachHook?.let { hook -> return hook(attachTopic(topic), body)?.takeIf(::isAttachment) }
         val at = if (!internetOn) null else runCatching {

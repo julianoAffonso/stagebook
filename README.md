@@ -266,7 +266,7 @@ Libraries in the app, all open source:
 | [Hilt](https://dagger.dev/hilt/) (Dagger) | wiring the app's parts | Apache 2.0 |
 | [Reorderable](https://github.com/Calvin-LL/Reorderable) | dragging songs in a setlist | Apache 2.0 |
 | [ZXing](https://github.com/zxing/zxing) core | making and reading QR codes | Apache 2.0 |
-| [PdfBox-Android](https://github.com/TomRoush/PdfBox-Android) | making big PDFs smaller | Apache 2.0 |
+| [PdfBox-Android](https://github.com/TomRoush/PdfBox-Android) | making PDFs smaller | Apache 2.0 |
 | [stb_vorbis](https://github.com/nothings/stb), [dr_mp3 and dr_wav](https://github.com/mackron/dr_libs) | decoding backing tracks | public domain or MIT |
 
 Android itself draws the PDFs (`PdfRenderer`), reads a track's length (`MediaMetadataRetriever`) and tells a web
