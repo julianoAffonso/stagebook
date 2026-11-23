@@ -128,6 +128,7 @@ SECTIONS = [
             "- **Type the 3 words:** receives what someone sent over the internet. It leaves when internet is off in Settings.",
         ],
         "figs": [Fig(("jornada_importar_menu_tablet", "jornada_importar_menu", "O + da aba Músicas", "The + of the Songs tab")),
+                 Fig(("tablet_10_pdf_sites", "celular_10_pdf_sites", "PDFs de sites: abra uma partitura e toque no PDF", "PDFs from sites: open a score and tap its PDF")),
                  Fig(("tablet_4_editor_importar_existente", "celular_4_editor_importar_existente", "Importar uma música que você já tem", "Importing a song you already have"))],
         "subs": [
             sub("importar-internet", "Da internet", "From the web",
@@ -186,6 +187,7 @@ SECTIONS = [
                  "**Backup and QR:** the PDF goes in the backup with the backing tracks (the same option); without the file the song shows as PDF lost, for you to attach again. The QR and the lyrics file don't carry the PDF."],
                 [Fig(("tablet_6_palco_pdf", "celular_7_palco_pdf", "Uma partitura em PDF no palco", "A PDF score on stage")),
                  Fig(("tablet_4_editor_pdf", "celular_4_editor_pdf", "Música em PDF no editor", "A song as a PDF in the editor")),
+                 Fig(("tablet_4_editor_recorte", "celular_4_editor_recorte", "Recortar o PDF", "Crop the PDF")),
                  Fig(("editor_web_6_pdf", None, "Música em PDF no editor do computador", "A song as a PDF in the editor on the computer"))]),
             sub("editor-tom", "Tom e capotraste", "Key and capo",
                 ["O − e + do tom transpõem a cifra meio tom de cada vez. O do capotraste não mexe nos diagramas: avisa em que tom vai soar. Se a música tem tablatura, as casas dela acompanham o tom e o capo."],
