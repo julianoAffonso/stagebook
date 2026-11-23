@@ -146,6 +146,10 @@ class PdfStageTest {
             if (!together) Thread.sleep(5)   // the new page is drawn off the main thread
         }
         assertTrue("the page was swapped with no turn", together)
+        // two solid sheets side by side: one over the other, fading, washed the page's edge out (user, 23/11)
+        fun left(page: Int) = compose.onNodeWithContentDescription("Página $page de 7 do PDF").fetchSemanticsNode().positionInRoot.x
+        val oldWidth = compose.onNodeWithContentDescription("Página 1 de 7 do PDF").fetchSemanticsNode().size.width
+        assertTrue("the pages overlap during the turn: ${left(1)} + $oldWidth > ${left(2)}", left(1) + oldWidth <= left(2) + 1f)
         compose.mainClock.autoAdvance = true
         compose.waitUntil(5_000) { !shows(1) }
         compose.onNodeWithContentDescription("Página 2 de 7 do PDF").assertIsDisplayed()

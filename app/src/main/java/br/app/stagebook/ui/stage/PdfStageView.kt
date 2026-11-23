@@ -285,7 +285,7 @@ fun PdfStageView(
                         targetState = PdfShot(pageKey, shownAt, image, size.first, size.second),
                         modifier = Modifier.fillMaxSize(),
                         contentKey = { it.song to it.page },
-                        transitionSpec = { pageTurn(targetState.page >= initialState.page) },
+                        transitionSpec = { pageTurn(targetState.page >= initialState.page, sheet = true) },
                         contentAlignment = Alignment.Center,
                         label = "pdf page",
                     ) { shot ->
