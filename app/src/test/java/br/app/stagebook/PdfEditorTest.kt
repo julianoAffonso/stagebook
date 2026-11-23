@@ -44,6 +44,7 @@ import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.setMain
 import kotlinx.coroutines.withTimeout
+import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -294,6 +295,17 @@ class PdfEditorTest {
     }
 
     private val saved = SongEditorUiState(loading = false, mode = EditorMode.EDIT, title = "Chart", text = "[G]letra")
+
+    @Config(qualifiers = "+w800dp-h1280dp")
+    @Test fun `on a tablet the PDF's three actions sit together from the start, under the pages button`() {
+        screen(saved, EditorPdf("Cifra do Vento.pdf", pages = 3, bytes = 412_000))
+        fun box(text: String) = compose.onNodeWithText(text, substring = true).getUnclippedBoundsInRoot()
+        val pages = box("Páginas no palco"); val crop = box("Recortar"); val swap = box("Trocar PDF"); val remove = box("Remover PDF")
+        assertEquals("starts where the pages button starts", pages.left.value, crop.left.value, 1f)
+        // together, not one in each third of the card
+        assertTrue("Trocar is ${(swap.left - crop.right).value} dp from Recortar", (swap.left - crop.right).value <= 24f)
+        assertTrue("Remover is ${(remove.left - swap.right).value} dp from Trocar", (remove.left - swap.right).value <= 24f)
+    }
 
     @Test fun `a PDF song shows the card in place of the lyrics field - name, pages, size and the sentence`() {
         screen(saved, EditorPdf("Cifra do Vento.pdf", pages = 3, bytes = 412_000))

@@ -97,10 +97,12 @@ fun PdfSongCard(pdf: EditorPdf, onReplace: () -> Unit, onRemove: () -> Unit, mod
                 stringResource(R.string.pdf_pages_title) + " · " + stringResource(R.string.pdf_pages_of, pdf.pages - pdf.hidden.count { it in 0 until pdf.pages }, pdf.pages),
                 onPages, Modifier.fillMaxWidth(), icon = AppIcons.Visibility, tone = ButtonTone.Tonal,
             )
-            Row(horizontalArrangement = Arrangement.spacedBy(Spacing.s)) {
-                if (!pdf.lost) ActionButton(stringResource(R.string.editor_pdf_crop), onCrop, Modifier.weight(1f), tone = ButtonTone.Tonal)
-                ActionButton(stringResource(R.string.editor_pdf_replace), onReplace, Modifier.weight(1f), tone = ButtonTone.Tonal)
-                ActionButton(stringResource(R.string.editor_pdf_remove), onRemove, Modifier.weight(1f), tone = ButtonTone.Quiet)
+            // one after the other from the start, each with its icon like the pages button above: spread in three equal
+            // columns they looked scattered on a tablet, lined up with nothing (user, 23/11). They wrap on a narrow phone
+            androidx.compose.foundation.layout.FlowRow(horizontalArrangement = Arrangement.spacedBy(Spacing.s)) {
+                if (!pdf.lost) ActionButton(stringResource(R.string.editor_pdf_crop), onCrop, icon = AppIcons.Crop, tone = ButtonTone.Tonal)
+                ActionButton(stringResource(R.string.editor_pdf_replace), onReplace, icon = AppIcons.Sync, tone = ButtonTone.Tonal)
+                ActionButton(stringResource(R.string.editor_pdf_remove), onRemove, icon = AppIcons.Delete, tone = ButtonTone.Quiet)
             }
         }
     }
