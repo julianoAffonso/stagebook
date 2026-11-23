@@ -29,6 +29,7 @@ import br.app.stagebook.ui.stage.StageScreen
 import br.app.stagebook.ui.stage.StageSong
 import br.app.stagebook.ui.stage.StageUiState
 import br.app.stagebook.ui.theme.StagebookTheme
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -66,6 +67,41 @@ class PdfStageTest {
         assertEquals("page 4 is still kept: not drawn again", 5, source.rendered.size)
         pages.bitmap(0, 300)
         assertEquals("page 0 had gone: drawn again", 6, source.rendered.size)
+    }
+
+    @Test fun `a page already drawn comes at once while another is being drawn, and its size is asked once`() = runBlocking {
+        val gate = java.util.concurrent.CountDownLatch(1)
+        val sizeAsked = java.util.concurrent.atomic.AtomicInteger()
+        val source = object : PdfSource {
+            override val pageCount = 5
+            override fun pageSize(page: Int): Pair<Int, Int> { sizeAsked.incrementAndGet(); return 400 to 600 }
+            override fun render(page: Int, width: Int): Bitmap {
+                if (page == 2) gate.await()   // the page ahead takes its time
+                return Bitmap.createBitmap(width, width, Bitmap.Config.ARGB_8888)
+            }
+            override fun close() {}
+        }
+        val pages = PdfPages(source)
+        val first = pages.bitmap(0, 100)
+        pages.size(0); pages.size(0)
+        assertEquals(1, sizeAsked.get())
+        val slow = launch(kotlinx.coroutines.Dispatchers.Default) { pages.bitmap(2, 100) }
+        try {
+            // with the slow page holding the renderer, the kept one doesn't wait for it
+            val again = kotlinx.coroutines.withTimeoutOrNull(2_000) { kotlinx.coroutines.delay(100); pages.bitmap(0, 100) }
+            assertTrue("the kept page waited for the one being drawn", again === first)
+        } finally {
+            gate.countDown()
+            slow.join()
+        }
+    }
+
+    @Test fun `the page before is drawn ahead too, for the turn back`() {
+        val source = FakeSource(7)
+        var count = 0
+        compose.setContent { StagebookTheme { PdfStageView(PdfOpen.Ready(PdfPages(source)), 3, invert = false, onPageCount = { count = it }) } }
+        compose.waitUntil(5_000) { count == 7 }
+        compose.waitUntil(5_000) { source.rendered.any { it.first == 2 } && source.rendered.any { it.first == 4 } }
     }
 
     @Test fun `closing the pages closes the PDF and keeps nothing`() = runBlocking {

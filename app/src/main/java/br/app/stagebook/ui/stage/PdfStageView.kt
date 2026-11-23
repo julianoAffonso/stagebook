@@ -185,13 +185,18 @@ fun PdfStageView(
                         // (a failure here must not make the page already on screen "unreadable")
                         // (also with the zoom kept a little in: it stays from page to page now, and the turn was drawn on
                         // demand every time; beyond twice the pixels the next page waits its turn, for the memory)
-                        if (bucket <= 2 && at + 1 < pages.pageCount) try {
-                            val (nw, nh) = pages.size(at + 1)
-                            pages.bitmap(at + 1, PdfZoom.capWidth(PdfCrops.wholeWidth(nw to nh, PdfCrops.forPage(crops, at + 1), widthPx, heightPx) * bucket, nw, nh))
-                        } catch (e: kotlinx.coroutines.CancellationException) {
-                            throw e
-                        } catch (_: Exception) {
-                        } catch (_: OutOfMemoryError) {
+                        // then the page before, for the turn back (user, 23/11: going back drew the page on demand);
+                        // going forward it is still kept, and costs nothing
+                        if (bucket <= 2) for (other in intArrayOf(at + 1, at - 1)) {
+                            if (other !in 0 until pages.pageCount) continue
+                            try {
+                                val (nw, nh) = pages.size(other)
+                                pages.bitmap(other, PdfZoom.capWidth(PdfCrops.wholeWidth(nw to nh, PdfCrops.forPage(crops, other), widthPx, heightPx) * bucket, nw, nh))
+                            } catch (e: kotlinx.coroutines.CancellationException) {
+                                throw e
+                            } catch (_: Exception) {
+                            } catch (_: OutOfMemoryError) {
+                            }
                         }
                     } catch (e: kotlinx.coroutines.CancellationException) {
                         throw e
