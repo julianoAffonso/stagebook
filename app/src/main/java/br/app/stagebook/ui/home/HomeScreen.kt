@@ -40,7 +40,7 @@ import androidx.compose.runtime.getValue
 enum class HomeTab(@StringRes val label: Int, val icon: ImageVector) {
     SONGS(R.string.tab_songs, AppIcons.MusicNote),
     SETLISTS(R.string.tab_setlists, AppIcons.QueueMusic),
-    SETTINGS(R.string.tab_settings, AppIcons.Tune),
+    SETTINGS(R.string.tab_settings, AppIcons.Settings),
 }
 
 /**
