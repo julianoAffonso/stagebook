@@ -657,7 +657,8 @@ function drawPdf() {
   // the first page as it will look on the stage (turned over if the colours are), the invert switch and the trim
   const preview = $("pdf-preview");
   preview.hidden = !has;
-  if (has) loadPdfPage(0).then((url) => { if (url) { preview.src = url; preview.alt = t.pdfPreview; } else preview.hidden = true; });
+  // (with a trim, only the part kept, as the stage will show it)
+  if (has) loadPdfPage(0).then(async (url) => { if (url) { preview.src = await croppedPage(url, cropFor(current.pdfCrops || [], 0)); preview.alt = t.pdfPreview; } else preview.hidden = true; });
   preview.style.filter = current && current.pdfInvert ? "invert(1)" : "";
   $("pdf-invert").checked = !!(current && current.pdfInvert);
   $("pdf-invert").parentElement.hidden = !has;
@@ -841,6 +842,17 @@ async function loadPdfPage(n) {
   if (pdfPages.size > Math.max(12, (current.pdfPages || 0) + 2)) { URL.revokeObjectURL(pdfPages.values().next().value); pdfPages.delete(pdfPages.keys().next().value); }
   pdfPages.set(key, url);
   return url;
+}
+// a page's picture cut to its trim (the whole picture when there is none, or when it can't be cut)
+async function croppedPage(url, crop) {
+  if (!crop || cropWhole(crop)) return url;
+  const img = new Image();
+  img.src = url;
+  try { await img.decode(); } catch (e) { return url; }
+  const part = cropPixels(cropValid(crop), img.naturalWidth, img.naturalHeight);
+  const canvas = Object.assign(document.createElement("canvas"), { width: part.width, height: part.height });
+  canvas.getContext("2d").drawImage(img, part.left, part.top, part.width, part.height, 0, 0, part.width, part.height);
+  return canvas.toDataURL("image/png");
 }
 // the colours and the trims go to the tablet at once (the file is saved already, as for the track)
 async function sendPdfView(body) {
@@ -1097,6 +1109,11 @@ const cropFor = (crops, page) => (crops.find((c) => c.page === page) || crops.fi
 function cropValid(c) {
   const left = Math.min(Math.max(c.left, 0), 1 - CROP_MIN), top = Math.min(Math.max(c.top, 0), 1 - CROP_MIN);
   return { page: c.page, left, top, right: Math.min(Math.max(c.right, left + CROP_MIN), 1), bottom: Math.min(Math.max(c.bottom, top + CROP_MIN), 1) };
+}
+// the part of a picture of [w] x [h] pixels a trim keeps
+function cropPixels(c, w, h) {
+  const left = Math.min(Math.max(Math.floor(c.left * w), 0), Math.max(w - 1, 0)), top = Math.min(Math.max(Math.floor(c.top * h), 0), Math.max(h - 1, 0));
+  return { left, top, width: Math.min(Math.max(Math.floor((c.right - c.left) * w), 1), w - left), height: Math.min(Math.max(Math.floor((c.bottom - c.top) * h), 1), h - top) };
 }
 function cropSet(crops, c) { const rest = crops.filter((x) => x.page !== c.page), v = cropValid(c); return cropWhole(v) ? rest : [...rest, v]; }
 const cropClear = (crops, page) => crops.filter((c) => c.page !== page);

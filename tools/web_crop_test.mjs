@@ -8,7 +8,7 @@ import vm from "node:vm";
 const page = readFileSync(new URL("../app/src/main/assets/web/index.html", import.meta.url), "utf8");
 const block = page.split("// <crop-logic>")[1]?.split("// </crop-logic>")[0];
 assert.ok(block, "the page has no <crop-logic> block");
-const L = vm.runInNewContext(`${block}\n({ cropFor, cropValid, cropSet, cropClear, cropWhole, cropGrab, cropMove, CROP_ALL, cropInk, cropAround, cropSample, CROP_AIR })`);
+const L = vm.runInNewContext(`${block}\n({ cropFor, cropValid, cropSet, cropClear, cropWhole, cropGrab, cropMove, CROP_ALL, cropInk, cropAround, cropSample, CROP_AIR, cropPixels })`);
 
 const crop = (page, left = 0, top = 0, right = 1, bottom = 1) => ({ page, left, top, right, bottom });
 
@@ -97,4 +97,10 @@ test("one frame for several pages holds what each has; a long PDF is read at pag
   assert.deepEqual([...L.cropSample(3)], [0, 1, 2]);
   const long = L.cropSample(300);
   assert.equal(long.length, 24); assert.equal(long[0], 0); assert.equal(long[23], 299);
+});
+
+test("the preview of a trimmed page takes only the part kept, inside the picture", () => {
+  assert.deepEqual({ ...L.cropPixels(crop(0, 0.25, 0.1, 0.75, 0.6), 400, 600) }, { left: 100, top: 60, width: 200, height: 300 });
+  const edge = L.cropPixels(crop(0, 0.9, 0.9, 1, 1), 10, 10);
+  assert.ok(edge.left + edge.width <= 10 && edge.top + edge.height <= 10 && edge.width >= 1 && edge.height >= 1);
 });

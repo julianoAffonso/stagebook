@@ -18,6 +18,10 @@ import br.app.stagebook.ui.components.SwitchRow
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.platform.testTag
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Icon
@@ -86,7 +90,10 @@ fun PdfSongCard(pdf: EditorPdf, onReplace: () -> Unit, onRemove: () -> Unit, mod
                 }
             }
             // the first page, as it will look on the stage (with the colours turned over, if they are)
-            pdf.file?.let { PdfPreview(it, pdf.invert, br.app.stagebook.domain.PdfHidden.visible(pdf.pages.coerceAtLeast(1), pdf.hidden).first()) }
+            pdf.file?.let {
+                val first = br.app.stagebook.domain.PdfHidden.visible(pdf.pages.coerceAtLeast(1), pdf.hidden).first()
+                PdfPreview(it, pdf.invert, first, crop = br.app.stagebook.domain.PdfCrops.forPage(pdf.crops, first))
+            }
             Text(stringResource(R.string.editor_pdf_note), style = MaterialTheme.typography.bodyMedium)
             // the colours of this song's PDF: white paper black, for a dark stage. Here, and not on the stage's header
             if (!pdf.lost) SwitchRow(stringResource(R.string.stage_pdf_invert), pdf.invert, onInvert, Modifier.fillMaxWidth())
@@ -124,20 +131,45 @@ private fun PdfSongCardDarkPreview() = PreviewSurface(dark = true) {
 
 /** The PDF's first page, small, in the card: drawn off the main thread, closed with the card. */
 @Composable
-private fun PdfPreview(file: java.io.File, invert: Boolean, page: Int = 0, modifier: Modifier = Modifier) {
+private fun PdfPreview(file: java.io.File, invert: Boolean, page: Int = 0, modifier: Modifier = Modifier, crop: br.app.stagebook.data.model.PdfCrop? = null) {
     val open by br.app.stagebook.ui.stage.rememberPdfOpen(file)
     val ready = open as? br.app.stagebook.ui.stage.PdfOpen.Ready
     val image by br.app.stagebook.ui.stage.rememberPdfPageImage(ready?.pages, page, PREVIEW_WIDTH)
     Box(modifier.fillMaxWidth().heightIn(max = PREVIEW_MAX_HEIGHT), contentAlignment = Alignment.Center) {
         val shown = image
-        if (shown != null) {
-            Image(
-                shown, stringResource(R.string.editor_pdf_preview), Modifier.fillMaxHeight().clip(MaterialTheme.shapes.small).background(Color.White),
-                contentScale = ContentScale.Fit, colorFilter = if (invert) br.app.stagebook.ui.stage.InvertFilter else null,
-            )
-        } else if (open is br.app.stagebook.ui.stage.PdfOpen.Loading) CircularProgressIndicator()
+        if (shown != null) PdfPageThumb(shown, crop, invert, Modifier.fillMaxHeight())
+        else if (open is br.app.stagebook.ui.stage.PdfOpen.Loading) CircularProgressIndicator()
     }
 }
 
+/**
+ * A page as the stage will show it: with its trim, only the part kept (user, 23/11: the card went on showing the whole
+ * page after a crop, margins and all), and turned over when the colours are.
+ */
+@Composable
+internal fun PdfPageThumb(image: androidx.compose.ui.graphics.ImageBitmap, crop: br.app.stagebook.data.model.PdfCrop?, invert: Boolean, modifier: Modifier = Modifier) {
+    val label = stringResource(R.string.editor_pdf_preview)
+    val filter = if (invert) br.app.stagebook.ui.stage.InvertFilter else null
+    if (crop == null) {
+        Image(image, label, modifier.clip(MaterialTheme.shapes.small).background(Color.White), contentScale = ContentScale.Fit, colorFilter = filter)
+        return
+    }
+    // the part kept, in the image's pixels; the box takes its shape
+    val left = (crop.left * image.width).toInt().coerceIn(0, image.width - 1)
+    val top = (crop.top * image.height).toInt().coerceIn(0, image.height - 1)
+    val width = ((crop.right - crop.left) * image.width).toInt().coerceIn(1, image.width - left)
+    val height = ((crop.bottom - crop.top) * image.height).toInt().coerceIn(1, image.height - top)
+    androidx.compose.foundation.Canvas(
+        modifier.aspectRatio(width.toFloat() / height).clip(MaterialTheme.shapes.small).background(Color.White)
+            .testTag(PDF_THUMB_TAG).semantics { contentDescription = label },
+    ) {
+        drawImage(
+            image, srcOffset = androidx.compose.ui.unit.IntOffset(left, top), srcSize = androidx.compose.ui.unit.IntSize(width, height),
+            dstSize = androidx.compose.ui.unit.IntSize(size.width.toInt(), size.height.toInt()), colorFilter = filter,
+        )
+    }
+}
+
+internal const val PDF_THUMB_TAG = "pdf_thumb"
 private const val PREVIEW_WIDTH = 480
 private val PREVIEW_MAX_HEIGHT = 320.dp
