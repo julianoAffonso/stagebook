@@ -45,13 +45,18 @@ Lyrics, chords and backing tracks in one app, to play live on Android. Solo or w
   turned by the pedal, a tap or a swipe; zoom with two fingers (kept with the song), hold the page to highlight, crop the
   margins (all pages or one) and invert the colors for a dark stage, both in the song's editor. PDFs go to the band on the same Wi-Fi (up to 6 MB per send) and over the internet as encrypted attachments of the
   free server (up to 30 MB per send, kept 3 hours; the send warns about it). PDFs are never read as text.
+  If the song kept lyrics or chords from before the PDF, a switch on the PDF card shows those lyrics on stage.
 - **Backing tracks:** OGG with any number of channels, MP3 or WAV, on a USB audio interface or the device's output.
-  With a mixer, per-output routing, EQ and normalization.
+  With a mixer, per-output routing, EQ and normalization. The track can fade out when you stop it and starts at its first sound.
+- **Complete song details:** one tap looks up the artist, year, BPM and length missing in the whole library; a song with a
+  backing track takes its length from the track itself.
 - **Settings by task:** the menu's Settings tab lists seven groups (stage, chords, page turning, import and backup, band and computer, player and
-  metronome, device), each opening full screen like the stage, with a **search** that also finds what is turned off and says why. Songs look the same everywhere
+  metronome, device), each opening full screen like the stage, with a **search** that also finds what is turned off and says why. Inside the bigger
+  groups, subtitles gather the cards on the same subject (in Band and computer: Playing with the band, Out of the app, Computer), and the stage preview
+  stays on top only while the options it shows pass under it. Songs look the same everywhere
   (title, artist, key, BPM, capo, track), and the Songs list can show and sort them by **most and least played**. The song editor has two screens, **Data** and **Lyrics and chords**; deleting
   a song asks with its name. The app warns, on the band and over the internet, when someone is on another version.
-- **Metronome**, lyrics and chords import from websites, **Now Playing** for OBS and Resolume, the song on a TV or projector (external screen)
+- **Metronome**, lyrics and chords import from websites, **Now Playing** for OBS and Resolume, the song on a TV or projector (**external screen**: the same page as the stage, with or without chords, and the logo or your own image off stage)
   ([format](docs/now-playing.md)), backup to a `.stagebook` file (tap one in a chat, a download or the file manager
   and it opens in the app), an **editor on the computer** (in the browser, with setlists and breaks) and an **essential
   mode** that turns off what you won't use.
@@ -201,7 +206,9 @@ of it. The next release counts its notes from the version before, so nobody miss
 
 ### Engine simulator
 `tools/engine-sim/run.sh` runs the audio engine on a Mac with a fake USB interface and compares its sound with the
-version validated on a real mixer. It also tests drops, the clock plans and load. In Actions it runs on synthetic
+version validated on a real mixer. It also tests drops, the clock plans, load and the edges of the sound (no click on
+pause, play or after a seek; the end of the track). With no tracks given it makes its own out of noise (needs numpy and
+soundfile). In Actions it runs on synthetic
 tracks (real ones never go to the repository) and isn't a required check. When even the fourth open is judged noisy,
 the runner is marked as too noisy and the four plan A tests show as skipped; the plan B tests run anywhere. It doesn't
 replace the test on a real mixer.

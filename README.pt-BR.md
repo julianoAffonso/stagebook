@@ -46,15 +46,19 @@ Letra, cifra e backing track num app só, para tocar ao vivo no Android. Sozinho
   aparecem no palco, viradas pelo pedal, por um toque ou um deslize; amplie com dois dedos (o zoom fica na música), segure a página para marcar, recorte as
   margens (todas as páginas ou uma) e inverta as cores para um palco escuro, os dois no editor da música. Os PDFs vão para a banda no mesmo Wi-Fi (até 6 MB por envio) e pela internet como anexos cifrados
   do servidor gratuito (até 30 MB por envio, guardados por 3 horas; o envio avisa). PDF nunca é lido como
-  texto.
+  texto. Se a música guardou letra ou cifra de antes do PDF, uma chave no cartão do PDF mostra essa letra no palco.
 - **Backing track:** OGG com quantos canais tiver, MP3 ou WAV, numa interface de áudio USB ou na saída do aparelho. Tem
-  mixer, roteamento por saída, EQ e normalização.
+  mixer, roteamento por saída, EQ e normalização. A faixa pode descer o volume ao parar (fade) e começa no primeiro som.
+- **Completar dados:** um toque busca artista, ano, BPM e duração que faltam na biblioteca inteira; a música com backing
+  track pega a duração da própria faixa.
 - **Ajustes por tarefa:** a aba Ajustes do menu lista sete grupos (palco, cifras, virar a página, importar e backup, banda e computador, player e
-  metrônomo, aparelho), cada um em tela cheia como o palco, com uma **busca** que também acha o que está desligado e diz por quê. A música tem a mesma linha
+  metrônomo, aparelho), cada um em tela cheia como o palco, com uma **busca** que também acha o que está desligado e diz por quê. Dentro dos grupos
+  maiores, subtítulos juntam os cartões do mesmo assunto (em Banda e computador: Tocar com a banda, Para fora do app, Computador), e a prévia do palco
+  fica presa no alto só enquanto passam as opções que ela mostra. A música tem a mesma linha
   em todo lugar (título, artista, tom, BPM, capo, faixa), e a lista de Músicas mostra e ordena pelas **mais e menos tocadas**. O editor de música tem duas telas, **Dados** e **Letra e
   cifra**; apagar uma música pergunta com o nome dela. O app avisa, na banda e pela internet, quando alguém está em
   outra versão.
-- **Metrônomo**, importação de letras e cifras pelos sites, **Now Playing** para OBS e Resolume, a música numa TV ou projetor (tela externa)
+- **Metrônomo**, importação de letras e cifras pelos sites, **Now Playing** para OBS e Resolume, a música numa TV ou projetor (**tela externa**: a mesma página do palco, com ou sem cifra, e o logo ou uma imagem sua fora do palco)
   ([formato](docs/now-playing.pt-BR.md)), backup num arquivo `.stagebook` (toque num deles numa conversa, num download
   ou no gerenciador de arquivos e ele abre no app), um **editor no computador** (no navegador, com setlists e
   intervalos) e um **modo essencial** que desliga o que você não vai usar.
@@ -204,7 +208,9 @@ novidades a partir da anterior, e ninguém perde nenhuma mudança.
 
 ### Simulador do motor
 O `tools/engine-sim/run.sh` roda o motor de áudio num Mac com uma interface USB falsa e compara o som com a versão
-validada numa mesa de verdade. Também testa quedas, os planos do relógio e carga. No Actions ele roda com faixas
+validada numa mesa de verdade. Também testa quedas, os planos do relógio, carga e as bordas do som (sem estalo no pause,
+no play e depois de um salto; o fim da faixa). Sem faixas, ele gera as próprias com ruído (precisa de numpy e
+soundfile). No Actions ele roda com faixas
 sintéticas (as de verdade nunca vão para o repositório) e não é uma verificação obrigatória. Quando até a quarta
 abertura é julgada ruidosa, o runner é marcado como barulhento e os quatro testes de plano A aparecem como pulados; os
 de plano B rodam em qualquer lugar. Ele não substitui o teste na mesa.

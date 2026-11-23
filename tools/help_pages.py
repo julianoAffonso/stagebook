@@ -1232,7 +1232,7 @@ def _regroup_settings():
         ("[For playing without failures](#ajustes-avancado)", "[For playing without failures](#ajustes-player)"),
         ("o cartão Para tocar sem falhas em Avançado", "o cartão Para tocar sem falhas em Player e metrônomo"),
         ("the For playing without failures card in Advanced", "the For playing without failures card in Player and metronome"),
-        ("o MIDI da música em Pedal e MIDI", "a Saída MIDI em Virar a página"), ("the song MIDI in Pedal and MIDI", "the MIDI out in Turn the page"),
+        ("o MIDI da música em Pedal e MIDI", "a Saída MIDI em Banda e computador"), ("the song MIDI in Pedal and MIDI", "the MIDI out in Band and computer"),
         ("Ajustes → Modo essencial", "Ajustes → Aparelho → Modo essencial"), ("Settings → Essential mode", "Settings → Device → Essential mode"),
     ]
 
