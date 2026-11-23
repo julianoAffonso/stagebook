@@ -495,6 +495,18 @@ static void check(int ok, const char *what, const char *detail) {
     if (!ok) fails++;
 }
 
+// ---- the edges of the sound in a capture: where it starts and ends, and how loud it is right there ----
+static double rms_all(const float *a, long from, long to) {   // over the 4 channels
+    if (from < 0) from = 0;
+    if (to <= from) return 0;
+    double sum = 0;
+    for (long i = from * 4; i < to * 4; i++) sum += (double)a[i] * a[i];
+    return sqrt(sum / ((to - from) * 4));
+}
+static long first_sound(const float *a, long n) { for (long i = 0; i < n * 4; i++) if (a[i] != 0) return i / 4; return -1; }
+static long last_sound(const float *a, long n) { for (long i = n * 4 - 1; i >= 0; i--) if (a[i] != 0) return i / 4; return -1; }
+static int by_value(const void *a, const void *b) { double x = *(const double *)a, y = *(const double *)b; return x < y ? -1 : x > y; }
+
 static void dump(const char *path) {
     FILE *f = fopen(path, "wb");
     fwrite(cap, sizeof(float) * 4, cap_n, f);
@@ -625,15 +637,15 @@ int main(int argc, char **argv) {
     snprintf(buf, sizeof buf, "%.0f despertares/s", wps);
     check(wps <= 60, "decoder nearly asleep when stopped", buf);
 
-    // 4) desligar
-    printf("[4] desligar\n");
+    // 4) turning off
+    printf("[4] turning off\n");
     double t0 = now();
     FN(stop)(env, NULL);
     double ts = now() - t0;
     snprintf(buf, sizeof buf, "%.0f ms (closing silence so the desk doesn't whine)", ts * 1000);
     check(ts > 0.4 && ts < 0.8, "turns off with ~0.5 s of silence", buf);
     snprintf(buf, sizeof buf, "%d URBs still with the kernel, %d engine memory blocks leaked", sim_kernel_urbs(), nlive);
-    check(sim_kernel_urbs() == 0 && nlive == 0, "nada sobra ao desligar", buf);
+    check(sim_kernel_urbs() == 0 && nlive == 0, "nothing is left behind when it turns off", buf);
     sim_close_conn();
 
     // 5) cable unplugged mid-song, then plugged back in (what the service does: stop, close, start)
@@ -1104,6 +1116,68 @@ only_starve:
     snprintf(buf, sizeof buf, "first sound at %lld ms", (long long)lead);
     check(lead >= 0 && lead < dur, "finds where the first sound is", buf);
     check(FN(leadingSilence)(env, NULL, (jstring)"/nonexistent.ogg", 0.001f, 30000) == -1, "a file that doesn't open says so", "");
+    // 12) the edges of the sound. With no fade set, a pause and a play still go down and up over a few ms: a cut at full
+    // level is a click on the PA. Five places in the song and the middle result counts, so one transient doesn't decide
+    printf("[12] no click on pause and play; play in the middle of a fade; the end of the track\n");
+    {
+        double down[5], up[5], cold[5];
+        long ms2 = OUT_RATE / 500, near = OUT_RATE / 100, far = OUT_RATE / 40;   // 2 ms, 10 ms, 25 ms
+        for (int i = 0; i < 5; i++) {
+            // "cold": the first play after a seek, with nothing decoded yet; then a pause and a play from where it stopped
+            FN(seek)(env, NULL, 60000 + i * 7000);
+            sleep_s(0.1);
+            for (int again = 0; again < 2; again++) {
+                cap_n = 0; capturing = 1;
+                FN(play)(env, NULL); sleep_s(0.4);
+                FN(pause)(env, NULL); sleep_s(0.3);
+                capturing = 0;
+                long f = first_sound(cap, cap_n), l = last_sound(cap, cap_n);
+                int there = f >= 0 && l - f > 2 * far;
+                double rise = there ? rms_all(cap, f, f + ms2) / fmax(rms_all(cap, f + near, f + far), 1e-9) : 9;
+                if (again) up[i] = rise; else cold[i] = rise;
+                down[i] = there ? rms_all(cap, l + 1 - ms2, l + 1) / fmax(rms_all(cap, l - far, l - near), 1e-9) : 9;
+            }
+        }
+        qsort(down, 5, sizeof down[0], by_value); qsort(up, 5, sizeof up[0], by_value); qsort(cold, 5, sizeof cold[0], by_value);
+        snprintf(buf, sizeof buf, "last 2 ms at %.0f%% of the level just before, first 2 ms at %.0f%% of the level just after",
+                 down[2] * 100, up[2] * 100);
+        check(down[2] < 0.6 && up[2] < 0.6, "pause and play ramp over a few ms, no cut at full level", buf);
+        snprintf(buf, sizeof buf, "first 2 ms at %.0f%% of the level just after", cold[2] * 100);
+        check(cold[2] < 0.6, "the first play after a seek ramps too", buf);
+    }
+    {
+        // played again 1.6 s into a 2 s fade (the volume is at a fifth): it comes back whole, from where the song is
+        FN(setFadeOut)(env, NULL, 2000);
+        FN(seek)(env, NULL, 60000); FN(play)(env, NULL); sleep_s(0.3);
+        cap_n = 0; capturing = 1; sleep_s(0.4);
+        long n1 = cap_n;
+        jlong p1 = FN(position)(env, NULL);
+        FN(pause)(env, NULL); sleep_s(1.6);
+        FN(play)(env, NULL); sleep_s(0.6);
+        capturing = 0;
+        jlong p2 = FN(position)(env, NULL);
+        long q = OUT_RATE / 4;
+        meters before = meter(cap, n1), back = meter(cap + (cap_n - q) * 4, q);
+        snprintf(buf, sizeof buf, "playing %.1f dB, 0.6 s after playing again %.1f dB, the position went on %lld ms",
+                 db(before.rms[0]), db(back.rms[0]), (long long)(p2 - p1));
+        check(fabs(db(back.rms[0]) - db(before.rms[0])) < 6.0 && p2 - p1 > 1800 && p2 - p1 < 2700,
+              "a play in the middle of a fade brings the volume back and carries on from there", buf);
+        FN(setFadeOut)(env, NULL, 0);
+        FN(pause)(env, NULL); sleep_s(0.1);
+    }
+    {
+        // the track played to its end: silence, the position stays at the end and the stream stays up for the next song
+        FN(seek)(env, NULL, dur - 1500); FN(play)(env, NULL);
+        sleep_s(2.5);
+        cap_n = 0; capturing = 1; sleep_s(0.3); capturing = 0;
+        meters end = meter(cap, cap_n);
+        jlong p = FN(position)(env, NULL);
+        snprintf(buf, sizeof buf, "1 s past the end: peak %.1f dB, position %lld of %lld ms, stream %s",
+                 db(fmax(end.peak[0], end.peak[1])), (long long)p, (long long)dur, FN(isRunning)(env, NULL) ? "up" : "down");
+        check(end.peak[0] == 0 && end.peak[1] == 0 && FN(isRunning)(env, NULL) && llabs((long long)(p - dur)) < 300,
+              "the end of the track is silence, the position stops there and the stream stays up", buf);
+        FN(pause)(env, NULL);
+    }
 #endif
     FN(stop)(env, NULL);
     sim_close_conn();

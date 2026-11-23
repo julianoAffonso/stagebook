@@ -747,7 +747,9 @@ static void *usb_main(void *arg) {
             for (int f = 0; f < nf; f++) { \
                 float lane[LANES_MAX] = {0}; \
                 int want_play = g_playing && !tail && !hold; \
-                if (want_play && g_fade < 1.0f) g_fade += 1.0f / FADE_FRAMES; \
+                /* the volume only starts up once there is sound to play: after a seek the decoder takes a few ms to bring it, \
+                   and rising over nothing made the first sound come in at full level (simulator, 22/11) */ \
+                if (want_play && g_fade < 1.0f && (g_fade > 0.0f || g_ring_n > 0)) g_fade += 1.0f / FADE_FRAMES; \
                 /* the stream ending or held is never the slow fade: the anti-click, so the tail is silence */ \
                 if (!want_play && g_fade > 0.0f) g_fade -= (tail || hold) ? 1.0f / FADE_FRAMES : FADE_DOWN_STEP; \
                 if (g_fade < 0) g_fade = 0; if (g_fade > 1) g_fade = 1; \
@@ -1059,7 +1061,7 @@ static aaudio_data_callback_result_t dev_cb(AAudioStream *st, void *ud, void *da
     for (int f = 0; f < nf; f++) {
         float lane[LANES_MAX] = {0};
         int want_play = g_playing;
-        if (want_play && g_fade < 1.0f) g_fade += 1.0f / FADE_FRAMES;
+        if (want_play && g_fade < 1.0f && (g_fade > 0.0f || g_ring_n > 0)) g_fade += 1.0f / FADE_FRAMES;   // as on the USB path
         if (!want_play && g_fade > 0.0f) g_fade -= FADE_DOWN_STEP;
         if (g_fade < 0) g_fade = 0; if (g_fade > 1) g_fade = 1;
         if (g_fade > 0 && ring_pop_locked(lane)) g_consumed++;
