@@ -104,7 +104,7 @@ class MusicBrainz @Inject constructor() {
             c.setRequestProperty("Accept", "application/json")
             try {
                 when (c.responseCode) {
-                    200 -> Asked.Found(best(c.inputStream.bufferedReader().readText(), title, artist))
+                    200 -> Asked.Found(best(c.inputStream.use { it.readTextCapped(MAX_SERVICE_ANSWER) }, title, artist))
                     503, 429 -> Asked.Busy
                     else -> Asked.Found(null)
                 }

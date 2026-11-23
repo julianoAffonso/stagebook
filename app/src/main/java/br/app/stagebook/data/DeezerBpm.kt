@@ -90,7 +90,7 @@ class DeezerBpm @Inject constructor() {
                 c.readTimeout = TIMEOUT_MS
                 try {
                     when (c.responseCode) {
-                        200 -> c.inputStream.bufferedReader().readText().let { if (it.contains("\"Quota limit exceeded\"")) Busy else it }
+                        200 -> c.inputStream.use { it.readTextCapped(MAX_SERVICE_ANSWER) }.let { if (it.contains("\"Quota limit exceeded\"")) Busy else it }
                         429, 503 -> Busy
                         else -> null
                     }

@@ -49,7 +49,8 @@ class IncomingFiles @Inject constructor(
                 val kind = context.contentResolver.openInputStream(uri)!!.use { input ->
                     val buffered = input.buffered()
                     val kind = kindOf(buffered) ?: return@use null
-                    part.outputStream().use { out -> copyLimited(buffered, out, if (kind == Kind.SONGS_JSON) MAX_JSON_BYTES else Long.MAX_VALUE) }
+                    // a backup with its tracks is big, but never the whole disk
+                    part.outputStream().use { out -> copyLimited(buffered, out, if (kind == Kind.SONGS_JSON) MAX_JSON_BYTES else (dir.usableSpace - SPACE_LEFT_BYTES).coerceAtLeast(0)) }
                     kind
                 } ?: return@runCatching false
                 decodes(part, kind)
@@ -103,6 +104,7 @@ class IncomingFiles @Inject constructor(
         private const val PART = "incoming.part"
         private const val HEAD_BYTES = 64
         private const val COPY_BUFFER = 64 * 1024
+        private const val SPACE_LEFT_BYTES = 64L * 1024 * 1024   // room the device keeps while a file comes in
         private const val MAX_JSON_BYTES = 32L * 1024 * 1024   // thousands of songs; a bigger "songs file" isn't one
 
         private fun isSongText(s: br.app.stagebook.data.model.Song) =

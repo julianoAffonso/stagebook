@@ -118,8 +118,8 @@ class Backup @Inject constructor(
             ZipInputStream(input).use { zip ->
                 generateSequence { zip.nextEntry }.forEach { e ->
                     when (e.name) {
-                        MANIFEST -> manifest = json.decodeFromString(Manifest.serializer(), zip.readBytes().decodeToString())
-                        SONGS -> songs = json.decodeFromString(Songs.serializer(), zip.readBytes().decodeToString()).songs.size
+                        MANIFEST -> manifest = json.decodeFromString(Manifest.serializer(), zip.readTextCapped(MAX_MANIFEST_BYTES))
+                        SONGS -> songs = json.decodeFromString(Songs.serializer(), zip.readTextCapped(MAX_ENTRY_BYTES)).songs.size
                     }
                 }
             }
@@ -147,9 +147,9 @@ class Backup @Inject constructor(
             ZipInputStream(input).use { zip ->
                 generateSequence { zip.nextEntry }.forEach { e ->
                     when {
-                        e.name == MANIFEST -> json.decodeFromString(Manifest.serializer(), zip.readBytes().decodeToString()).let { savedBy = it.device; savedParts = it.parts }
-                        e.name == SONGS -> songs = json.decodeFromString(Songs.serializer(), zip.readBytes().decodeToString())
-                        e.name == SETTINGS -> settings = json.parseToJsonElement(zip.readBytes().decodeToString()).jsonObject
+                        e.name == MANIFEST -> json.decodeFromString(Manifest.serializer(), zip.readTextCapped(MAX_MANIFEST_BYTES)).let { savedBy = it.device; savedParts = it.parts }
+                        e.name == SONGS -> songs = json.decodeFromString(Songs.serializer(), zip.readTextCapped(MAX_ENTRY_BYTES))
+                        e.name == SETTINGS -> settings = json.parseToJsonElement(zip.readTextCapped(MAX_ENTRY_BYTES)).jsonObject
                         e.name.startsWith(TRACKS_DIR) && Part.TRACKS in parts -> {
                             // only the file name (never an outside folder: "../")
                             val name = e.name.removePrefix(TRACKS_DIR).substringAfterLast('/')
@@ -262,6 +262,9 @@ class Backup @Inject constructor(
     private fun appVersion() = runCatching { context.packageManager.getPackageInfo(context.packageName, 0).versionName.orEmpty() }.getOrDefault("")
 
     companion object {
+        // what a backup's text parts can weigh: a file from outside with more is not a backup (it was read whole)
+        private const val MAX_MANIFEST_BYTES = 64 * 1024
+        private const val MAX_ENTRY_BYTES = 64 * 1024 * 1024
         const val FORMAT = 1
         const val EXTENSION = "stagebook"
         // Android's picker doesn't know .stagebook: saves as binary and opens any file (the content is checked)

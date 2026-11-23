@@ -63,12 +63,21 @@ class PdfStore @Inject constructor(@ApplicationContext private val context: Cont
 
     /**
      * A smaller copy of the PDF [file] to send over the internet (user, 22/11: "compactar o PDF pra enviar"), in the cache;
-     * null when it doesn't come out much smaller (the file itself goes). The caller deletes the copy.
+     * null when it doesn't come out much smaller (the file itself goes). Kept for [SEND_KEEP_MS] under the file's own
+     * name, size and date: a send to several band members shrinks each PDF once. The store deletes the old ones, here.
      */
+    @Synchronized
     fun forSending(file: File, inspector: PdfInspector = PdfInspector()): File? {
-        val out = File(context.cacheDir, "send-${java.util.UUID.randomUUID()}.pdf")
-        val small = PdfShrink.shrunk(context, file, minBytes = 0, out = out) ?: return null
-        return small.takeIf { inspector.check(it) is PdfCheck.Ok } ?: run { small.delete(); null }
+        val now = System.currentTimeMillis()
+        context.cacheDir.listFiles { f -> f.name.startsWith(SEND_PREFIX) && now - f.lastModified() > SEND_KEEP_MS }?.forEach { it.delete() }
+        val base = "$SEND_PREFIX${file.name}-${file.length()}-${file.lastModified()}"
+        val out = File(context.cacheDir, "$base.pdf")
+        val none = File(context.cacheDir, "$base.none")   // tried, and it didn't get smaller: not tried again for a while
+        if (out.isFile) return out
+        if (none.isFile) return null
+        val small = PdfShrink.shrunk(context, file, minBytes = 0, out = out)?.takeIf { inspector.check(it) is PdfCheck.Ok }
+        if (small == null) { out.delete(); runCatching { none.createNewFile() } }
+        return small
     }
 
     private fun shrink(tmp: File, inspector: PdfInspector) {
@@ -115,6 +124,8 @@ class PdfStore @Inject constructor(@ApplicationContext private val context: Cont
             name.takeIf { it.isNotEmpty() && '/' !in it && '\\' !in it && ".." !in it && !it.startsWith('.') && it.none { c -> c.isISOControl() } }
 
         private const val UNSAFE = "unsafe-name.none"
+        private const val SEND_PREFIX = "send-"
+        const val SEND_KEEP_MS = 30 * 60_000L
 
         fun looksLikePdf(head: ByteArray): Boolean = head.size >= MAGIC.size && MAGIC.indices.all { head[it] == MAGIC[it] }
 

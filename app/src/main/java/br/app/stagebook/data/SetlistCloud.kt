@@ -455,7 +455,7 @@ class SetlistCloud @Inject constructor(
     internal fun updateNotice(): ByteArray = pack(PAIR_MARK, json.encodeToString(Pack("", emptyList(), BandProtocol.BREAKS_VERSION)))
 
     /** What arrived in my inbox from a pair, since [since] (null = the last 12 h); null with no internet. */
-    suspend fun fetchPair(pairKey: ByteArray, since: String?): PairFetch? = withContext(Dispatchers.IO) {
+    suspend fun fetchPair(pairKey: ByteArray, since: String?, known: (packageId: String) -> Boolean = { false }): PairFetch? = withContext(Dispatchers.IO) {
         val lines = get("$SERVER/${pairTopic(pairKey, identity.id)}/json?poll=1&since=${since ?: "12h"}") ?: return@withContext null
         val msgs = messagesWithIds(lines)
         val all = msgs.mapNotNull { (_, m) -> ShareCode.decrypt(pairKey, m)?.let { runCatching { json.decodeFromString<Chunk>(it.decodeToString()) }.getOrNull() } }
@@ -467,6 +467,9 @@ class SetlistCloud @Inject constructor(
             if (ordered.size != n) return@mapNotNull null
             // a malformed chunk is an unreadable package, not an error that stops this member's sync and the next ones
             val bytes = runCatching { ordered.fold(ByteArray(0)) { acc, c -> acc + java.util.Base64.getDecoder().decode(c.d) } }.getOrNull() ?: return@mapNotNull null
+            // a package already taken in (a resend, 12 h later) isn't opened again: its PDFs were downloaded and written
+            // to the disk just to be thrown away (audit 22/11). It still comes back by its id, so the receipt goes again
+            if (known(pid)) return@mapNotNull Triple(pid, "", emptyList<SharedSong>())
             val pkg = openPairPackage(bytes) { url -> fetchAttachment(url, pairKey) } ?: return@mapNotNull null
             pkg.breaks?.let { breaks[pid] = it }
             Triple(pid, pkg.text, pkg.songs)
@@ -503,8 +506,10 @@ class SetlistCloud @Inject constructor(
      * encrypted with [key] (the server and whoever finds the address see nothing). Its address, or null when it didn't go.
      */
     private fun attach(topic: String, key: ByteArray, file: java.io.File): String? {
+        // the smaller copy is kept a while by the store: the same PDF going to five members was shrunk five times, with
+        // the band waiting behind it (audit 22/11)
         val small = runCatching { pdfs?.forSending(file, inspector) }.getOrNull()
-        val bytes = try { (small ?: file).readBytes() } catch (e: java.io.IOException) { return null } finally { small?.delete() }
+        val bytes = try { (small ?: file).readBytes() } catch (e: java.io.IOException) { return null }
         val body = ShareCode.encrypt(key, bytes).toByteArray()
         attachHook?.let { hook -> return hook(attachTopic(topic), body)?.takeIf(::isAttachment) }
         val at = if (!internetOn) null else runCatching {
@@ -519,7 +524,7 @@ class SetlistCloud @Inject constructor(
             try {
                 c.outputStream.use { it.write(body) }
                 if (c.responseCode != 200) null
-                else json.parseToJsonElement(c.inputStream.bufferedReader().readText()).jsonObject["attachment"]?.jsonObject?.get("url")?.jsonPrimitive?.content
+                else json.parseToJsonElement(c.inputStream.use { it.readTextCapped(MAX_SERVICE_ANSWER) }).jsonObject["attachment"]?.jsonObject?.get("url")?.jsonPrimitive?.content
             } finally { c.disconnect() }
         }.getOrNull()
         return at?.takeIf(::isAttachment)
@@ -564,7 +569,7 @@ class SetlistCloud @Inject constructor(
         c.readTimeout = TIMEOUT_MS
         c.setRequestProperty("User-Agent", USER_AGENT)
         try {
-            if (c.responseCode != 200) null else c.inputStream.bufferedReader().readLines()
+            if (c.responseCode != 200) null else c.inputStream.use { it.readTextCapped(MAX_POLL_ANSWER) }.lines().filter { it.isNotEmpty() }
         } finally {
             c.disconnect()
         }
@@ -596,6 +601,8 @@ class SetlistCloud @Inject constructor(
         private const val TIMEOUT_MS = 10_000
         private const val ATTACH_TIMEOUT_MS = 60_000   // a PDF of some MB on a slow phone line
         // an attachment is the PDF encrypted (base64): 4/3 of the largest PDF and some framing
+        // a topic's messages at once: the 60 of a send, or a member's package in chunks; well under this
+        private const val MAX_POLL_ANSWER = 32 * 1024 * 1024
         private const val MAX_ATTACHMENT = br.app.stagebook.domain.BandContent.MAX_PDF_BYTES * 4 / 3 + 64 * 1024
         private const val MAX_ATTACH_URL = 200
         private const val OLD_PAIR_PDF_BYTES = 60_000L
