@@ -16,6 +16,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import kotlinx.coroutines.isActive
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
@@ -107,9 +108,12 @@ fun PdfScrollView(
                     if (autoRan[0]) {
                         autoRan[0] = false
                         val stopAt = scroll.value.roundToInt()
+                        val anchorBefore = anchor
                         anchor = stopAt
                         val k = PdfScroll.steps(total, viewport, stopAt).indexOfFirst { it >= stopAt }.coerceAtLeast(0)
-                        syncing[0] = true
+                        // only when the step really changes, as the lyrics do: set with nothing to clear it (the scroll ended
+                        // twice in the same place), it swallowed the next press of the pedal (audit 22/11)
+                        if (k != at || stopAt != anchorBefore) syncing[0] = true
                         onPausedNow(k)
                     }
                     return@LaunchedEffect
@@ -124,17 +128,22 @@ fun PdfScrollView(
                     if (v >= max) { onAutoEndNow(); break }
                 }
             }
-            val offset = scroll.value.roundToInt()
-            val visible = PdfScroll.visible(tops, heights, offset, viewport)
+            // read through a derived state: the scroll moves on every frame of the automatic scroll, and read here it made the
+            // whole view compose again 60 times a second; like this, only when a page comes into view or leaves (audit 22/11)
+            val visible by remember(tops, heights, viewport) { androidx.compose.runtime.derivedStateOf { PdfScroll.visible(tops, heights, scroll.value.roundToInt(), viewport) } }
             // the pictures of the pages in view, drawn off the main thread; the others are let go
             val drawn = remember(pages, width, crops) { mutableStateMapOf<Int, ImageBitmap>() }
             LaunchedEffect(visible, pages, width, crops) {
                 drawn.keys.filter { it !in visible }.forEach { drawn.remove(it) }
                 for (p in visible) {
                     if (p in drawn) continue
+                    // the view moved on meanwhile: stop here, not one page later (the catch below swallowed the cancellation)
+                    if (!kotlinx.coroutines.currentCoroutineContext().isActive) break
                     val bitmap = runCatching {
                         val (pw, ph) = pages.size(p)
-                        pages.bitmap(p, PdfCrops.wholeWidth(pw to ph, PdfCrops.forPage(crops, p), width, viewport)).asImageBitmap()
+                        // as wide as the view, whatever its height: the pages go one under the other here. Fitted to the
+                        // view's height, a page on a tablet on its side was drawn small and stretched 2.7 times (audit 22/11)
+                        pages.bitmap(p, PdfCrops.wholeWidth(pw to ph, PdfCrops.forPage(crops, p), width, Int.MAX_VALUE)).asImageBitmap()
                     }.getOrNull() ?: continue
                     drawn[p] = bitmap
                 }

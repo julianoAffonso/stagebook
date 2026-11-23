@@ -17,6 +17,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.Immutable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -120,7 +121,11 @@ fun rememberPresentationDisplay(enabled: Boolean): Display? {
 fun ExternalPresentation(display: Display, content: @Composable () -> Unit) {
     val context = LocalContext.current
     val latest = rememberUpdatedState(content)
-    DisposableEffect(display) {
+    // made again when Android closes it by itself (the TV changed its resolution a second after connecting) or it failed
+    // to show: before, the TV went back to mirroring the tablet until the cable was plugged again (audit 22/11)
+    var generation by remember(display) { androidx.compose.runtime.mutableIntStateOf(0) }
+    var again by remember(display) { mutableStateOf(false) }
+    DisposableEffect(display, generation) {
         val activity = context.activity() ?: return@DisposableEffect onDispose {}
         val presentation = Presentation(activity, display)
         val view = ComposeView(presentation.context).apply { setContent { latest.value() } }
@@ -130,9 +135,17 @@ fun ExternalPresentation(display: Display, content: @Composable () -> Unit) {
             it.setViewTreeSavedStateRegistryOwner(activity)
             it.setViewTreeViewModelStoreOwner(activity)
         }
+        var leaving = false
+        presentation.setOnDismissListener { if (!leaving) again = true }
         // the screen may go away between being found and shown
-        runCatching { presentation.show() }
-        onDispose { runCatching { presentation.dismiss() } }
+        if (runCatching { presentation.show() }.isFailure) again = true
+        onDispose { leaving = true; runCatching { presentation.dismiss() } }
+    }
+    // after a moment, not at once: a screen really gone would be tried in a loop
+    if (again) androidx.compose.runtime.LaunchedEffect(generation) {
+        kotlinx.coroutines.delay(PRESENTATION_RETRY_MS)
+        again = false
+        generation++
     }
 }
 
@@ -152,7 +165,8 @@ fun ExternalStageContent(frame: MirrorFrame?, look: Look, pdfFile: (String) -> F
                 // the PDF's kept lyrics, the part of the page on stage (a PDF song with no lyrics shows its name)
                 LyricsPart(frame, look, fg) { all -> br.app.stagebook.domain.MirrorLines.pdfPart(all.size, { all[it].text.isEmpty() }, frame.pdfCount, frame.pdfAt) }
             } else if (look.externalShow == ExternalShow.PDF) {
-                val open by rememberPdfOpen(pdfFile(frame.pdf))
+                val file = remember(frame.pdf) { pdfFile(frame.pdf) }   // not on every composition: it looks at the disk
+                val open by rememberPdfOpen(file)
                 PdfStageView(
                     open, frame.pdfPage, frame.pdfInvert, onPageCount = {}, marks = frame.pdfMarks, markColor = Color(look.highlightColor),
                     crops = frame.pdfCrops, pageKey = frame.songId,
@@ -175,9 +189,13 @@ private fun hasLyrics(text: String): Boolean =
 @Composable
 private fun LyricsPart(frame: MirrorFrame, look: Look, fg: Color, part: (List<StageLine>) -> IntRange) {
     val names = rememberSectionNames(look.translateSections)
-    val chords = ChordLook(look.externalShow != ExternalShow.LYRICS, look.chordScale, Color(look.chordColor))
-    val text = remember(frame, names, chords, look.sectionColor, look.showSections, look.sectionScale, look.sectionFont, look.highlightColor) {
-        val all = stageLines(frame.text, names, Color(look.sectionColor), look.showSections, chords, look.sectionScale, Color(look.highlightColor), look.sectionFont.family)
+    val showChords = look.externalShow != ExternalShow.LYRICS
+    val chords = remember(showChords, look.chordScale, look.chordColor) { ChordLook(showChords, look.chordScale, Color(look.chordColor)) }
+    // the song is read once, and each page turn only picks its part (keyed on the whole frame, every turn read the song again)
+    val all = remember(frame.text, names, chords, look.sectionColor, look.showSections, look.sectionScale, look.sectionFont, look.highlightColor) {
+        stageLines(frame.text, names, Color(look.sectionColor), look.showSections, chords, look.sectionScale, Color(look.highlightColor), look.sectionFont.family)
+    }
+    val text = remember(all, frame.lines, frame.pdfAt, frame.pdfCount) {
         val r = part(all)
         (if (r.isEmpty()) emptyList() else all.subList(r.first, r.last + 1)).map { it.text }.dropWhile { it.isEmpty() }.dropLastWhile { it.isEmpty() }
     }
@@ -206,6 +224,8 @@ private fun LyricsPart(frame: MirrorFrame, look: Look, fg: Color, part: (List<St
  */
 @Composable
 fun ExternalIdleContent(idle: ExternalIdle, image: File?, modifier: Modifier = Modifier) {
+    // another image saved over the same file: drawn again (the file's date was read while composing, and nothing composed)
+    val version by br.app.stagebook.data.ExternalImageStore.version.collectAsState()
     Box(modifier.fillMaxSize().background(Color.Black).testTag(EXTERNAL_IDLE_TAG), Alignment.Center) {
         when (idle) {
             ExternalIdle.LOGO -> br.app.stagebook.ui.components.AppLogo(size = androidx.compose.ui.unit.Dp(LOGO_DP))
@@ -213,7 +233,7 @@ fun ExternalIdleContent(idle: ExternalIdle, image: File?, modifier: Modifier = M
             ExternalIdle.IMAGE -> BoxWithConstraints(Modifier.fillMaxSize()) {
                 val w = constraints.maxWidth
                 val h = constraints.maxHeight
-                val picture by androidx.compose.runtime.produceState<androidx.compose.ui.graphics.ImageBitmap?>(null, image, image?.lastModified(), w, h) {
+                val picture by androidx.compose.runtime.produceState<androidx.compose.ui.graphics.ImageBitmap?>(null, image, version, w, h) {
                     value = image?.takeIf { it.exists() }?.let { f -> kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { sampled(f, w, h) } }
                 }
                 picture?.let {
@@ -257,19 +277,20 @@ private fun externalStyle(size: TextUnit, fg: Color, look: Look) = TextStyle(
  */
 internal fun fitFontPx(measurer: TextMeasurer, text: AnnotatedString, width: Int, height: Int, style: (Float) -> TextStyle): Float {
     if (width <= 0 || height <= 0) return MIN_EXTERNAL_PX
-    fun fits(px: Float): Boolean {
-        val r = measurer.measure(text, style(px), softWrap = false, constraints = Constraints())
-        // the chords drawn above a letter can reach a little past the line's end
-        return r.size.width * CHORD_SLACK <= width && r.size.height <= height
-    }
-    var lo = MIN_EXTERNAL_PX
-    var hi = MAX_EXTERNAL_PX
-    if (!fits(lo)) return lo
+    fun size(px: Float) = measurer.measure(text, style(px), softWrap = false, constraints = Constraints()).size
+    // nothing wraps and every height follows the font, so the text grows in proportion: measured once at a reference size
+    // and scaled (it was a search of ten layouts on every page turn, on the thread that animates the tablet's own page;
+    // audit 22/11), then checked, and brought down a step at a time if rounding left it a pixel over
+    val ref = size(REFERENCE_PX)
+    if (ref.width <= 0 || ref.height <= 0) return MIN_EXTERNAL_PX
+    // the chords drawn above a letter can reach a little past the line's end
+    var px = (REFERENCE_PX * minOf(width / (ref.width * CHORD_SLACK), height.toFloat() / ref.height)).coerceIn(MIN_EXTERNAL_PX, MAX_EXTERNAL_PX)
     repeat(FIT_STEPS) {
-        val mid = (lo + hi) / 2
-        if (fits(mid)) lo = mid else hi = mid
+        val now = size(px)
+        if (now.width * CHORD_SLACK <= width && now.height <= height) return px
+        px = (px * 0.97f).coerceAtLeast(MIN_EXTERNAL_PX)
     }
-    return lo
+    return px
 }
 
 const val EXTERNAL_TAG = "external_screen"
@@ -278,5 +299,7 @@ const val EXTERNAL_IMAGE_TAG = "external_image"
 private const val LOGO_DP = 240f
 private const val MIN_EXTERNAL_PX = 12f
 private const val MAX_EXTERNAL_PX = 400f
-private const val FIT_STEPS = 9
+private const val FIT_STEPS = 4
+private const val REFERENCE_PX = 48f
+private const val PRESENTATION_RETRY_MS = 1_500L
 private const val CHORD_SLACK = 1.04f

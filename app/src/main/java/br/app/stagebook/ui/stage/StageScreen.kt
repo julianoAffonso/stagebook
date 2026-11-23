@@ -1137,7 +1137,8 @@ fun StageScreen(
             }
             // a PDF song: its pages in place of the lyrics. The page count is what the pedal, the tap and the swipe turn through
             if (song.pdf.isNotEmpty()) {
-                val opened by rememberPdfOpen(pdfFile(song.pdf))
+                val songPdf = remember(song.pdf) { pdfFile(song.pdf) }   // not on every composition: it looks at the disk
+                val opened by rememberPdfOpen(songPdf)
                 // pages left off the stage (user, 22/11): the stage counts only the pages shown; the marks and the trims stay
                 // on their file pages
                 val visible = remember(opened, song.pdfHidden) { (opened as? br.app.stagebook.ui.stage.PdfOpen.Ready)?.let { br.app.stagebook.domain.PdfHidden.visible(it.pages.pageCount, song.pdfHidden) } }

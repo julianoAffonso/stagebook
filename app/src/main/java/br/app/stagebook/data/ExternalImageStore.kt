@@ -25,18 +25,23 @@ class ExternalImageStore @Inject constructor(@ApplicationContext private val con
             val input = context.contentResolver.openInputStream(uri) ?: return@withContext false
             val copied = input.use { i -> tmp.outputStream().use { o -> copyAtMost(i, o, MAX_BYTES) } }
             if (!copied || !isImage(tmp)) { tmp.delete(); return@withContext false }
-            tmp.renameTo(file)
+            tmp.renameTo(file).also { if (it) changed() }
         } catch (e: Exception) {
+            tmp.delete()   // also when cancelled: up to 20 MB stayed behind
             if (e is kotlinx.coroutines.CancellationException) throw e
-            tmp.delete()
             false
         }
     }
 
     /** Another choice than the image (logo or black): the image goes, only what is in use stays on the device. */
-    fun forget() { file.delete() }
+    fun forget() { file.delete(); changed() }
 
     companion object {
+        // one image for the whole app: whoever shows it draws again when this moves, whichever instance saved it
+        private val _version = kotlinx.coroutines.flow.MutableStateFlow(0)
+        val version: kotlinx.coroutines.flow.StateFlow<Int> = _version
+        private fun changed() { _version.value++ }
+
         const val FILE = "external_idle"
         const val MAX_BYTES = 20L * 1024 * 1024
 

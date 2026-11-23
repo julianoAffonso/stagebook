@@ -77,4 +77,11 @@ class PdfScrollTest {
         compose.waitForIdle()
         compose.onAllNodesWithContentDescription("Marca-texto").assertCountEquals(0)
     }
+
+    // audit 22/11: fitted to the view's height, a page on a tablet on its side was drawn at 707 px and shown at 1920
+    @Test fun `in scroll mode a page is drawn as wide as the view, on its side too`() {
+        val a4 = 595 to 842
+        assertEquals(1920, br.app.stagebook.domain.PdfCrops.wholeWidth(a4, null, 1920, Int.MAX_VALUE))
+        assertTrue(br.app.stagebook.domain.PdfCrops.wholeWidth(a4, null, 1920, 1000) < 800)   // what it was drawn at
+    }
 }

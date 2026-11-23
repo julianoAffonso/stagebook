@@ -74,8 +74,11 @@ class ExternalIdleTest {
         // only the image in use is kept: choosing the logo or black deletes it
         val store = ExternalImageStore(context)
         picture().copyTo(store.file, overwrite = true)
+        val before = ExternalImageStore.version.value
         store.forget()
         assertFalse(store.file.exists())
+        // whoever shows the image hears of the change (it was only seen after opening and closing a stage, audit 22/11)
+        assertTrue(ExternalImageStore.version.value > before)
     }
 
     @Test fun `Settings chooses what shows with the stage closed`() {
