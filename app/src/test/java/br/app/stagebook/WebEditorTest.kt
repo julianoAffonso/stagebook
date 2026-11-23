@@ -219,4 +219,33 @@ class WebEditorTest {
         clock += 91 * day
         assertEquals(401, routes.handle(req("GET", "/api/session", cookie = key)).status)
     }
+
+    // audit 22/11
+    @Test fun `nothing is cached unless the answer says so, and then only its own line goes`() {
+        val plain = java.io.ByteArrayOutputStream().also { WebHttp.write(it, br.app.stagebook.data.web.HttpResponse.json(200, "{}")) }.toString()
+        assertTrue(plain.contains("Cache-Control: no-store"))
+        val page = java.io.ByteArrayOutputStream().also { WebHttp.write(it, br.app.stagebook.data.web.HttpResponse(200, ByteArray(1), "image/jpeg", mapOf("Cache-Control" to "private, max-age=60"))) }.toString()
+        assertTrue(page.contains("Cache-Control: private, max-age=60"))
+        assertFalse("no-store beside it won, and the browser kept nothing", page.contains("no-store"))
+    }
+
+    @Test fun `an upload cut half way leaves no file behind`() {
+        val file = java.io.File.createTempFile("upload", ".part")
+        val raw = "PUT /api/backup HTTP/1.1\r\nHost: 10.0.0.2\r\nContent-Length: 1000\r\n\r\nonly this much"
+        val cut = object : java.io.InputStream() {
+            private val src = ByteArrayInputStream(raw.toByteArray())
+            override fun read(): Int = src.read().also { if (it < 0) throw java.net.SocketTimeoutException("cut") }
+        }
+        val e = runCatching { WebHttp.read(cut, toFile = { file }) { 10_000L } }.exceptionOrNull()
+        assertTrue(e != null)
+        assertFalse("the half file stayed in the cache", file.exists())
+    }
+
+    @Test fun `an approval nobody comes for is forgotten with the request's time`() {
+        val a = WebEditorAuth(MemoryStore()) { clock }
+        val r = a.ask("Chrome", "10.0.0.9")!!
+        a.answer(r.id, true)
+        clock += WebEditorAuth.REQUEST_TTL_MS + 1
+        assertEquals(WebEditorAuth.Poll.Unknown, a.poll(r.id))   // the key is gone, not handed out late
+    }
 }

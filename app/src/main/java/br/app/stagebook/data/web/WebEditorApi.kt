@@ -154,6 +154,7 @@ class WebEditorApi(
     data class ImportResult(
         val status: String, val title: String = "", val author: String = "", val year: String = "", val tempo: String = "", val text: String = "",
         val key: String = "", val capo: Int = 0,
+        val duration: String = "",   // the length the page or the file says ("3:45"): hidden from the text like the key, so it travels apart
     )
 
     @Serializable
@@ -213,7 +214,7 @@ class WebEditorApi(
         return json.encodeToString(
             repository.library.value.songs
                 // the app's order (accents and case ignored): "À Francesa" with the A's, not after Z (device test B-22)
-                .sortedBy { br.app.stagebook.domain.TextKey.of(it.title) }
+                .map { br.app.stagebook.domain.TextKey.of(it.title) to it }.sortedBy { it.first }.map { it.second }   // the key once per song, not per comparison
                 .map { item(it, day) },
         )
     }
@@ -317,6 +318,7 @@ class WebEditorApi(
                         found.year, Chords.directive(found.text, "tempo").orEmpty(),
                         Chords.hideMeta(Chords.setDirective(Chords.setDirective(Chords.setDirective(found.text, "title", ""), "artist", ""), "subtitle", "")),
                         Chords.key(found.text), Chords.capo(found.text),
+                        Chords.meta(found.text).durationText,
                     ),
                 ),
             )

@@ -119,11 +119,19 @@ class WebEditorServer @Inject constructor(
         }
         serverJob = scope.launch {
             while (isActive) {
-                val client = runCatching { socket.accept() }.getOrNull() ?: break
+                // a passing error accepting one connection doesn't end the editor: it looked on and answered nobody (audit 22/11)
+                val client = runCatching { socket.accept() }.getOrNull() ?: if (socket.isClosed) break else continue
                 // a few at a time, on their own threads: a flood of connections can't hold the app's other work
-                // (library saves, band); the rest is closed right away (audit 30/10)
-                if (!slots.tryAcquire()) { runCatching { client.close() }; continue }
-                launch(serveDispatcher) { try { serve(client) } finally { slots.release() } }
+                // (library saves, band). With all taken the next one waits a moment for a place (a page loading its six
+                // images right after another used to lose some, closed with no answer) and then is told "busy"
+                if (!slots.tryAcquire(SLOT_WAIT_MS, java.util.concurrent.TimeUnit.MILLISECONDS)) {
+                    launch(serveDispatcher) { runCatching { client.use { it.soTimeout = BUSY_TIMEOUT_MS; WebHttp.write(it.getOutputStream(), HttpResponse.status(503)) } } }
+                    continue
+                }
+                // atomic: turned off between the place taken and the start, it still runs far enough to give the place back
+                val place = java.util.concurrent.atomic.AtomicBoolean(true)
+                fun free() { if (place.getAndSet(false)) slots.release() }
+                launch(serveDispatcher, start = kotlinx.coroutines.CoroutineStart.ATOMIC) { try { serve(client, ::free) } finally { free() } }
             }
         }
     }
@@ -147,11 +155,12 @@ class WebEditorServer @Inject constructor(
         if (repository.library.value.look.webEditorOn) repository.updateLook { it.copy(webEditorOn = false) }
     }
 
-    private fun serve(client: Socket) = client.use { s ->
+    private fun serve(client: Socket, answered: () -> Unit = {}) = client.use { s ->
         clients += s
         val response = runCatching {
-            s.soTimeout = TIMEOUT_MS
-            val req = WebHttp.read(s.getInputStream(), s.inetAddress?.hostAddress.orEmpty(), ::bodyFile, { routes.gate(it, isBig(it.path)) }, ::maxBody)
+            // a connection that says nothing leaves after a short wait; once the head came, the body has the usual time
+            s.soTimeout = HEAD_TIMEOUT_MS
+            val req = WebHttp.read(s.getInputStream(), s.inetAddress?.hostAddress.orEmpty(), ::bodyFile, { routes.gate(it, isBig(it.path)).also { _ -> s.soTimeout = TIMEOUT_MS } }, ::maxBody)
             try {
                 if (server == null) HttpResponse.status(503) else routes.handle(req)   // turned off while it was arriving
             } finally {
@@ -159,6 +168,7 @@ class WebEditorServer @Inject constructor(
             }
         }.getOrElse { e -> HttpResponse.status((e as? HttpError)?.status ?: 400) }
         runCatching { WebHttp.write(s.getOutputStream(), response) }
+        answered()   // the place is free before the socket closes: the same client's next call finds it
         clients -= s
     }
 
@@ -203,6 +213,9 @@ class WebEditorServer @Inject constructor(
         private const val TAG = "WebEditor"
         const val PORT = 8090
         private const val TIMEOUT_MS = 15_000
+        private const val HEAD_TIMEOUT_MS = 5_000
+        private const val BUSY_TIMEOUT_MS = 2_000
+        private const val SLOT_WAIT_MS = 1_500L
         const val MAX_BODY = 2 * 1024 * 1024   // a pasted chord sheet or a few ChordPro files
         const val MAX_FILE = 1024L * 1024 * 1024   // a backup with all the backing tracks
         const val MAX_CONNECTIONS = 8

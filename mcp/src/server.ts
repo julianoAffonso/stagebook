@@ -43,7 +43,8 @@ function songOut(s: Song, withText: boolean) {
 /** The distinct chords of a ChordPro text, in order of appearance. */
 export function chordsIn(chordpro: string): string[] {
   const seen = new Set<string>();
-  for (const m of chordpro.matchAll(/\[([A-G][^\[\]\s]*)\]/g)) seen.add(m[1]);
+  // a chord as the app reads one (ChordName): [Chorus], [Bridge] or [Final] are section titles, not chords
+  for (const m of chordpro.matchAll(/\[([A-G][#b♯♭]?(?:maj|min|dim|aug|sus|add|m|M|°|º|\+|-|\d|\(|\)|#|b|♯|♭|,|\/(?=\d))*(?:\/[A-G][#b♯♭]?)?\*{0,3})\]/g)) seen.add(m[1]);
   return [...seen];
 }
 
@@ -80,7 +81,8 @@ export function checkBreaks(breaks: number[] | undefined, songs: number): void {
   if (breaks.some((p, i) => i > 0 && p <= breaks[i - 1])) throw new StagebookError("Break positions must be in ascending order, with no repeats.");
 }
 
-const norm = (s: string) => s.normalize("NFD").replace(/\p{Diacritic}/gu, "").toLowerCase();
+// as the app compares names (TextKey): no accents, no apostrophes, only letters and digits
+const norm = (s: string) => s.normalize("NFD").replace(/\p{Diacritic}/gu, "").replace(/['’´`]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
 
 export function buildServer(client: StagebookClient): McpServer {
   const server = new McpServer(
@@ -327,7 +329,7 @@ export function buildServer(client: StagebookClient): McpServer {
       const r = await client.send("POST", "/api/import", { text: pasted ?? "", url: url ?? "", title: title ?? "", withTab: with_tab ?? null }, undefined, 60000, signal);
       if (r?.status === "askTab") return text("The song has tablature: call again with with_tab true (keep it) or false (chords only).");
       if (!keep) return text({ toReview: { title: r.title, author: r.author, year: r.year, tempo: r.tempo, key: r.key, capo: r.capo, chords: chordsIn(r.text ?? ""), text: r.text } });
-      const created = await client.send("POST", "/api/songs", { title: r.title, author: r.author, year: r.year, tempo: r.tempo, text: r.text, key: r.key, capo: r.capo, tags: [] });
+      const created = await client.send("POST", "/api/songs", { title: r.title, author: r.author, year: r.year, tempo: r.tempo, duration: r.duration ?? "", text: r.text, key: r.key, capo: r.capo, tags: [] });
       return text({ created: created?.id, title: r.title, author: r.author });
     }),
   );
