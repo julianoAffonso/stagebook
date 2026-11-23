@@ -99,7 +99,13 @@ class ConductMissingStripTest {
 
     @Test fun `a follower's list is what this device lacks, with nothing to send`() {
         compose.setContent { StagebookTheme { ConductBar(ConductUi.Following("Voz", "Música", false, false, listOf("Baixo"), listOf("Evidências", "Asa Branca")), {}, {}, {}, {}) } }
-        compose.onNodeWithText("Voz", substring = true).performClick()
+        // the strip is worked out off the test's thread: its line is waited for before it is tapped, and the tap is
+        // repeated until the window is up (the Release run failed here on a slow runner, 23/11: the line wasn't there yet)
+        compose.waitUntil(TEST_WAIT_MS) {
+            val line = compose.onAllNodesWithText("Voz", substring = true)
+            if (compose.onAllNodesWithText("Faltam neste aparelho").fetchSemanticsNodes().isEmpty() && line.fetchSemanticsNodes().isNotEmpty()) line[0].performClick()
+            compose.onAllNodesWithText("Faltam neste aparelho").fetchSemanticsNodes().isNotEmpty()
+        }
         compose.onNodeWithText("Faltam neste aparelho").assertExists()
         // one row per song, not one text with line breaks
         compose.onNodeWithText("Evidências").assertExists()

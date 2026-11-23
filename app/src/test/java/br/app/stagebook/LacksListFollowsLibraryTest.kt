@@ -95,7 +95,13 @@ class LacksListFollowsLibraryTest {
 
     @Test fun `a song that arrived leaves the list, and the last one closes the window`() {
         screen(); following()
-        compose.onNodeWithText("Voz", substring = true).performClick()
+        // the strip is worked out off the test's thread: its line is waited for before it is tapped, and the tap is
+        // repeated until the window is up (the Release run failed here on a slow runner, 23/11: the line wasn't there yet)
+        compose.waitUntil(TEST_WAIT_MS) {
+            val line = compose.onAllNodesWithText("Voz", substring = true)
+            if (compose.onAllNodesWithText("Faltam neste aparelho").fetchSemanticsNodes().isEmpty() && line.fetchSemanticsNodes().isNotEmpty()) line[0].performClick()
+            compose.onAllNodesWithText("Faltam neste aparelho").fetchSemanticsNodes().isNotEmpty()
+        }
         compose.onNodeWithText("Faltam neste aparelho").assertExists()
         compose.waitUntil(TEST_WAIT_MS) { inWindow("Primeira") > 0 && inWindow("Segunda") > 0 && inWindow("Terceira") > 0 }
         arrives("Primeira")
