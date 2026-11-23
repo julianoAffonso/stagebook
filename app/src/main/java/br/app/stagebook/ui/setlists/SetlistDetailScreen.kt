@@ -143,6 +143,7 @@ fun SetlistDetailRoute(
         onHideQr = viewModel::hideQr,
         onMove = viewModel::move,
         onRemove = viewModel::remove,
+        onRemoveMany = viewModel::removeMany,
         onDeleteSetlist = viewModel::delete,   // the setlist goes away and the LaunchedEffect above comes back
         onAddBreak = viewModel::addBreak,
         onRemoveBreak = viewModel::removeBreak,
@@ -194,6 +195,7 @@ fun SetlistDetailScreen(
     startEditing: Boolean = false,   // opens in editing (tests, and a setlist just created)
     onRestore: (songIds: List<String>, breaks: List<Int>) -> Unit = { _, _ -> },   // "Discard": the setlist as it was when editing began
     toList: Int = 0,   // a new number = the Setlists tab tapped again: go back to the list (as Back would)
+    onRemoveMany: (List<Pair<Int, String>>) -> Unit = { picks -> picks.sortedByDescending { it.first }.forEach { (i, id) -> onRemove(i, id) } },   // the chosen songs out in one save
 ) {
     val wide = wideLists()
     var renaming by rememberSaveable { mutableStateOf(false) }
@@ -453,8 +455,8 @@ fun SetlistDetailScreen(
             else pluralStringResource(R.plurals.set_remove_many_confirm, selected.size, selected.size),
             stringResource(R.string.set_remove),
             {
-                // from the end, so the positions of the others don't move; the repository checks each is still there
-                items.withIndex().filter { it.value.key in selected }.sortedByDescending { it.index }.forEach { onRemove(it.index, it.value.songId) }
+                // all at once: the repository checks each is still at its place
+                onRemoveMany(items.withIndex().filter { it.value.key in selected }.map { it.index to it.value.songId })
                 selected = emptyList()
             },
             { removingMany = false },
@@ -466,7 +468,7 @@ fun SetlistDetailScreen(
             songs = uiState.items.count { !it.missing },
             online = online,
             internetOn = internetOn,
-            limits = br.app.stagebook.ui.share.ShareLimits(lists = 1, songs = uiState.items.count { !it.missing }, setlists = true, pdfSizes = pdfSizes()),
+            limits = br.app.stagebook.ui.share.ShareLimits(lists = 1, songs = uiState.items.count { !it.missing }, setlists = true, pdfSizes = remember(uiState.items) { pdfSizes() }),   // looks at the disk: once per setlist, not per composition
             onQr = { sharing = false; onShowQr() },
             onInternet = { withSongs -> sharing = false; onSendInternet(withSongs) },
             onDismiss = { sharing = false; doneSharing() },

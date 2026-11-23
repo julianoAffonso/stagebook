@@ -270,6 +270,20 @@ class LibraryRepository @Inject constructor(
         mutate { lib -> lib.copy(sets = lib.sets.filterNot { it.id == id }) }
     }
 
+    /** Several setlists deleted in one save (one each was a write of the whole library per setlist; audit 22/11). */
+    fun deleteSetlists(ids: Collection<String>) {
+        val gone = ids.toSet()
+        gone.forEach { setPickedTags(it, emptySet()) }
+        mutate { lib -> lib.copy(sets = lib.sets.filterNot { it.id in gone }) }
+    }
+
+    /** Several songs out of a setlist in one save: each as [removeItem] takes it, only if it is still at its place. */
+    fun removeItems(setId: String, picks: List<Pair<Int, String>>) = updateSet(setId) { s ->
+        val out = picks.filter { (i, songId) -> s.items.getOrNull(i) == songId }.map { it.first }.toSet()
+        if (out.isEmpty()) s
+        else s.copy(items = s.items.filterIndexed { i, _ -> i !in out }, breaks = SetlistBreaks.afterRemoving(s.breaks, s.items.size, out))
+    }
+
     /** The song at [from] goes to [to] (positions among the songs); the breaks stay between the same songs. */
     fun moveItem(setId: String, from: Int, to: Int) = updateSet(setId) { s ->
         if (from !in s.items.indices || to !in s.items.indices) s

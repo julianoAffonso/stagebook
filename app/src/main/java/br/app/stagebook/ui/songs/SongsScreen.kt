@@ -330,7 +330,7 @@ fun SongsScreen(
     if (sharing) {
         ShareSheet(
             songs = selected.size, online = online, onQr = null, internetOn = internetOn,
-            limits = br.app.stagebook.ui.share.ShareLimits(lists = 1, songs = selected.size, setlists = false, pdfSizes = pdfSizesOf(selected)),
+            limits = br.app.stagebook.ui.share.ShareLimits(lists = 1, songs = selected.size, setlists = false, pdfSizes = remember(selected) { pdfSizesOf(selected) }),   // looks at the disk: once per choice, not per composition
             onInternet = { sharing = false; onShareSongs(selected); selected = emptyList() },
             onDismiss = { sharing = false },
             band = band,

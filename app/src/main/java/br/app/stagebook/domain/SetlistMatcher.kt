@@ -44,6 +44,10 @@ object SetlistMatcher {
             return if (byArtist.size == 1) QrMatch.Found(byArtist[0]) else QrMatch.Similar(sameTitle.take(MAX_CANDIDATES))
         }
         val similar = keys.keyed
+            // a title much longer or shorter can't be similar enough (the distance is at least the difference in length):
+            // left out before the costly comparison, the same answer for a fraction of the work. A setlist received with
+            // 30 unknown songs compared each with the whole library on the screen's thread (audit 22/11)
+            .filter { (_, key) -> kotlin.math.abs(key.length - kt.length) <= (1 - SIMILAR_MIN) * maxOf(key.length, kt.length) }
             .map { (song, key) -> song to similarity(key, kt) }
             .filter { it.second >= SIMILAR_MIN }
             .sortedByDescending { it.second }

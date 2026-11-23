@@ -139,6 +139,7 @@ class SetlistsViewModel @Inject constructor(
     }
 
     fun delete(id: String) = repository.deleteSetlist(id)
+    fun deleteMany(ids: List<String>) = repository.deleteSetlists(ids)
 
     fun onQueryChange(q: String) { query.value = q }
 

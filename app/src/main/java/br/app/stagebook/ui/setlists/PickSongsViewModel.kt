@@ -17,6 +17,7 @@ import kotlinx.coroutines.flow.stateIn
 import javax.inject.Inject
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import br.app.stagebook.ui.songs.typingDelay
 
@@ -64,18 +65,19 @@ class PickSongsViewModel @Inject constructor(
     @OptIn(FlowPreview::class)
     private val filtered = combine(repository.library, search.combine(facts, ::Pair), query.debounce(::typingDelay), chosenTags) { lib, (s, known), q, chosen ->
         val set = lib.setlist(setId)
+        val inSet = set?.items?.toHashSet().orEmpty()   // looked up per row: a list here was songs × setlist items (audit 22/11)
         val all = br.app.stagebook.domain.Tags.all(lib.songs)
         val kept = br.app.stagebook.domain.Tags.stillUsed(chosen, all)
         val rows = br.app.stagebook.domain.Tags.filter(s.find(q), kept) { it.tags }.map {
             val fact = known[it.id]
             // a song the search already has and the facts don't yet: its row comes bare and is redone right after
             PickRowUi(
-                it.id, it.title, it.artistLine(), set?.items?.contains(it.id) == true, false,
+                it.id, it.title, it.artistLine(), it.id in inSet, false,
                 fact?.meta?.key.orEmpty(), fact?.meta?.tempo ?: 0, fact?.meta?.capo ?: 0, fact?.hasTrack == true,
             )
         }
         PickSongsUiState(setName = set?.name.orEmpty(), rows = rows, inSetCount = set?.items?.size ?: 0, tags = all, chosenTags = kept)
-    }
+    }.flowOn(kotlinx.coroutines.Dispatchers.Default)   // the search and the tags off the screen's thread, as the song list does
 
     val uiState: StateFlow<PickSongsUiState> = combine(filtered, selected) { f, sel ->
         val place = HashMap<String, Int>(sel.size * 2).also { m -> sel.forEachIndexed { i, id -> m[id] = f.inSetCount + i + 1 } }
