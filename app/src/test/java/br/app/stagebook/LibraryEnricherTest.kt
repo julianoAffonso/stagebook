@@ -127,7 +127,7 @@ class LibraryEnricherTest {
     @Test fun `what the services don't have leaves the count until the song changes, and Look again asks for it`() = runBlocking {
         val repo = repo()
         repo.restore(listOf(Song("a", "Rara", "Banda", "2000")), emptyList())
-        val asked = mutableListOf<String>()
+        val asked = java.util.concurrent.CopyOnWriteArrayList<String>()   // written where the lookups run, read by the test
         val e = enricher(repo, asked).apply { facts = { t, _ -> asked += "dz:$t"; null } }
         assertEquals(1, e.missingCount(repo.library.value.songs))
         e.start()
@@ -138,7 +138,9 @@ class LibraryEnricherTest {
         asked.clear()
         e.start()
         assertEquals(emptyList<String>(), asked)
-        e.start(again = true)
+        // (pressed until it takes: the round before may still be closing on its own thread, and a press meanwhile does
+        // nothing; reading the progress here found the old round's "done" and no lookup yet, on a slow runner, 23/11)
+        withTimeout(5_000) { while (asked.isEmpty()) { e.start(again = true); kotlinx.coroutines.delay(10) } }
         withTimeout(5_000) { e.progress.first { !it.running && it.done > 0 } }
         assertTrue(asked.isNotEmpty())
         // a song renamed is another lookup: it counts again

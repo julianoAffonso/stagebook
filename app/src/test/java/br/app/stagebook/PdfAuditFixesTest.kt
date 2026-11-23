@@ -136,17 +136,21 @@ class PdfAuditFixesTest {
 
     @Test fun `a PDF opened for a song that left meanwhile is closed, not leaked`() {
         val gate = CountDownLatch(1)
+        val opening = CountDownLatch(1)
         val source = Source()
         var shown by mutableStateOf(true)
         compose.setContent {
             StagebookTheme {
                 if (shown) {
-                    val open by rememberPdfOpen(File("slow.pdf"), open = { gate.await(5, TimeUnit.SECONDS); source })
+                    val open by rememberPdfOpen(File("slow.pdf"), open = { opening.countDown(); gate.await(5, TimeUnit.SECONDS); source })
                     PdfStageView(open, 0, invert = false, onPageCount = {})
                 }
             }
         }
         compose.waitForIdle()
+        // the opening runs on another thread: it has to have begun before the song leaves (on a slow runner the song left
+        // first, the opening was cancelled before it started, and there was nothing to close: the Check failed, 23/11)
+        assertTrue("the PDF never began to open", opening.await(10, TimeUnit.SECONDS))
         shown = false   // the song left while its PDF was still opening
         compose.waitForIdle()
         gate.countDown()
