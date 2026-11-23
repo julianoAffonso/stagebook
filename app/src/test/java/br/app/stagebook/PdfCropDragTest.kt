@@ -4,6 +4,9 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.assertIsEnabled
+import androidx.compose.ui.test.onNodeWithContentDescription
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTouchInput
 import br.app.stagebook.data.model.PdfCrop
@@ -66,5 +69,52 @@ class PdfCropDragTest {
         compose.waitForIdle()
         // page 1 of 3 has no trim of its own: its frame starts whole, not from the one for all pages
         assertEquals(PdfCrop(0), set)
+    }
+
+    // a PDF whose pages are white with a black block: page n has it from (20% + n*5%) to 70% across, 30% to 60% down
+    private class BlockPdf(override val pageCount: Int) : br.app.stagebook.data.PdfSource {
+        override fun pageSize(page: Int) = 400 to 600
+        override fun render(page: Int, width: Int): android.graphics.Bitmap {
+            val height = width * 3 / 2
+            val pixels = IntArray(width * height) { i ->
+                val x = (i % width).toFloat() / width; val y = (i / width).toFloat() / height
+                if (x >= 0.2f + page * 0.05f && x < 0.7f && y >= 0.3f && y < 0.6f) 0xFF000000.toInt() else 0xFFFFFFFF.toInt()
+            }
+            return android.graphics.Bitmap.createBitmap(pixels, width, height, android.graphics.Bitmap.Config.ARGB_8888)
+        }
+        override fun close() {}
+    }
+
+    private fun autoCrop(thisPageOnly: Boolean): PdfCrop {
+        var set: PdfCrop? = null
+        val open = br.app.stagebook.data.PdfPages(BlockPdf(3))
+        compose.setContent { StagebookTheme { PdfCropDialog(EditorPdf("a.pdf", pages = 3, bytes = 1_000), onSet = { set = it }, onClear = {}, onDismiss = {}, openPages = open) } }
+        compose.waitForIdle()
+        if (thisPageOnly) {
+            compose.onNodeWithContentDescription("Próxima página").performClick()
+            compose.onNodeWithText("Só esta página").performClick()
+        }
+        compose.onNodeWithText("Automático").performClick()
+        // the pages are read off the main thread: the frame arrives a moment later, and the button is free again
+        compose.waitUntil(5_000) { compose.onAllNodesWithText("Automático").fetchSemanticsNodes().isNotEmpty() && runCatching { compose.onNodeWithText("Automático").assertIsEnabled() }.isSuccess }
+        compose.onNodeWithText("Salvar").performClick()
+        compose.waitUntil(5_000) { set != null }
+        return set!!
+    }
+
+    @Test fun `Automatic puts the frame around what every page has drawn, and Save keeps it for all pages`() {
+        val crop = autoCrop(thisPageOnly = false)
+        assertEquals(PdfCrop.ALL, crop.page)
+        // page 0 starts the furthest left (20%); all end at 70% across, 30% to 60% down; a little air around
+        assertEquals("left: $crop", 0.2f - 0.015f, crop.left, 0.01f)
+        assertEquals("right: $crop", 0.7f + 0.015f, crop.right, 0.01f)
+        assertEquals("top: $crop", 0.3f - 0.015f, crop.top, 0.01f)
+        assertEquals("bottom: $crop", 0.6f + 0.015f, crop.bottom, 0.01f)
+    }
+
+    @Test fun `for this page only, Automatic reads that page alone`() {
+        val crop = autoCrop(thisPageOnly = true)
+        assertEquals(1, crop.page)
+        assertEquals("left: $crop", 0.25f - 0.015f, crop.left, 0.01f)
     }
 }

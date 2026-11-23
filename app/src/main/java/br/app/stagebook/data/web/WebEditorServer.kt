@@ -369,6 +369,7 @@ class WebEditorServer @Inject constructor(
             "cropAll" to R.string.pdf_crop_all,
             "cropPage" to R.string.pdf_crop_page,
             "cropNone" to R.string.pdf_crop_none,
+            "cropAuto" to R.string.pdf_crop_auto,
             "cropPrev" to R.string.pdf_crop_previous,
             "cropNext" to R.string.pdf_crop_next,
             "cancel" to R.string.action_cancel,

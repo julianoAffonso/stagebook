@@ -1385,7 +1385,8 @@
     <string name="editor_pdf_preview">The first page of the PDF</string>
     <string name="editor_pdf_crop">Crop</string>
     <string name="pdf_crop_title">Crop the PDF</string>
-    <string name="pdf_crop_hint">Drag the edges to keep only the part you play from. The file is not changed.</string>
+    <string name="pdf_crop_hint">Drag the edges to keep only the part you play from, or let Automatic take the blank margins off. The file is not changed.</string>
+    <string name="pdf_crop_auto">Automatic</string>
     <string name="pdf_crop_all">All pages</string>
     <string name="pdf_crop_page">This page only</string>
     <string name="pdf_crop_none">No crop</string>

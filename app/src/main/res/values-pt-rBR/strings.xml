@@ -1438,7 +1438,8 @@
     <string name="editor_pdf_preview">Primeira página do PDF</string>
     <string name="editor_pdf_crop">Recortar</string>
     <string name="pdf_crop_title">Recortar o PDF</string>
-    <string name="pdf_crop_hint">Arraste as bordas para ficar só com a parte que você toca. O arquivo não muda.</string>
+    <string name="pdf_crop_hint">Arraste as bordas para ficar só com a parte que você toca, ou deixe o Automático tirar as margens em branco. O arquivo não muda.</string>
+    <string name="pdf_crop_auto">Automático</string>
     <string name="pdf_crop_all">Todas as páginas</string>
     <string name="pdf_crop_page">Só esta página</string>
     <string name="pdf_crop_none">Sem recorte</string>

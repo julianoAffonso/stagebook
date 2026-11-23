@@ -67,6 +67,7 @@ import br.app.stagebook.ui.stage.PdfOpen
 import br.app.stagebook.ui.stage.rememberPdfOpen
 import br.app.stagebook.ui.theme.Spacing
 import kotlin.math.abs
+import kotlinx.coroutines.launch
 
 /**
  * The trim of a PDF (user, 15/11): its page with a frame whose edges are dragged, for the same trim on every page or for
@@ -77,6 +78,7 @@ import kotlin.math.abs
 fun PdfCropDialog(
     pdf: EditorPdf, onSet: (PdfCrop) -> Unit, onClear: (page: Int) -> Unit,
     onComposed: () -> Unit = {},   // called each time the window's body composes (the tests count that a drag makes none)
+    openPages: br.app.stagebook.data.PdfPages? = null,   // the PDF already open (the tests: they have no file to open)
     onDismiss: () -> Unit,
 ) {
     val pages = pdf.pages.coerceAtLeast(1)
@@ -90,9 +92,27 @@ fun PdfCropDialog(
     // the frame being dragged, in fractions of the page; starts from what is kept for this scope
     val frame = remember(scope, current) { CropFrameState(current) }
     val open by pdf.file?.let { rememberPdfOpen(it) } ?: remember { mutableStateOf<PdfOpen>(PdfOpen.Failed) }
-    val ready = open as? PdfOpen.Ready
+    val ready = openPages?.let { PdfOpen.Ready(it) } ?: open as? PdfOpen.Ready
     val image by br.app.stagebook.ui.stage.rememberPdfPageImage(ready?.pages, page, CROP_PAGE_WIDTH)
     val shape = image?.let { it.width.toFloat() / it.height } ?: PAGE_SHAPE
+    // the automatic trim (user, 23/11): the frame goes around what is drawn, for this page or for all of them; it is only
+    // placed, the person still saves (or drags it further)
+    val work = androidx.compose.runtime.rememberCoroutineScope()
+    var finding by remember { mutableStateOf(false) }
+    val auto: () -> Unit = {
+        val p = ready?.pages
+        if (p != null && !finding) {
+            finding = true
+            val wanted = if (all) br.app.stagebook.domain.PdfAutoCrop.sample(p.pageCount) else listOf(page)
+            work.launch {
+                val found = try { autoFrame(p, wanted) } finally { finding = false }
+                if (found != null) {
+                    val v = br.app.stagebook.domain.PdfCrops.valid(PdfCrop(scope, found.left, found.top, found.right, found.bottom))
+                    frame.left = v.left; frame.top = v.top; frame.right = v.right; frame.bottom = v.bottom
+                }
+            }
+        }
+    }
 
     Dialog(onDismissRequest = onDismiss, properties = DialogProperties(usePlatformDefaultWidth = false)) {
         Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
@@ -127,14 +147,28 @@ fun PdfCropDialog(
                 if (pages > 1) SegmentedChoice(
                     listOf(Choice(true, R.string.pdf_crop_all), Choice(false, R.string.pdf_crop_page)), all, { all = it },
                 )
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(Spacing.s)) {
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(Spacing.s), verticalAlignment = Alignment.CenterVertically) {
                     ActionButton(stringResource(R.string.pdf_crop_none), { onClear(scope); onDismiss() }, Modifier.weight(1f), icon = AppIcons.Replay, tone = ButtonTone.Quiet)
+                    ActionButton(stringResource(R.string.pdf_crop_auto), auto, icon = AppIcons.Crop, tone = ButtonTone.Tonal, enabled = ready != null && !finding)
                     ActionButton(stringResource(R.string.action_save), { onSet(PdfCrop(scope, frame.left, frame.top, frame.right, frame.bottom)); onDismiss() }, Modifier.weight(1f), icon = AppIcons.Save)
                 }
             }
         }
     }
 }
+
+/** The frame around what is drawn on [wanted] pages of [pages], each read small and off the main thread. */
+private suspend fun autoFrame(pages: br.app.stagebook.data.PdfPages, wanted: List<Int>): br.app.stagebook.domain.PdfAutoCrop.Frame? =
+    kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) {
+        br.app.stagebook.domain.PdfAutoCrop.around(wanted.map { n ->
+            try {
+                val drawn = pages.bitmap(n, AUTO_PAGE_WIDTH)
+                val pixels = IntArray(drawn.width * drawn.height)
+                drawn.getPixels(pixels, 0, drawn.width, 0, 0, drawn.width, drawn.height)
+                br.app.stagebook.domain.PdfAutoCrop.frame(pixels, drawn.width, drawn.height)
+            } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (_: Exception) { null }   // a page that can't be drawn is left out
+        })
+    }
 
 /**
  * The frame over the page: what is outside it is dimmed, and each edge, corner or the inside is dragged. The drawing is a
@@ -229,3 +263,4 @@ private val HANDLE_ROOM = 12.dp
 internal const val CROP_FRAME_TAG = "pdf_crop_frame"
 private const val PAGE_SHAPE = 2f / 3f   // a page of paper, until the real one is drawn
 private const val CROP_PAGE_WIDTH = 900
+private const val AUTO_PAGE_WIDTH = 300   // enough to find a margin; read for up to 24 pages
