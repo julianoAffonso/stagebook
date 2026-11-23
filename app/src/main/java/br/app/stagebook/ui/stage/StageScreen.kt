@@ -56,9 +56,6 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.animation.slideInHorizontally
-import androidx.compose.animation.slideOutHorizontally
-import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
@@ -175,7 +172,6 @@ private val SPACES = Regex("[\\s\u2002]+")
 /** With the fingers still for this long, the pinch rebuilds the pages (before that, it only scales the text). */
 private const val PINCH_REFLOW_MS = 120L
 private const val PAGE_SLOTS = 7      // dots in the footer (7 × 28dp fit on phones with the clock)
-private const val PAGE_IN_MS = 220   // the new page coming in (and the dragged one going back with it)
 private const val EDIT_OFFER_MS = 4_000L   // the edit button goes away by itself
 
 /** How long a PDF page stays on screen before it is remembered as the one the song was left on. */
@@ -1475,11 +1471,7 @@ fun StageScreen(
                     // turn the page: the new one comes in from the side of the movement
                     val forward = targetState.song > initialState.song ||
                         (targetState.song == initialState.song && targetState.page > initialState.page)
-                    val dir = if (forward) 1 else -1
-                    ((slideInHorizontally(tween(PAGE_IN_MS)) { it / 6 * dir } + fadeIn(tween(PAGE_IN_MS))) togetherWith
-                        (slideOutHorizontally(tween(160)) { -it / 6 * dir } + fadeOut(tween(160))))
-                        // the pages are the same size: no size to animate, and no cut at the page's own width while it slides
-                        .using(androidx.compose.animation.SizeTransform(clip = false))
+                    pageTurn(forward)
                 },
                 label = "page",
             ) { content ->

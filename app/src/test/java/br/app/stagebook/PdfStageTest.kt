@@ -2,6 +2,7 @@ package br.app.stagebook
 
 import android.graphics.Bitmap
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
@@ -88,6 +89,30 @@ class PdfStageTest {
         // the page ahead is drawn off the main thread, after the one on screen: waited for, not read at once (it failed
         // on a slow runner, 23/11)
         compose.waitUntil(5_000) { source.rendered.any { it.first == 3 } && source.rendered.any { it.first == 4 } }
+    }
+
+    @Test fun `turning the page brings the new one in while the old one leaves, and then only the new one stays`() {
+        var at by androidx.compose.runtime.mutableStateOf(0)
+        var count = 0
+        val open = PdfOpen.Ready(PdfPages(FakeSource(7)))   // one PDF for both pages, as the stage keeps it
+        compose.setContent { StagebookTheme { PdfStageView(open, at, invert = false, onPageCount = { count = it }) } }
+        fun shows(page: Int) = compose.onAllNodesWithContentDescription("Página $page de 7 do PDF").fetchSemanticsNodes().isNotEmpty()
+        compose.waitUntil(5_000) { count == 7 && shows(1) }
+        compose.waitForIdle()
+        // frame by frame: the two pages are on screen together only during the turn
+        compose.mainClock.autoAdvance = false
+        at = 1
+        var together = false
+        val until = System.currentTimeMillis() + 5_000
+        while (!together && System.currentTimeMillis() < until) {
+            compose.mainClock.advanceTimeByFrame()
+            together = shows(1) && shows(2)
+            if (!together) Thread.sleep(5)   // the new page is drawn off the main thread
+        }
+        assertTrue("the page was swapped with no turn", together)
+        compose.mainClock.autoAdvance = true
+        compose.waitUntil(5_000) { !shows(1) }
+        compose.onNodeWithContentDescription("Página 2 de 7 do PDF").assertIsDisplayed()
     }
 
     @Test fun `a PDF that can't be opened says so`() {
