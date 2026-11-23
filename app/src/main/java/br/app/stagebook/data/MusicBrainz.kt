@@ -57,6 +57,10 @@ class MusicBrainz @Inject constructor() {
     internal fun cacheSize(): Int = synchronized(found) { found.size }
 
     /** [patient] false (a lookup nobody waits for) gives up at once when another one is going: an import waiting for its year goes first. */
+    /** How many lookups ended with the server still busy: "no answer", which is not "it doesn't have it". */
+    @Volatile var gaveUp = 0
+        private set
+
     suspend fun lookup(title: String, artist: String, patient: Boolean = true): Info? = withContext(Dispatchers.IO) {
         val key = TextKey.of(title) + "|" + TextKey.of(artist)
         synchronized(found) { found[key] }?.let { return@withContext it }
@@ -77,6 +81,7 @@ class MusicBrainz @Inject constructor() {
                 val r = ask(title, artist)
                 if (r !is Asked.Busy) return (r as? Asked.Found)?.info
             }
+            gaveUp++   // busy to the last try: not an answer (who asked may ask again later)
             return null
         } finally {
             gate.unlock()

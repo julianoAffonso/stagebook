@@ -55,11 +55,20 @@ class LibraryEnricher @Inject constructor(
     // songs looked up that still lack something, by id: the signature of what was looked up (title, artist, what it lacked)
     private val tried get() = context.getSharedPreferences("enrich", Context.MODE_PRIVATE)
 
-    /** How many songs lack something that can be looked up, not counting the ones already looked up for it. */
-    fun missingCount(songs: List<Song>): Int = songs.count { lacks(it) && !wasTried(it) }
+    // how many lookups the services left unanswered so far (busy to the last try): the tests count their own
+    internal var unanswered: () -> Int = { musicBrainz.gaveUp + deezer.gaveUp }
 
-    /** How many songs were looked up and still lack something the services don't have. */
-    fun triedCount(songs: List<Song>): Int = songs.count { lacks(it) && wasTried(it) }
+    /** Songs that lack something and weren't looked up yet, and songs looked up that still lack it: one pass over the library. */
+    fun counts(songs: List<Song>): Pair<Int, Int> {
+        val seen = tried.all
+        var missing = 0
+        var looked = 0
+        for (s in songs) if (lacks(s)) { if (seen[s.id] == signature(s)) looked++ else missing++ }
+        return missing to looked
+    }
+
+    fun missingCount(songs: List<Song>): Int = counts(songs).first
+    fun triedCount(songs: List<Song>): Int = counts(songs).second
 
     private fun wasTried(s: Song) = tried.getString(s.id, null) == signature(s)
 
@@ -73,27 +82,47 @@ class LibraryEnricher @Inject constructor(
         if (ids.isEmpty()) return
         job = scope.launch {
             var filled = 0
+            // what was found, written a few songs at a time: each write is the whole library to the disk, and one a song
+            // was a hundred rewrites for a hundred songs (audit 22/11)
+            val found = LinkedHashMap<String, (Song) -> Song>()
+            fun flush() {
+                if (found.isEmpty()) return
+                val fills = HashMap(found)
+                found.clear()
+                repository.updateSongs(fills.keys) { cur -> fills[cur.id]?.invoke(cur) ?: cur }
+            }
+            val looked = ArrayList<String>()
             try {
-                // the first round, then the songs that still lack something once more: a busy service answers later
+                // the first round, then once more only the songs a service gave no answer for (it was busy): what it
+                // answered "I don't have" isn't asked twice
                 var round = ids
                 repeat(ROUNDS) { r ->
                     if (r > 0) {
-                        round = round.filter { id -> repository.song(id)?.let(::lacks) == true }
                         if (round.isEmpty()) return@repeat
-                        // the second round counts on its own (user, 22/11: "of 59" jumping to "of 107" looked wrong)
                         _progress.value = Progress(running = true, done = 0, total = round.size, filled = filled, again = true)
                         delay(roundPauseMs)
                     }
+                    val noAnswer = ArrayList<String>()
                     round.forEachIndexed { i, id ->
-                        if (enrich(id)) filled++
+                        val before = unanswered()
+                        val fill = enrich(id)
+                        if (fill != null) { found[id] = fill; filled++ }
+                        if (unanswered() != before) noAnswer += id else looked += id
+                        if (found.size >= WRITE_EVERY) flush()
                         _progress.value = Progress(running = true, done = i + 1, total = round.size, filled = filled, again = r > 0)
                     }
-                }
-                // what still lacks something after both rounds was looked up: it leaves the count until it changes
-                tried.edit {
-                    ids.forEach { id -> repository.song(id)?.let { s -> if (lacks(s)) putString(id, signature(s)) else remove(id) } }
+                    flush()
+                    if (r == ROUNDS - 1) looked += noAnswer   // still busy after two rounds: looked up, for now
+                    round = noAnswer
                 }
             } finally {
+                flush()   // stopped half way: what was found is kept
+                // what was looked up and still lacks something leaves the count until it changes; ids of songs deleted go
+                val now = repository.library.value.songs.associateBy { it.id }
+                tried.edit {
+                    tried.all.keys.filter { it !in now }.forEach { remove(it) }
+                    looked.forEach { id -> now[id]?.let { s -> if (lacks(s)) putString(id, signature(s)) else remove(id) } }
+                }
                 _progress.value = _progress.value.copy(running = false, filled = filled)
             }
         }
@@ -101,8 +130,9 @@ class LibraryEnricher @Inject constructor(
 
     fun stop() { job?.cancel() }
 
-    private suspend fun enrich(id: String): Boolean {
-        val song = repository.song(id) ?: return false
+    /** What was found for the song [id], as a fill to apply to it; null when nothing new came. */
+    private suspend fun enrich(id: String): ((Song) -> Song)? {
+        val song = repository.song(id) ?: return null
         val needWho = song.author.isBlank() || song.year.isBlank()
         // a backing track knows its own length better than any service (user, 22/11)
         val fromTrack = if (Chords.duration(song.text) == 0 && song.track.isNotEmpty()) trackSeconds(song.track) else 0
@@ -113,11 +143,7 @@ class LibraryEnricher @Inject constructor(
             facts(song.title, song.author.ifBlank { info?.artist.orEmpty() }).also { delay(deezerSpacingMs) }
         } else null
         val f = if (fromTrack > 0) DeezerBpm.Facts(bpm = looked?.bpm ?: 0, seconds = fromTrack) else looked
-        val before = repository.song(id) ?: return false
-        val after = fill(before, info, f)
-        if (after == before) return false
-        repository.updateSong(id) { cur -> fill(cur, info, f) }
-        return true
+        return if (fill(song, info, f) == song) null else ({ cur -> fill(cur, info, f) })
     }
 
     companion object {
@@ -125,6 +151,7 @@ class LibraryEnricher @Inject constructor(
         const val DEEZER_SPACING_MS = 250L
         const val ROUNDS = 2
         const val ROUND_PAUSE_MS = 5_000L
+        const val WRITE_EVERY = 10
 
         /** What was looked up for [s]: its title, artist and which fields it lacked. Another one means looking again. */
         fun signature(s: Song): String = listOf(

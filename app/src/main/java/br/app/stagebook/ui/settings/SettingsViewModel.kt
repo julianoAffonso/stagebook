@@ -47,6 +47,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -263,8 +264,8 @@ class SettingsViewModel @Inject constructor(
             val shown = key?.copy(action = PedalAction.of(key.keyCode, lib.look.pedalKeys))
             SettingsUiState(!loaded, lib.look, lib.songs.size, lib.sets.size, lastKey = shown, version = version, pedalConnected = lib.look.pedalName in connected, update = up)
                 .let { st -> br.app.stagebook.domain.PlayHistory.summary(lib.history).let { (n, d) -> st.copy(playedSongs = n, playedDays = d) } }
-                .copy(missingData = enricher.missingCount(lib.songs), triedData = enricher.triedCount(lib.songs))
-        },
+                .let { st -> enricher.counts(lib.songs).let { (missing, tried) -> st.copy(missingData = missing, triedData = tried) } }
+        }.flowOn(kotlinx.coroutines.Dispatchers.Default),   // every song's text is read for the counts: not on the screen's thread (audit 22/11)
         midi.state,
         language,
         enricher.progress,

@@ -90,7 +90,12 @@ class LibraryEnricherTest {
         val repo = repo()
         repo.restore(listOf(Song("a", "Uma", text = Chords.setDirective(Chords.setDirective("x", "tempo", "100"), "duration", "3:00"))), emptyList())
         var calls = 0
-        val e = enricher(repo).apply { artistYear = { t, _ -> calls++; if (calls == 1) null else MusicBrainz.Info(t, "Found Artist", "1999") } }
+        var busy = 0
+        // the first time the service is busy to the last try (no answer); asked again, it answers
+        val e = enricher(repo).apply {
+            unanswered = { busy }
+            artistYear = { t, _ -> calls++; if (calls == 1) { busy++; null } else MusicBrainz.Info(t, "Found Artist", "1999") }
+        }
         e.start()
         withTimeout(5_000) { e.progress.first { !it.running && it.done > 0 } }
         assertEquals("Found Artist", repo.song("a")!!.author)
@@ -103,7 +108,11 @@ class LibraryEnricherTest {
         val full = Chords.setDirective(Chords.setDirective("x", "tempo", "100"), "duration", "3:00")
         repo.restore(listOf(Song("a", "Uma", text = full), Song("b", "Duas", text = full), Song("c", "Tres", text = full)), emptyList())
         var asked = 0
-        val e = enricher(repo).apply { artistYear = { t, _ -> asked++; if (t == "Duas" && asked <= 3) null else MusicBrainz.Info(t, "Artista", "1999") } }
+        var busy = 0
+        val e = enricher(repo).apply {
+            unanswered = { busy }
+            artistYear = { t, _ -> asked++; if (t == "Duas" && asked <= 3) { busy++; null } else MusicBrainz.Info(t, "Artista", "1999") }
+        }
         val seen = java.util.Collections.synchronizedList(mutableListOf<LibraryEnricher.Progress>())
         val watch = launch(Dispatchers.IO) { e.progress.collect { seen += it } }
         e.start()
@@ -183,6 +192,33 @@ class LibraryEnricherTest {
         compose.onNodeWithText("Pode sair desta tela.").assertExists()
         compose.onNodeWithText("Parar").performScrollTo().performClick()
         assertTrue(stopped)
+    }
+
+    // audit 22/11
+    @Test fun `what a service answered it doesn't have isn't asked twice, and a hundred songs aren't a hundred writes`() = runBlocking {
+        val repo = repo()
+        val full = Chords.setDirective(Chords.setDirective("x", "tempo", "100"), "duration", "3:00")
+        repo.restore((1..25).map { Song("s$it", "Song $it", text = full) }, emptyList())
+        var asked = 0
+        var writes = 0
+        val watch = launch(Dispatchers.IO) { repo.library.collect { writes++ } }
+        val e = enricher(repo).apply {
+            unanswered = { 0 }   // every lookup was answered
+            artistYear = { t, _ -> asked++; if (t.endsWith("5")) null else MusicBrainz.Info(t, "Artista", "1999") }
+        }
+        val before = writes
+        e.start()
+        withTimeout(10_000) { e.progress.first { !it.running && it.done > 0 } }
+        watch.cancel()
+        assertEquals("each song asked once: the ones not found are not asked again", 25, asked)
+        assertTrue("written in batches, not once a song: ${writes - before}", writes - before <= 6)
+        assertEquals(22, repo.library.value.songs.count { it.author == "Artista" })
+        assertEquals(3, e.triedCount(repo.library.value.songs))
+        // a deleted song leaves the list of the ones looked up
+        repo.deleteSong("s5")
+        e.start(again = true)
+        withTimeout(10_000) { e.progress.first { !it.running && it.done > 0 } }
+        assertEquals(2, e.triedCount(repo.library.value.songs))
     }
 
     @Test fun `the card says one state at a time`() {

@@ -98,8 +98,13 @@ class DeezerBpm @Inject constructor() {
             }.getOrElse { if (it is java.io.IOException) Busy else null }
             if (r !== Busy) return r as String?
         }
+        gaveUp++   // busy to the last try: not an answer
         return null
     }
+
+    /** How many requests ended with the server still busy: "no answer", which is not "it doesn't have it". */
+    @Volatile var gaveUp = 0
+        private set
 
     private object Busy
     internal var pauseMs = 700L   // the tests shorten it
