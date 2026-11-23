@@ -66,6 +66,7 @@ class WebEditorServer @Inject constructor(
         band = { WebEditorApi.Band({ inbox.get().items.value }, { bandInternet.get().syncNow() }) },
         backup = { backup.get() }, tracks = { tracks.get() }, pdfs = { pdfs.get() },
         workDir = { java.io.File(context.cacheDir, "web").apply { mkdirs() } },
+        locale = { Languages.wrap(context).resources.configuration.locales[0] },
     )
     private val receiver = lazy {
         WebReceive(repository, { cloud.get().receive(it) }, { code, ok -> bandInternet.get().accepted(code, ok.from) }, { inbox.get().remove(it) })
@@ -236,11 +237,19 @@ class WebEditorServer @Inject constructor(
             "songCount" to R.plurals.song_count, "breakCount" to R.plurals.break_count, "pdfFacts" to R.plurals.editor_pdf_facts,
             "plays" to R.plurals.songs_plays, "playedDays" to R.plurals.songs_played_days, "playedWeeks" to R.plurals.songs_played_weeks,
             "playedMonths" to R.plurals.songs_played_months,
+            "historySummary" to R.plurals.history_summary, "historyDays" to R.plurals.history_days,
         )
 
         /** Texts the page uses, by the name it knows them. */
         val WEB_STRINGS = mapOf(
             "title" to R.string.web_title,
+            // what was played: the same report as Settings → Library
+            "played" to R.string.history_title, "playedEmpty" to R.string.history_empty, "playedNone" to R.string.history_none_period,
+            "periodMonth" to R.string.history_month, "periodYear" to R.string.history_year, "periodAll" to R.string.history_all,
+            "byDay" to R.string.history_by_day, "bySong" to R.string.history_by_song, "exportCsv" to R.string.history_export,
+            "exportFailed" to R.string.history_failed, "historyFile" to R.string.history_file,
+            "colDate" to R.string.history_col_date, "colSong" to R.string.history_col_song, "colArtist" to R.string.history_col_artist,
+            "colSetlist" to R.string.history_col_setlist, "colTimes" to R.string.history_col_times,
             "ask" to R.string.web_ask,
             "askingCode" to R.string.web_asking_code,
             "denied" to R.string.web_denied,

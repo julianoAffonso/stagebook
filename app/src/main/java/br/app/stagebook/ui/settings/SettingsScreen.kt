@@ -211,11 +211,15 @@ fun SettingsRoute(
     // the history of what was played, as a spreadsheet (user, 22/11): the period picked, then where to save it
     var historyPeriod by rememberSaveable { mutableStateOf(br.app.stagebook.domain.PlayHistory.Period.MONTH) }
     var reportOpen by rememberSaveable { mutableStateOf(false) }   // the report, over Settings (user, 23/11)
-    val historyHeader = listOf(stringResource(R.string.history_col_date), stringResource(R.string.history_col_song), stringResource(R.string.history_col_artist), stringResource(R.string.history_col_setlist))
+    var historyView by rememberSaveable { mutableStateOf(br.app.stagebook.domain.PlayHistory.View.DAYS) }
+    val historyColumns = br.app.stagebook.domain.PlayHistory.Columns(
+        stringResource(R.string.history_col_date), stringResource(R.string.history_col_song), stringResource(R.string.history_col_artist),
+        stringResource(R.string.history_col_setlist), stringResource(R.string.history_col_times),
+    )
     // a spreadsheet where the comma is the decimal mark wants ';' between columns (it opened in one column otherwise)
     val historySeparator = if (java.text.DecimalFormatSymbols.getInstance(androidx.compose.ui.platform.LocalConfiguration.current.locales[0]).decimalSeparator == ',') ';' else ','
     val historySaver = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("text/csv")) { uri ->
-        uri?.let { viewModel.historyTo(it, historyPeriod, historyHeader, historySeparator) }
+        uri?.let { viewModel.historyTo(it, historyPeriod, historyView, historyColumns, historySeparator) }
     }
     val pendingRestore by viewModel.pendingRestore.collectAsStateWithLifecycle()
     // a file tapped outside the app takes the same path as one picked with Open file
@@ -468,7 +472,8 @@ fun SettingsRoute(
             androidx.compose.material3.Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
                 PlayReportScreen(
                     history, historyPeriod, { historyPeriod = it },
-                    onExport = { historySaver.launch("stagebook-${resources.getString(R.string.history_file)}-${java.time.LocalDate.now()}.csv") },
+                    view = historyView, onView = { historyView = it },
+                    onExport = { _, _ -> historySaver.launch("stagebook-${resources.getString(R.string.history_file)}-${java.time.LocalDate.now()}.csv") },
                     onBack = { reportOpen = false },
                 )
             }

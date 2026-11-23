@@ -169,6 +169,9 @@
     <string name="history_all">All</string>
     <string name="history_open">See the report</string>
     <string name="history_none_period">Nothing played in this period.</string>
+    <string name="history_by_day">By day</string>
+    <string name="history_by_song">By song</string>
+    <string name="history_col_times">Times</string>
     <string name="history_export">Export spreadsheet (CSV)</string>
     <string name="history_failed">Couldn\'t save the spreadsheet.</string>
     <string name="history_file">played</string>

@@ -189,4 +189,56 @@ class WebEditorMoreTest {
         api.clear()
         assertTrue(waiting.none { it.exists() })
     }
+
+    // ---- what was played (user, 23/11): the report of Settings, on the computer too ----
+
+    private fun withPlays(): WebEditorApi = runBlocking {
+        val today = java.time.LocalDate.now()
+        repo.joinHistory(listOf(
+            br.app.stagebook.data.model.PlayEntry("2020-01-05", "Antiga", "Banda Velha"),
+            br.app.stagebook.data.model.PlayEntry(today.withDayOfMonth(1).toString(), "Tempo Perdido", "Legião Urbana", "Bar do Zé"),
+            br.app.stagebook.data.model.PlayEntry(today.toString(), "Tempo Perdido", "Legião Urbana"),
+            br.app.stagebook.data.model.PlayEntry(today.toString(), "Hazard", "Richard Marx"),
+        ))
+        withTimeout(5_000) { repo.library.first { it.history.size == 4 } }
+        WebEditorApi(repo, locale = { java.util.Locale.forLanguageTag("pt-BR") })
+    }
+
+    private fun played(api: WebEditorApi, period: String) =
+        api.handle(HttpRequest("GET", "/api/played", query = mapOf("period" to period)), device)!!.text()
+
+    @Test fun `what was played comes by day, the latest first, and by song with its count`() {
+        val api = withPlays()
+        val month = kotlinx.serialization.json.Json.parseToJsonElement(played(api, "month")) as kotlinx.serialization.json.JsonObject
+        assertEquals("4", month["total"].toString())
+        assertEquals("3", month["songs"].toString())   // the one of 2020 isn't this month's
+        val days = month["days"] as kotlinx.serialization.json.JsonArray
+        val names = days.map { (it as kotlinx.serialization.json.JsonObject)["day"].toString().trim('"') }
+        assertEquals(names.sortedDescending(), names)
+        // the day by its name, in the app's language
+        assertTrue(days.first().toString(), " de " in (days.first() as kotlinx.serialization.json.JsonObject)["name"].toString())
+        val counts = month["counts"].toString()
+        assertTrue(counts, counts.startsWith("""[{"title":"Tempo Perdido","author":"Legião Urbana","times":2}"""))
+        assertTrue("\"Antiga\"" in played(api, "all"))
+        assertTrue("\"Antiga\"" !in played(api, "year"))
+    }
+
+    @Test fun `the spreadsheet comes as the view asked for, with the computer's separator and column names`() {
+        val api = withPlays()
+        fun csv(body: String) = api.handle(HttpRequest("POST", "/api/played/csv", body = body.toByteArray()), device)!!
+        val bySong = csv("""{"period":"month","view":"songs","separator":";","columns":["Data","Música","Artista","Setlist","Vezes"]}""")
+        assertTrue(bySong.contentType, bySong.contentType.startsWith("text/csv"))
+        assertEquals("\uFEFFMúsica;Artista;Vezes\r\nTempo Perdido;Legião Urbana;2\r\nHazard;Richard Marx;1\r\n", bySong.text())
+        val byDay = csv("""{"period":"all","view":"days","separator":",","columns":["Date","Song","Artist","Setlist","Times"]}""").text()
+        assertTrue(byDay, byDay.startsWith("\uFEFFDate,Song,Artist,Setlist\r\n2020-01-05,Antiga,Banda Velha,\r\n"))
+        assertEquals(400, csv("not json").status)
+    }
+
+    @Test fun `the page has every text of the report`() {
+        val page = File("src/main/assets/web/index.html").readText()
+        val known = br.app.stagebook.data.web.WebEditorServer.WEB_STRINGS.keys
+        listOf("played", "playedEmpty", "playedNone", "periodMonth", "periodYear", "periodAll", "byDay", "bySong", "exportCsv", "exportFailed", "historyFile", "colDate", "colSong", "colArtist", "colSetlist", "colTimes")
+            .forEach { name -> assertTrue(name, name in known && (Regex("""\bt\.$name\b""").containsMatchIn(page) || "data-t=\"$name\"" in page)) }
+        assertTrue("historySummary" in br.app.stagebook.data.web.WebEditorServer.WEB_PLURALS && "historyDays" in br.app.stagebook.data.web.WebEditorServer.WEB_PLURALS)
+    }
 }

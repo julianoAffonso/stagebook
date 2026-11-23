@@ -55,7 +55,7 @@ Letra, cifra e backing track num app só, para tocar ao vivo no Android. Sozinho
   metrônomo, aparelho), cada um em tela cheia como o palco, com uma **busca** que também acha o que está desligado e diz por quê. Dentro dos grupos
   maiores, subtítulos juntam os cartões do mesmo assunto (em Banda e computador: Tocar com a banda, Para fora do app, Computador), e a prévia do palco
   fica presa no alto só enquanto passam as opções que ela mostra. A música tem a mesma linha
-  em todo lugar (título, artista, tom, BPM, capo, faixa), e a lista de Músicas mostra e ordena pelas **mais e menos tocadas**. O editor de música tem duas telas, **Dados** e **Letra e
+  em todo lugar (título, artista, tom, BPM, capo, faixa), e a lista de Músicas mostra e ordena pelas **mais e menos tocadas**. **O que foi tocado** (Ajustes → Biblioteca, e uma aba do editor no computador) lista as músicas de um período por dia ou por música com a contagem, e exporta isso em planilha (CSV). O editor de música tem duas telas, **Dados** e **Letra e
   cifra**; apagar uma música pergunta com o nome dela. O app avisa, na banda e pela internet, quando alguém está em
   outra versão.
 - **Metrônomo**, importação de letras e cifras pelos sites, **Now Playing** para OBS e Resolume, a música numa TV ou projetor (**tela externa**: a mesma página do palco, com ou sem cifra, e o logo ou uma imagem sua fora do palco)

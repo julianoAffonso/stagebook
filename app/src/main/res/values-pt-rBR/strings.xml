@@ -179,6 +179,9 @@
     <string name="history_all">Tudo</string>
     <string name="history_open">Ver o relatório</string>
     <string name="history_none_period">Nada tocado neste período.</string>
+    <string name="history_by_day">Por dia</string>
+    <string name="history_by_song">Por música</string>
+    <string name="history_col_times">Vezes</string>
     <string name="history_export">Exportar planilha (CSV)</string>
     <string name="history_failed">Não deu para salvar a planilha.</string>
     <string name="history_file">tocadas</string>

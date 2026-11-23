@@ -54,7 +54,7 @@ Lyrics, chords and backing tracks in one app, to play live on Android. Solo or w
   metronome, device), each opening full screen like the stage, with a **search** that also finds what is turned off and says why. Inside the bigger
   groups, subtitles gather the cards on the same subject (in Band and computer: Playing with the band, Out of the app, Computer), and the stage preview
   stays on top only while the options it shows pass under it. Songs look the same everywhere
-  (title, artist, key, BPM, capo, track), and the Songs list can show and sort them by **most and least played**. The song editor has two screens, **Data** and **Lyrics and chords**; deleting
+  (title, artist, key, BPM, capo, track), and the Songs list can show and sort them by **most and least played**. **What was played** (Settings → Library, and a tab of the editor on the computer) lists the songs of a period by day or by song with its count, and exports that as a spreadsheet (CSV). The song editor has two screens, **Data** and **Lyrics and chords**; deleting
   a song asks with its name. The app warns, on the band and over the internet, when someone is on another version.
 - **Metronome**, lyrics and chords import from websites, **Now Playing** for OBS and Resolume, the song on a TV or projector (**external screen**: the same page as the stage, with or without chords, and the logo or your own image off stage)
   ([format](docs/now-playing.md)), backup to a `.stagebook` file (tap one in a chat, a download or the file manager

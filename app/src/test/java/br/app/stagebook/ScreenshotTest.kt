@@ -1098,14 +1098,20 @@ class ScreenshotTest {
     )
 
     @Composable
-    private fun PlayReport() = br.app.stagebook.ui.settings.PlayReportScreen(
-        playedLines, br.app.stagebook.domain.PlayHistory.Period.MONTH, {}, {}, {}, today = java.time.LocalDate.parse("2026-11-23"),
+    private fun PlayReport(view: br.app.stagebook.domain.PlayHistory.View = br.app.stagebook.domain.PlayHistory.View.DAYS) = br.app.stagebook.ui.settings.PlayReportScreen(
+        playedLines, br.app.stagebook.domain.PlayHistory.Period.MONTH, {}, { _, _ -> }, {}, today = java.time.LocalDate.parse("2026-11-23"), view = view,
     )
 
     @Test @Config(qualifiers = PHONE)
     fun settingsPhonePlayed() = shoot("celular_5_ajustes_tocadas") { PlayReport() }
 
     @Test fun settingsTabletPlayed() = shoot("tablet_5_ajustes_tocadas") { PlayReport() }
+
+    // by song: each one once with how many times (user, 23/11)
+    @Test @Config(qualifiers = PHONE)
+    fun settingsPhonePlayedBySong() = shoot("celular_5_ajustes_tocadas_musica") { PlayReport(br.app.stagebook.domain.PlayHistory.View.SONGS) }
+
+    @Test fun settingsTabletPlayedBySong() = shoot("tablet_5_ajustes_tocadas_musica") { PlayReport(br.app.stagebook.domain.PlayHistory.View.SONGS) }
 
     @Test @Config(qualifiers = PHONE)
     fun settingsPhoneList() = shoot("celular_5_ajustes") { DrawerShot(HomeTab.SETTINGS) { br.app.stagebook.ui.settings.SettingsMenu(settings, { _, _ -> }, it) } }

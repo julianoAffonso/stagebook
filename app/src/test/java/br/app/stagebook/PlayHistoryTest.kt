@@ -107,13 +107,14 @@ class PlayHistoryTest {
         PlayEntry("2026-11-21", "Sem Artista"),
     )
 
+    @Config(qualifiers = "+w411dp-h1200dp")   // room for both days at once: the test compares where they are
     @Test fun `the report lists the period's songs day by day, the latest show first, and exports what it shows`() {
         var period by androidx.compose.runtime.mutableStateOf(PlayHistory.Period.MONTH)
         var exported: PlayHistory.Period? = null
         var left = 0
         compose.setContent {
             StagebookTheme {
-                br.app.stagebook.ui.settings.PlayReportScreen(played, period, { period = it }, { exported = it }, { left++ }, today = java.time.LocalDate.parse("2026-11-23"))
+                br.app.stagebook.ui.settings.PlayReportScreen(played, period, { period = it }, { p, _ -> exported = p }, { left++ }, today = java.time.LocalDate.parse("2026-11-23"))
             }
         }
         compose.onNodeWithText("3 músicas tocadas em 2 dias de show.").assertExists()
@@ -139,7 +140,7 @@ class PlayHistoryTest {
     @Test fun `a period with nothing played says so and offers no spreadsheet`() {
         compose.setContent {
             StagebookTheme {
-                br.app.stagebook.ui.settings.PlayReportScreen(played.take(1), PlayHistory.Period.MONTH, {}, {}, {}, today = java.time.LocalDate.parse("2026-11-23"))
+                br.app.stagebook.ui.settings.PlayReportScreen(played.take(1), PlayHistory.Period.MONTH, {}, { _, _ -> }, {}, today = java.time.LocalDate.parse("2026-11-23"))
             }
         }
         compose.onNodeWithText("Nada tocado neste período.").assertExists()
@@ -150,5 +151,48 @@ class PlayHistoryTest {
         val days = PlayHistory.byDay(played)
         assertEquals(listOf("2026-11-21", "2026-11-07", "2025-03-02"), days.map { it.first })
         assertEquals(listOf("Anunciação", "Sem Artista"), days.first().second.map { it.title })
+    }
+
+    private val repeated = played + listOf(
+        PlayEntry("2026-11-22", "tempo perdido", "Legião Urbana"),   // the same song, typed another way
+        PlayEntry("2026-11-22", "Anunciação", "Alceu Valença"),
+        PlayEntry("2026-11-23", "Anunciação", "Alceu Valença"),
+    )
+
+    @Test fun `by song, each song comes once with how many times it was played, the most played first`() {
+        val counts = PlayHistory.bySong(repeated)
+        assertEquals(listOf("Anunciação" to 3, "tempo perdido" to 2, "Antiga" to 1, "Sem Artista" to 1), counts.map { it.title to it.times })
+        // a same name by another artist is another song
+        assertEquals(2, PlayHistory.bySong(listOf(PlayEntry("2026-01-01", "Hoje", "A"), PlayEntry("2026-01-02", "Hoje", "B"))).size)
+    }
+
+    @Test fun `the spreadsheet by song has the song, the artist and the times, and says its rows`() {
+        val columns = PlayHistory.Columns("Data", "Música", "Artista", "Setlist", "Vezes")
+        val today = LocalDate.parse("2026-11-23")
+        val (bySong, rows) = PlayHistory.sheet(repeated, PlayHistory.Period.MONTH, PlayHistory.View.SONGS, today, columns, ';')
+        assertEquals("\uFEFFMúsica;Artista;Vezes\r\nAnunciação;Alceu Valença;3\r\ntempo perdido;Legião Urbana;2\r\nSem Artista;;1\r\n", bySong)
+        assertEquals(3, rows)
+        val (byDay, lines) = PlayHistory.sheet(repeated, PlayHistory.Period.MONTH, PlayHistory.View.DAYS, today, columns, ';')
+        assertTrue(byDay, byDay.startsWith("\uFEFFData;Música;Artista;Setlist\r\n2026-11-07;Tempo Perdido;Legião Urbana;Bar do Zé\r\n"))
+        assertEquals(6, lines)
+    }
+
+    @Test fun `the report by song shows each song with its count and exports that view`() {
+        var view by androidx.compose.runtime.mutableStateOf(PlayHistory.View.DAYS)
+        var exported: PlayHistory.View? = null
+        compose.setContent {
+            StagebookTheme {
+                br.app.stagebook.ui.settings.PlayReportScreen(
+                    repeated, PlayHistory.Period.MONTH, {}, { _, v -> exported = v }, {}, today = LocalDate.parse("2026-11-23"), view = view, onView = { view = it },
+                )
+            }
+        }
+        compose.onNodeWithText("3 vezes").assertDoesNotExist()
+        compose.onNodeWithText("Por música").performClick()
+        compose.onNodeWithText("3 vezes").assertExists()
+        compose.onNodeWithText("2 vezes").assertExists()
+        compose.onNodeWithText("Sábado, 21 de novembro de 2026").assertDoesNotExist()   // no days in this view
+        compose.onNodeWithText("Exportar planilha (CSV)").performClick()
+        assertEquals(PlayHistory.View.SONGS, exported)
     }
 }

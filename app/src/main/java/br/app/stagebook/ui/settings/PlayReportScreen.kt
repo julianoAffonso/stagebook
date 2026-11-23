@@ -44,14 +44,19 @@ fun PlayReportScreen(
     history: List<PlayEntry>,
     period: PlayHistory.Period,
     onPeriod: (PlayHistory.Period) -> Unit,
-    onExport: (PlayHistory.Period) -> Unit,
+    onExport: (PlayHistory.Period, PlayHistory.View) -> Unit,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
+    view: PlayHistory.View = PlayHistory.View.DAYS,
+    onView: (PlayHistory.View) -> Unit = {},
     today: LocalDate = remember { LocalDate.now() },
 ) {
     val locale = LocalConfiguration.current.locales[0]
     // the latest show first; the spreadsheet keeps the oldest first, as a report is read
-    val days = remember(history, period, today) { PlayHistory.byDay(PlayHistory.of(history, period, today)) }
+    val lines = remember(history, period, today) { PlayHistory.of(history, period, today) }
+    val days = remember(lines) { PlayHistory.byDay(lines) }
+    // each song once with its count: made only when that view is the one shown
+    val counts = remember(lines, view) { if (view == PlayHistory.View.SONGS) PlayHistory.bySong(lines) else emptyList() }
     val dayName = remember(locale) { DateTimeFormatter.ofLocalizedDate(FormatStyle.FULL).withLocale(locale) }
     val songs = days.sumOf { it.second.size }
     Box(modifier.fillMaxSize(), Alignment.TopCenter) {
@@ -69,6 +74,10 @@ fun PlayReportScreen(
                 ),
                 period, onPeriod, Modifier.fillMaxWidth(),
             )
+            if (songs > 0) SegmentedChoice(
+                listOf(Choice(PlayHistory.View.DAYS, R.string.history_by_day), Choice(PlayHistory.View.SONGS, R.string.history_by_song)),
+                view, onView, Modifier.fillMaxWidth(),
+            )
             if (songs == 0) {
                 Text(
                     stringResource(if (history.isEmpty()) R.string.history_empty else R.string.history_none_period),
@@ -77,7 +86,9 @@ fun PlayReportScreen(
                 )
             } else {
                 LazyColumn(Modifier.weight(1f).fillMaxWidth()) {
-                    days.forEach { (day, lines) ->
+                    if (view == PlayHistory.View.SONGS) {
+                        items(counts.size, contentType = { "count" }) { i -> CountRow(counts[i]) }
+                    } else days.forEach { (day, lines) ->
                         item(key = day, contentType = "day") {
                             Text(
                                 // a day that isn't a date (a file made by hand) is shown as it is
@@ -91,7 +102,7 @@ fun PlayReportScreen(
                 }
                 // the screen's one main action, at the end as everywhere
                 Row(Modifier.fillMaxWidth().padding(bottom = Spacing.l), horizontalArrangement = Arrangement.End) {
-                    ActionButton(stringResource(R.string.history_export), { onExport(period) }, icon = AppIcons.Download)
+                    ActionButton(stringResource(R.string.history_export), { onExport(period, view) }, icon = AppIcons.Download)
                 }
             }
         }
@@ -105,5 +116,17 @@ private fun PlayRow(line: PlayEntry) {
         Text(line.title, style = MaterialTheme.typography.bodyLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
         val detail = listOf(line.author, line.setlist).filter { it.isNotBlank() }.joinToString(" · ")
         if (detail.isNotEmpty()) Text(detail, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
+    }
+}
+
+/** One song of the period and how many times it was played. */
+@Composable
+private fun CountRow(count: PlayHistory.SongCount) {
+    Row(Modifier.fillMaxWidth().padding(vertical = Spacing.s), horizontalArrangement = Arrangement.spacedBy(Spacing.m), verticalAlignment = Alignment.CenterVertically) {
+        Column(Modifier.weight(1f)) {
+            Text(count.title, style = MaterialTheme.typography.bodyLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            if (count.author.isNotBlank()) Text(count.author, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        }
+        Text(pluralStringResource(R.plurals.songs_plays, count.times, count.times), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }

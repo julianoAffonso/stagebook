@@ -79,6 +79,9 @@
   #f-text { min-height: 55vh; }
   .actions { display: flex; justify-content: space-between; align-items: center; margin-top: 16px; gap: 12px; flex-wrap: wrap; }
   .stack { display: flex; flex-direction: column; gap: 16px; }
+  #played-list h4 { margin: 20px 0 4px; font-size: 14px; color: var(--accent); }
+  #played-list .prow { display: flex; gap: 16px; align-items: center; padding: 8px 0; }
+  #played-list .prow > div:first-child { flex: 1; min-width: 0; }
   .blocks { display: flex; flex-direction: column; gap: 28px; }
   .drop { border: 2px dashed var(--line); border-radius: 16px; padding: 20px; text-align: center; }
   .drop.over { border-color: var(--accent); }
@@ -139,6 +142,7 @@
       <button role="tab" id="tab-songs" aria-selected="true" data-t="songs"></button>
       <button role="tab" id="tab-sets" aria-selected="false" data-t="setlists"></button>
       <button role="tab" id="tab-import" aria-selected="false" data-t="import"></button>
+      <button role="tab" id="tab-played" aria-selected="false" data-t="played"></button>
     </nav>
 
     <!-- songs: list on the left, the editor on the right -->
@@ -309,6 +313,24 @@
         </div>
       </div>
     </div>
+
+    <!-- what was played: the report of Settings → Library, and its spreadsheet -->
+    <div class="card" id="view-played" hidden>
+      <div class="stack">
+        <p id="played-summary" class="muted"></p>
+        <nav class="tabs" id="played-period" style="margin-bottom: 0">
+          <button data-period="month" aria-selected="true" data-t="periodMonth"></button>
+          <button data-period="year" aria-selected="false" data-t="periodYear"></button>
+          <button data-period="all" aria-selected="false" data-t="periodAll"></button>
+        </nav>
+        <nav class="tabs" id="played-view" style="margin-bottom: 0">
+          <button data-view="days" aria-selected="true" data-t="byDay"></button>
+          <button data-view="songs" aria-selected="false" data-t="bySong"></button>
+        </nav>
+        <div id="played-list"></div>
+        <div class="actions"><span id="played-status" class="muted"></span><button id="played-export" data-t="exportCsv" hidden></button></div>
+      </div>
+    </div>
   </section>
   <p id="offline" class="error" hidden></p>
 </main>
@@ -429,15 +451,68 @@ async function connected(session) {
 // ---- tabs ----
 function tab(name) {
   if (name !== "songs" && !leaveOk()) return;
-  for (const n of ["songs", "sets", "import"]) {
+  for (const n of ["songs", "sets", "import", "played"]) {
     $("tab-" + n).setAttribute("aria-selected", String(n === name));
     $("view-" + n).hidden = n !== name;
   }
   if (name === "import") loadBand();
+  if (name === "played") loadPlayed();
 }
 $("tab-songs").onclick = () => tab("songs");
 $("tab-sets").onclick = () => tab("sets");
 $("tab-import").onclick = () => tab("import");
+$("tab-played").onclick = () => tab("played");
+
+// ---- what was played: read only when its tab opens, and again when the period changes ----
+let playedPeriod = "month", playedView = "days", played = null;
+function playedRow(title, sub, end) {
+  const row = Object.assign(document.createElement("div"), { className: "prow" });
+  const a = document.createElement("div");
+  a.append(Object.assign(document.createElement("div"), { textContent: title }));
+  if (sub) a.append(Object.assign(document.createElement("div"), { className: "sub", textContent: sub }));
+  row.append(a);
+  if (end) row.append(Object.assign(document.createElement("div"), { className: "sub", textContent: end }));
+  return row;
+}
+function showPlayed() {
+  const list = $("played-list");
+  if (!played) return list.replaceChildren();
+  const some = played.songs > 0;
+  say("played-summary", some ? `${plural(t, "historySummary", played.songs)} ${plural(t, "historyDays", played.days.length)}` : played.total ? t.playedNone : t.playedEmpty);
+  $("played-view").hidden = !some;
+  $("played-export").hidden = !some;
+  list.replaceChildren(...(playedView === "songs"
+    ? played.counts.map((c) => playedRow(c.title, c.author, plural(t, "plays", c.times)))
+    : played.days.flatMap((d) => [Object.assign(document.createElement("h4"), { textContent: d.name }),
+        ...d.songs.map((s) => playedRow(s.title, [s.author, s.setlist].filter(Boolean).join(" · ")))])));
+}
+async function loadPlayed() {
+  const r = await api("/api/played?period=" + playedPeriod).catch(() => null);
+  if (!r || r.status !== 200) { played = null; showPlayed(); return say("played-summary", t.offline, "error"); }
+  played = await r.json();
+  say("played-status", "");
+  showPlayed();
+}
+document.querySelectorAll("#played-period button").forEach((b) => (b.onclick = () => {
+  playedPeriod = b.dataset.period;
+  document.querySelectorAll("#played-period button").forEach((o) => o.setAttribute("aria-selected", String(o === b)));
+  loadPlayed();
+}));
+document.querySelectorAll("#played-view button").forEach((b) => (b.onclick = () => {
+  playedView = b.dataset.view;
+  document.querySelectorAll("#played-view button").forEach((o) => o.setAttribute("aria-selected", String(o === b)));
+  showPlayed();
+}));
+// the spreadsheet of what is on screen, saved by the browser. ';' between columns where this computer writes 1,5
+// (its spreadsheet opened a comma file in one column)
+$("played-export").onclick = async () => {
+  const separator = (1.5).toLocaleString().includes(",") ? ";" : ",";
+  const r = await post("/api/played/csv", { period: playedPeriod, view: playedView, separator, columns: [t.colDate, t.colSong, t.colArtist, t.colSetlist, t.colTimes] });
+  if (!r || r.status !== 200) return say("played-status", t.exportFailed, "error");
+  const link = Object.assign(document.createElement("a"), { href: URL.createObjectURL(await r.blob()), download: `stagebook-${t.historyFile}-${new Date().toISOString().slice(0, 10)}.csv` });
+  document.body.append(link); link.click(); link.remove();
+  setTimeout(() => URL.revokeObjectURL(link.href), 10000);
+};
 
 // ---- songs ----
 async function loadList() {

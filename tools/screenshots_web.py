@@ -44,7 +44,8 @@ def page_strings(lang):
     out["lyrics"] = texts.get("editor_lyrics_chords", out.get("lyrics", ""))
     # plurals come as three texts (0, 1, other), as WebEditorServer.texts sends them; Portuguese counts 0 as "one"
     xml = LANGS[lang].read_text(encoding="utf-8")
-    for name, res in (("songCount", "song_count"), ("breakCount", "break_count"), ("pdfFacts", "editor_pdf_facts")):
+    for name, res in (("songCount", "song_count"), ("breakCount", "break_count"), ("pdfFacts", "editor_pdf_facts"), ("plays", "songs_plays"),
+                      ("historySummary", "history_summary"), ("historyDays", "history_days")):
         forms = dict(re.findall(r'<item quantity="(\w+)">(.*?)</item>', re.search(rf'<plurals name="{res}">(.*?)</plurals>', xml, re.S).group(1)))
         other = forms["other"]
         out[name + "0"] = forms["one"] if lang == "pt-BR" else other
@@ -58,11 +59,13 @@ SAMPLE = {
         "tags": ["Nacional", "Internacional", "Rock"],
         "lyrics": "[Intro]\n[G]  [D]  [Em]  [C]\n\n[Verso 1]\n[G]Uma linha de e[D]xemplo\n[Em]Outra linha in[C]ventada\n\n[Refrão]\n[G]O refrão de [D]teste\n[C]Fica aqui de e[D]xemplo",
         "set": "Show de sábado", "from": "Celular da Ana", "app": "Tablet do palco",
+        "days": ["Sábado, 21 de novembro de 2026", "Sábado, 14 de novembro de 2026", "Sábado, 7 de novembro de 2026"],
     },
     "en": {
         "tags": ["Local", "International", "Rock"],
         "lyrics": "[Intro]\n[G]  [D]  [Em]  [C]\n\n[Verse 1]\n[G]A sample line of [D]words\n[Em]Another made-up [C]line\n\n[Chorus]\n[G]The chorus for [D]testing\n[C]Stays here as a [D]sample",
         "set": "Saturday show", "from": "Ana's phone", "app": "Stage tablet",
+        "days": ["Saturday, November 21, 2026", "Saturday, November 14, 2026", "Saturday, November 7, 2026"],
     },
 }
 
@@ -78,6 +81,19 @@ def library(lang):
     ]
     return [{"id": i, "title": t, "author": a, "year": y, "key": k, "tags": tg, "bpm": bpm, "capo": capo, "hasTrack": track}
             for i, t, a, y, k, tg, bpm, capo, track in songs]
+
+
+def played(lang):
+    """What was played this month: three show days, the latest first, and each song with its count."""
+    s, lib = SAMPLE[lang], library(lang)
+    def line(i, setlist=True): return {"title": lib[i]["title"], "author": lib[i]["author"], "setlist": s["set"] if setlist else ""}
+    days = [(s["days"][0], [line(1, False), line(3, False)]), (s["days"][1], [line(2), line(0), line(4)]), (s["days"][2], [line(0), line(1), line(3)])]
+    counts = {}
+    for _, songs in days:
+        for x in songs:
+            counts[(x["title"], x["author"])] = counts.get((x["title"], x["author"]), 0) + 1
+    return {"total": 8, "songs": 8, "days": [{"day": f"2026-11-{21 - 7 * n}", "name": name, "songs": songs} for n, (name, songs) in enumerate(days)],
+            "counts": [{"title": t, "author": a, "times": n} for (t, a), n in sorted(counts.items(), key=lambda kv: (-kv[1], kv[0][0]))]}
 
 
 def review(lang):
@@ -126,6 +142,7 @@ class Stand(BaseHTTPRequestHandler):
                 "recebido": "tab('import'); showReview(" + json.dumps(review(lang), ensure_ascii=False) + ", 'words-status'); document.querySelectorAll('#view-import .blocks > div').forEach((d) => { if (!d.contains($('review'))) d.hidden = true; });",
                 "pedido": "",
                 "pdf": "await open('3');",
+                "tocadas": "tab('played');",
             }[Stand.scene]
             js = f"<script>setTimeout(async () => {{ {drive} }}, 400);</script></body>"
             return self.send(200, PAGE.read_text(encoding="utf-8").replace("</body>", js), "text/html")
@@ -147,13 +164,15 @@ class Stand(BaseHTTPRequestHandler):
             return self.send(200, json.dumps([{"id": "s1", "name": s["set"], "count": 4}, {"id": "s2", "name": "18/10/2026 20:30", "count": 6}], ensure_ascii=False))
         if p.startswith("/api/sets/"):
             return self.send(200, json.dumps({"id": "s1", "name": s["set"], "songs": library(lang)[:4], "breaks": [2]}, ensure_ascii=False))
+        if p == "/api/played":
+            return self.send(200, json.dumps(played(lang), ensure_ascii=False))
         if p == "/api/band":
             return self.send(200, json.dumps([{"id": "b1", "from": s["from"], "name": s["set"], "count": 12, "updated": False}], ensure_ascii=False))
         return self.send(404, "{}")
 
 
 # each scene's height: the import tab is a long page, the others fit a laptop screen
-HEIGHTS = {"pedido": 600, "musica": 940, "setlist": 820, "importar": 1900, "recebido": 820, "pdf": 820}
+HEIGHTS = {"pedido": 600, "musica": 940, "setlist": 820, "importar": 1900, "recebido": 820, "pdf": 820, "tocadas": 900}
 EXTRA = 120   # headless Chrome repeats the top of the page in the last rows: shot taller, then the bottom is cut
 
 
@@ -202,7 +221,7 @@ def main(dest, narrow=False):
         for lang in LANGS:
             folder = Path(dest) / lang
             folder.mkdir(parents=True, exist_ok=True)
-            for n, scene in enumerate(["pedido", "musica", "setlist", "importar", "recebido", "pdf"], 1):
+            for n, scene in enumerate(["pedido", "musica", "setlist", "importar", "recebido", "pdf", "tocadas"], 1):
                 Stand.lang, Stand.scene = lang, scene
                 shoot(url, str(folder / f"editor_web_{n}_{scene}.png"), profile, HEIGHTS[scene])
     server.shutdown()
