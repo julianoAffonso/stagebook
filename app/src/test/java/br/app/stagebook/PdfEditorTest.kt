@@ -302,6 +302,9 @@ class PdfEditorTest {
         fun box(text: String) = compose.onNodeWithText(text, substring = true).getUnclippedBoundsInRoot()
         val pages = box("Páginas no palco"); val crop = box("Recortar"); val swap = box("Trocar PDF"); val remove = box("Remover PDF")
         assertEquals("starts where the pages button starts", pages.left.value, crop.left.value, 1f)
+        // and their icons start where the card's sentences start: the button's own inner margin (8 dp) hangs to the left
+        val note = box("Esta música é um PDF")
+        assertEquals("the icons line up with the text above", note.left.value - 8f, crop.left.value, 1f)
         // together, not one in each third of the card
         assertTrue("Trocar is ${(swap.left - crop.right).value} dp from Recortar", (swap.left - crop.right).value <= 24f)
         assertTrue("Remover is ${(remove.left - swap.right).value} dp from Trocar", (remove.left - swap.right).value <= 24f)
