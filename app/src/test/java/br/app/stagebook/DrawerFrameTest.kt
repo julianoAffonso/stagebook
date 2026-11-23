@@ -75,6 +75,10 @@ class DrawerFrameTest {
         // Material's badge is 16 dp across at least; squeezed, it came out 10 dp wide and 17 dp tall
         val width = (badge.right - badge.left).value
         assertTrue("the badge was squeezed to $width dp wide", width >= 16f - 0.5f)
+        // and the tab with the number is wider than the others, for its name
+        val named = compose.onNodeWithText("Músicas").getUnclippedBoundsInRoot()
+        val other = compose.onNodeWithText("Setlists").getUnclippedBoundsInRoot()
+        assertTrue("the tab with the number got no extra room", other.left.value > 300f / 3 + 5f && named.left.value < other.left.value)
     }
 
     @Test fun `tapping a tab says which one`() {

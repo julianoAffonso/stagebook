@@ -77,12 +77,15 @@ fun DrawerFrame(
         Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min)) {
             HomeTab.entries.forEachIndexed { i, t ->
                 if (i > 0) Box(Modifier.width(1.dp).fillMaxHeight().background(MaterialTheme.colorScheme.outlineVariant))
-                DrawerTabButton(t, selected = tab == t, badge = badges[t] ?: 0, onClick = { onTabChange(t) }, modifier = Modifier.weight(1f))
+                // a tab with a number takes a little from the others, so its name still fits beside it (user, 23/11)
+                val count = badges[t] ?: 0
+                DrawerTabButton(t, selected = tab == t, badge = count, onClick = { onTabChange(t) }, modifier = Modifier.weight(if (count > 0) BADGED_TAB_WEIGHT else 1f))
             }
         }
     }
 }
 
+private const val BADGED_TAB_WEIGHT = 1.3f
 internal const val TAB_BADGE_TAG = "drawer tab badge"
 
 @Composable
