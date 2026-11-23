@@ -35,6 +35,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
@@ -573,6 +574,15 @@ private fun cutLine(id: Int, name: String, first: String? = null): CutText {
 
 @Composable
 private fun CutLine(text: CutText, style: androidx.compose.ui.text.TextStyle, tag: String, modifier: Modifier = Modifier, lines: Int = 1) {
+    // on two lines the sentence is one text: with the name in a box of its own, its second line began under the name and
+    // not at the start of the strip ("Conduzindo · ZZ Teste de" / "        nome bem co…", user on the S26, 23/11)
+    if (lines > 1 && text.end.isEmpty()) {
+        Text(
+            text.start + text.cut, modifier.semantics { this.text = androidx.compose.ui.text.AnnotatedString(text.whole) }.testTag(tag + "Cut"),
+            style = style, maxLines = lines, overflow = TextOverflow.Ellipsis,
+        )
+        return
+    }
     // read and found as the one sentence it is
     Row(modifier.semantics { this.text = androidx.compose.ui.text.AnnotatedString(text.whole) }) {
         if (text.start.isNotEmpty()) Text(text.start, Modifier.clearAndSetSemantics { testTag = tag + "Start" }, style = style, maxLines = 1, softWrap = false)
