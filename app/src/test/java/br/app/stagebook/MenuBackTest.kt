@@ -6,6 +6,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
+import androidx.compose.ui.test.onAllNodesWithText
 import br.app.stagebook.navigation.MenuBack
 import org.junit.Assert.assertEquals
 import org.junit.Rule
@@ -53,5 +54,25 @@ class MenuBackTest {
         assertEquals(0 to 1, toMenu to inner)
         pressBack()
         assertEquals(1 to 1, toMenu to inner)
+    }
+
+    @Test fun `on a show's stage with the menu open over it, back closes the menu and asks nothing`() {
+        var closed = 0; var left = 0
+        var open by mutableStateOf(true)
+        val state = br.app.stagebook.ui.stage.StageUiState(false, listOf(br.app.stagebook.ui.stage.StageSong("Uma", "Ana", "letra", false, id = "a")), look = br.app.stagebook.data.model.Look(), live = true)
+        compose.setContent {
+            br.app.stagebook.ui.theme.StagebookTheme {
+                androidx.compose.runtime.CompositionLocalProvider(
+                    br.app.stagebook.ui.drawer.LocalDrawer provides br.app.stagebook.ui.drawer.DrawerControl({}, { closed++; open = false }, isOpen = { open }),
+                ) { br.app.stagebook.ui.stage.StageScreen(state, 0, 0, { _, _ -> }, onBack = { left++ }) }
+            }
+        }
+        pressBack()
+        assertEquals(1, closed)
+        assertEquals(0, compose.onAllNodesWithText("Sair do palco?").fetchSemanticsNodes().size)
+        // menu closed: now it is the stage's back, which asks in a show
+        pressBack()
+        assertEquals(1, compose.onAllNodesWithText("Sair do palco?").fetchSemanticsNodes().size)
+        assertEquals(0, left)
     }
 }

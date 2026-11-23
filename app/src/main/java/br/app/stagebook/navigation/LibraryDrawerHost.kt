@@ -71,6 +71,7 @@ internal fun LibraryDrawerHost(
         DrawerControl(
             { scope.launch { state.open() } }, { if (guard.asks?.invoke() != true) scope.launch { state.close() } }, pinned = fixed,
             openSetlist = { id, share -> request = SetlistRequest(id, share); scope.launch { state.open() } },
+            isOpen = { state.isOpen && !fixed },
         )
     }
     // pinned, the sheet is not a sheet any more: it closes by itself (a left-open state held the pedal and Back for good)

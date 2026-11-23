@@ -510,7 +510,10 @@ fun StageScreen(
     var askExit by rememberSaveable { mutableStateOf(false) }
     val leave = { if (uiState.live) { askExit = true } else { onBack?.invoke() } }
     if (onBack != null) {
-        BackHandler { leave() }
+        // with the menu open over the stage, back closes the menu. The stage coming back from a Settings page registers
+        // its handler after the menu's, and back asked "Leave the stage?" under the open menu (device test 23/11)
+        val drawer = br.app.stagebook.ui.drawer.LocalDrawer.current
+        BackHandler { if (drawer != null && drawer.isOpen()) drawer.close() else leave() }
         if (askExit) {
             ConfirmDialog(
                 stringResource(R.string.stage_exit_confirm),
