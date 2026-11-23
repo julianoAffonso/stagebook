@@ -1065,6 +1065,41 @@ only_starve:
         check(early.peak[0] > late.peak[0] && late.peak[0] > 0 && after.peak[0] == 0 && cap_n > c0,
               "the volume goes down over 2 s, still sounding after 1 s, then silence", buf);
     }
+    // closing the stream with a long fade set still ends in silence: the last packets the desk gets are zeros
+    FN(setFadeOut)(env, NULL, 5000);
+    FN(seek)(env, NULL, 60000);
+    FN(play)(env, NULL);
+    sleep_s(0.5);
+    cap_n = 0; capturing = 1;
+    FN(stop)(env, NULL);
+    capturing = 0;
+    {
+        long r = OUT_RATE, lastn = r / 10 < cap_n ? r / 10 : cap_n;
+        meters end = meter(cap + (cap_n - lastn) * 4, lastn);
+        snprintf(buf, sizeof buf, "%ld frames of tail, last 0.1 s peak %.1f dB", cap_n, db(end.peak[0]));
+        check(cap_n > r / 4 && end.peak[0] == 0 && end.peak[1] == 0, "stop with a 5 s fade set still ends in silence", buf);
+    }
+    sim_close_conn();
+    E_START_FAST(); wait_probe();
+    {
+        // a new stream starts from silence even if the one before died audible
+        cap_n = 0; capturing = 1; sleep_s(0.3); capturing = 0;
+        meters start = meter(cap, cap_n);
+        snprintf(buf, sizeof buf, "peak %.1f dB before play", db(start.peak[0]));
+        check(start.peak[0] == 0, "a new stream is silent until play", buf);
+    }
+    e_load(ogg);
+    FN(setFadeOut)(env, NULL, 100000000);   // absurd: taken as the longest fade (10 s), and the volume still gets to zero
+    FN(seek)(env, NULL, 60000); FN(play)(env, NULL); sleep_s(0.3);
+    FN(pause)(env, NULL);
+    sleep_s(10.5);
+    cap_n = 0; capturing = 1; sleep_s(0.2); capturing = 0;
+    {
+        meters end = meter(cap, cap_n);
+        snprintf(buf, sizeof buf, "10.5 s after pause: peak %.1f dB", db(end.peak[0]));
+        check(end.peak[0] == 0, "an absurd fade length is held to 10 s and still ends in silence", buf);
+    }
+    FN(setFadeOut)(env, NULL, 0);
     jlong lead = FN(leadingSilence)(env, NULL, (jstring)ogg, 0.001f, 30000);
     snprintf(buf, sizeof buf, "first sound at %lld ms", (long long)lead);
     check(lead >= 0 && lead < dur, "finds where the first sound is", buf);

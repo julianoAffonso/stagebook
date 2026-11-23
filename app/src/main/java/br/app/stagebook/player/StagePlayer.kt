@@ -240,10 +240,13 @@ class StagePlayer @Inject constructor(
         }
     }
 
+    // the fade as Settings offers it: a value from a hand-edited backup can't make the engine misbehave (audit 22/11)
+    private fun stopFade(): Int = repository.library.value.look.stopFadeMs.coerceIn(0, br.app.stagebook.domain.TrackEnds.FADES_MS.max())
+
     private fun backToStart() {
         if (!PlayerService.running) return
         toStart?.cancel()
-        val wait = br.app.stagebook.domain.TrackEnds.seekDelay(repository.library.value.look.stopFadeMs)
+        val wait = br.app.stagebook.domain.TrackEnds.seekDelay(stopFade())
         toStart = scope.launch {
             if (wait > 0) delay(wait)
             engine.withLock { Engine.seek(lead) }
@@ -288,7 +291,7 @@ class StagePlayer @Inject constructor(
         // the sign goes with the wait: left on, it blinked on every song with nothing waiting for the interface (audit 10/11)
         _ui.update { it.copy(playing = false, waiting = false, away = false) }
         if (PlayerService.running) {
-            val fade = repository.library.value.look.stopFadeMs
+            val fade = stopFade()
             Engine.setFadeOut(fade)
             if (wasPlaying) fadeUntil = android.os.SystemClock.elapsedRealtime() + br.app.stagebook.domain.TrackEnds.seekDelay(fade)
             Engine.pause()
