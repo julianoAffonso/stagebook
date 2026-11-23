@@ -298,6 +298,7 @@ fun StageRoute(
             index = open,
             page = page,
             onPosition = { i, p -> index = i; page = p },
+            onAct = viewModel::stageAction,
             screen = screen,
             // 1 is no zoom: this screen goes back to automatic
             onZoom = { id, z -> viewModel.setZoom(id, screen, if (z == 1f) null else br.app.stagebook.data.model.ScreenZoom(z)) },
@@ -446,6 +447,7 @@ fun StageScreen(
     page: Int,
     onPosition: (song: Int, page: Int) -> Unit,
     modifier: Modifier = Modifier,
+    onAct: () -> Unit = {},   // a page or a song turned by the person (not a place the stage restored by itself)
     screen: String = "",   // size and position: a pinch belongs to the one it was made on
     onZoom: (songId: String, zoom: Float) -> Unit = { _, _ -> },
     onFit: (songId: String, zoom: br.app.stagebook.data.model.ScreenZoom) -> Unit = { _, _ -> },
@@ -769,6 +771,7 @@ fun StageScreen(
         if (breakAgain >= 0 && breakAgain == index) { breakAgain = -1; onBreak(true) }
     }
     fun go(forward: Boolean) {
+        onAct()
         if (onBreakNow) { leaveBreak(forward); return }
         if (followRest) { presses.steps = 0; return }
         if (autoOn) { autoOn = false; return }
@@ -789,6 +792,7 @@ fun StageScreen(
     fun previous() = go(false)
     // pedal set to "next song"/"previous song": always at its start; with a page turn on the way, it waits
     fun goSong(forward: Boolean) {
+        onAct()
         if (onBreakNow) { leaveBreak(forward); return }
         if (followRest) return
         if (presses.from != null) return

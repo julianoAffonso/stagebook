@@ -64,11 +64,11 @@ class LastStageTest {
     }
 
     @Test fun `a setlist opens where the show stopped`() {
-        assertEquals(Stage(setId = "L1", start = 1, atBreak = true), lastStageRoute(LastStage.Place("L1", null), library) { at })
+        assertEquals(Stage(setId = "L1", start = 1, atBreak = true, resumed = true), lastStageRoute(LastStage.Place("L1", null), library) { at })
     }
 
     @Test fun `a song opened alone opens alone`() {
-        assertEquals(Stage(songId = "s1"), lastStageRoute(LastStage.Place(null, "s1"), library) { at })
+        assertEquals(Stage(songId = "s1", resumed = true), lastStageRoute(LastStage.Place(null, "s1"), library) { at })
     }
 
     @Test fun `what was deleted or is empty gives nothing to open on`() {

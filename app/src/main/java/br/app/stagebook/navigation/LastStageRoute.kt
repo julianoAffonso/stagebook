@@ -14,8 +14,8 @@ internal fun lastStageRoute(place: LastStage.Place?, library: Library, resume: (
     place.setId?.let { id ->
         val set = library.setlist(id)?.takeIf { it.items.isNotEmpty() } ?: return null
         val at = resume(set.id)
-        return Stage(setId = set.id, start = at.start, atBreak = at.atBreak)
+        return Stage(setId = set.id, start = at.start, atBreak = at.atBreak, resumed = true)
     }
     val song = place.songId?.takeIf { id -> library.songs.any { it.id == id } } ?: return null
-    return Stage(songId = song)
+    return Stage(songId = song, resumed = true)
 }

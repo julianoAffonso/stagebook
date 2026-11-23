@@ -38,6 +38,9 @@ data class Stage(
     val atBreak: Boolean = false,
     // opened from the Songs list: the editor opened from it steps through that list (with its search and filters)
     val fromList: Boolean = false,
+    // the stage the app opened by itself at launch (the last one): nobody chose this song now, so it only counts as played
+    // once something is done on it
+    val resumed: Boolean = false,
 )
 
 /** The list of setlists, the start of the library drawer's own navigation (it also holds [SetlistDetail] and [PickSongs]). */

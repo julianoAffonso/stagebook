@@ -21,6 +21,7 @@ import kotlinx.coroutines.test.setMain
 import kotlinx.coroutines.withTimeout
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -69,6 +70,36 @@ class PlayCountTest {
         testStage(context, repo, SavedStateHandle(mapOf("songId" to id, "start" to 0)), show).songShown(0)
         wait(SetlistShow.PLAYED_AFTER_MS + 1_000)
         assertEquals(2, repo.plays(id))
+    }
+
+    @Test fun `the song the app opened on by itself counts only after something is done on the stage`() {
+        val repo = repo()
+        val id = repo.saveSong(Song(title = "A", text = "A"))
+        val other = repo.saveSong(Song(title = "B", text = "B"))
+        val show = store(repo)
+        // the app left open on the last song: nobody is playing it
+        val stage = testStage(context, repo, SavedStateHandle(mapOf("songId" to id, "start" to 0, "resumed" to true)), show)
+        stage.songShown(0)
+        wait(SetlistShow.PLAYED_AFTER_MS * 3)
+        assertEquals(0, repo.plays(id))
+        assertTrue(repo.library.value.history.isEmpty())
+        // a page turned: its minute starts there
+        stage.stageAction()
+        wait(SetlistShow.PLAYED_AFTER_MS - 1_000)
+        assertEquals(0, repo.plays(id))
+        wait(2_000)
+        assertEquals(1, repo.plays(id))
+        // in a setlist: going to the next song is the action, and that song counts with no more
+        val set = repo.createSetlist("Show").also { repo.addToSetlist(it, listOf(id, other)) }
+        day = "2026-11-20"
+        val resumed = testStage(context, repo, SavedStateHandle(mapOf("setId" to set, "start" to 0, "resumed" to true)), show)
+        resumed.songShown(0)
+        wait(SetlistShow.PLAYED_AFTER_MS * 2)
+        assertEquals(1, repo.plays(id))
+        resumed.songShown(1)
+        wait(SetlistShow.PLAYED_AFTER_MS + 1_000)
+        assertEquals(1, repo.plays(other))
+        assertEquals(1, repo.plays(id))
     }
 
     @Test fun `from a setlist each song counts its own minute, and deleting the setlist or clearing it keeps the count`() {
