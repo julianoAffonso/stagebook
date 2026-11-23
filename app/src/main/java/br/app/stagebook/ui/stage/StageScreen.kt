@@ -198,7 +198,6 @@ fun StageRoute(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val editorQueue = br.app.stagebook.data.LocalEditorQueue.current
     val appContext = androidx.compose.ui.platform.LocalContext.current.applicationContext
-    val pdfStore = remember(appContext) { br.app.stagebook.data.PdfStore(appContext) }
     // following without the leader's song: the leader's break and nothing else (no song, player or pedal here)
     if (viewModel.breakOnly) {
         KeepScreenOn()
@@ -319,7 +318,7 @@ fun StageRoute(
                 val setId = uiState.setlist?.id?.takeIf { it.isNotEmpty() }
                 if (setId != null) ({ d.openSetlist(setId, false) }) else d.open.takeIf { !d.pinned }
             },
-            pdfFile = pdfStore::file,
+            pdfFile = { br.app.stagebook.data.PdfStore.fileIn(appContext, it) },   // where it is, with no second store built by the screen
             onDrawerHandle = viewModel::setDrawerHandle,
             onPdfView = viewModel::setPdfView,
             onPdfPage = viewModel::setPdfPage,
@@ -678,7 +677,8 @@ fun StageScreen(
     // fast foot: a press that arrives before the requested position shows up with the right song's page count would use
     // stale values (it skipped a song or got lost). It waits in the queue and is applied as soon as the screen settles.
     // Keyed by song order, not by the objects: saving the zoom brings the list again and must not clear the queue.
-    val presses = remember(uiState.songs.map { it.id }) { PressQueue() }
+    val songOrder = remember(uiState.songs) { uiState.songs.map { it.id } }   // not a new list at every composition
+    val presses = remember(songOrder) { PressQueue() }
     // auto-scroll (T15, scroll mode): any tap or pedal press only pauses
     var autoOn by remember(index) { mutableStateOf(false) }
     var autoAvailable by remember { mutableStateOf(false) }   // scroll mode and the song doesn't fit on one screen

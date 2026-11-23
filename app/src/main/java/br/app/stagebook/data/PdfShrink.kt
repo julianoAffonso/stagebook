@@ -16,6 +16,7 @@ import java.io.File
  * stays: this never costs a PDF).
  */
 object PdfShrink {
+    private const val MIN_SIDE = 256
     const val MIN_BYTES = 2L * 1024 * 1024
     const val KEEP_RATIO = 0.7
     const val MAX_SIDE = 2000
@@ -29,16 +30,23 @@ object PdfShrink {
             val changed = PDDocument.load(file).use { doc ->
                 if (doc.isEncrypted) return null
                 var any = false
+                // a picture used on several pages (a letterhead, a scanned sheet repeated) is one object in the file: made
+                // smaller once and pointed at again, where each page got its own copy and the file could grow (audit 22/11)
+                val done = java.util.IdentityHashMap<Any, PDImageXObject>()
                 for (page in doc.pages) {
                     val res = page.resources ?: continue
                     for (name in res.xObjectNames.toList()) {
                         val image = res.getXObject(name) as? PDImageXObject ?: continue
                         if (image.bitsPerComponent <= 1 || image.softMask != null || image.isStencil) continue
                         val side = maxOf(image.width, image.height)
+                        if (side < MIN_SIDE) continue   // an icon, a logo: nothing to gain, and it only loses sharpness
+                        done[image.cosObject]?.let { res.put(name, it); continue }
                         val bitmap = image.image ?: continue
                         val scale = minOf(1f, MAX_SIDE.toFloat() / side)
                         val fitted = if (scale < 1f) Bitmap.createScaledBitmap(bitmap, (image.width * scale).toInt().coerceAtLeast(1), (image.height * scale).toInt().coerceAtLeast(1), true) else bitmap
-                        res.put(name, JPEGFactory.createFromImage(doc, fitted, JPEG_QUALITY))
+                        val small = JPEGFactory.createFromImage(doc, fitted, JPEG_QUALITY)
+                        done[image.cosObject] = small
+                        res.put(name, small)
                         if (fitted !== bitmap) fitted.recycle()
                         bitmap.recycle()
                         any = true

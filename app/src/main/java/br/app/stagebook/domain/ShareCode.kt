@@ -151,6 +151,7 @@ object ShareCode {
     const val SECRET_SEP = '~'
     private const val SECRET_BYTES = 16
     private val SECRET = Regex("[A-Za-z0-9_-]{22}")
+    private val NOT_WORD = Regex("[^a-z0-9]+")
 
     private fun validSecret(s: String) = SECRET.matches(s) && runCatching { Base64.getUrlDecoder().decode(s).size == SECRET_BYTES }.getOrDefault(false)
 
@@ -174,7 +175,7 @@ object ShareCode {
     }
 
     private fun normalizeWords(input: String): String? {
-        val parts = TextKey.of(input).split(Regex("[^a-z0-9]+")).filter { it.isNotEmpty() }
+        val parts = TextKey.of(input).split(NOT_WORD).filter { it.isNotEmpty() }
         if (parts.size != 3 || parts[0].toIntOrNull() == null || parts.drop(1).any { it.any(Char::isDigit) }) return null
         return parts.joinToString("-")
     }

@@ -151,13 +151,18 @@ class SongEditorViewModel @Inject constructor(
      * [EditorPdf.lost]). Made of state only: the screen reads it while composing, and it went to the disk on every read
      * (audit 16/11).
      */
+    // looked for once per text: the screen asks for the card at every composition
+    private var keptFor: Pair<String, Boolean>? = null
+    private fun keptLyrics(text: String): Boolean =
+        keptFor?.takeIf { it.first === text }?.second ?: br.app.stagebook.domain.KeptLyrics.has(text).also { keptFor = text to it }
+
     val pdfInfo: EditorPdf? get() = if (!isPdf) null else EditorPdf(
         pdfName, pdfPages, pdfBytes, lost = pdf.isEmpty(),
         file = pdfFile,
         invert = pdfInvert ?: repository.library.value.look.pdfInvert,
         crops = pdfCrops,
         hidden = pdfHidden,
-        keptLyrics = br.app.stagebook.domain.KeptLyrics.has(uiState.text),
+        keptLyrics = keptLyrics(uiState.text),
         asText = pdfText,
     )
 

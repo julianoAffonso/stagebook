@@ -114,6 +114,7 @@ internal fun testSettingsVm(
     midi: MidiPedal = MidiPedal(context, repo, scope),
 ): SettingsViewModel = SettingsViewModel(
     repo, context, updater, midi, backup, MetronomeSound(context), MidiOut(context, repo, scope), StagePlayer(context, repo), testEnricher(repo, scope, context),
+    br.app.stagebook.data.ExternalImageStore(context),
 )
 
 /** A stage with the real pieces around it (no audio plays in a test); [show] is where the setlist's marks go. */

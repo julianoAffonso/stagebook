@@ -25,6 +25,7 @@ import java.util.zip.Inflater
 object QrPayload {
     private const val NAME = "STAGEBOOK"
     private const val VERSION = 1
+    private val NEWER_HEAD = Regex("^$NAME(\\d+)\n")
     const val HEADER = "$NAME$VERSION"   // format header; a higher number = a newer app (it asks to update)
     // "Q" + the version: a newer QR still unpacks here, so the reader can say "update the app" instead of "not a setlist"
     private val PACKED_MARK = byteArrayOf('Q'.code.toByte(), ('0'.code + VERSION).toByte())
@@ -104,7 +105,7 @@ object QrPayload {
 
     /** Setlist QR in a format newer than this app (a higher header number): asks to update. */
     fun isNewer(text: String): Boolean =
-        Regex("^$NAME(\\d+)\n").find(text)?.groupValues?.get(1)?.toIntOrNull()?.let { it > VERSION } == true
+        NEWER_HEAD.find(text)?.groupValues?.get(1)?.toIntOrNull()?.let { it > VERSION } == true
 
     /**
      * Reading the already decompressed text (reference for the reader): null if it isn't a setlist QR or a title is

@@ -117,7 +117,12 @@ class SettingsViewModel @Inject constructor(
     private val midiOut: br.app.stagebook.data.MidiOut,
     private val player: br.app.stagebook.player.StagePlayer,
     private val enricher: br.app.stagebook.data.LibraryEnricher,
+    private val externalImages: br.app.stagebook.data.ExternalImageStore,
 ) : ViewModel() {
+    /** The external screen's own image: copied to this device; false when the file isn't an image (or is too big). */
+    suspend fun saveExternalImage(uri: Uri): Boolean = externalImages.save(uri)
+    fun forgetExternalImage() = externalImages.forget()
+
     private val _midiOutputs = MutableStateFlow<List<br.app.stagebook.data.MidiOutput>>(emptyList())
     /** The MIDI outputs there are right now (read when the list opens). */
     val midiOutputs: StateFlow<List<br.app.stagebook.data.MidiOutput>> = _midiOutputs.asStateFlow()
@@ -184,8 +189,9 @@ class SettingsViewModel @Inject constructor(
         _messages.send(if (ok) SettingsMessage.HistoryDone(lines.size) else SettingsMessage.HistoryFailed)
     }
 
+    // the files are opened off the screen's thread: where they live (Drive, a USB stick) can take seconds to answer
     fun backupTo(uri: Uri, parts: Set<br.app.stagebook.data.Backup.Part>) = viewModelScope.launch {
-        val ok = runCatching { context.contentResolver.openOutputStream(uri, "wt")!!.use { backup.write(it, parts) } }.isSuccess
+        val ok = runCatching { withContext(Dispatchers.IO) { context.contentResolver.openOutputStream(uri, "wt")!!.use { backup.write(it, parts) } } }.isSuccess
         _messages.send(if (ok) SettingsMessage.BackupDone else SettingsMessage.BackupFailed)
     }
 
@@ -194,7 +200,7 @@ class SettingsViewModel @Inject constructor(
         // a file tapped outside the app while the window of the one before is still open: the cache keeps one received
         // file, so that window would restore from a copy that is gone. The new file takes its place, whatever it is
         _pendingRestore.value = null
-        val c =runCatching { context.contentResolver.openInputStream(uri)!!.use { backup.inspect(it) } }.getOrNull()
+        val c =runCatching { withContext(Dispatchers.IO) { context.contentResolver.openInputStream(uri)!!.use { backup.inspect(it) } } }.getOrNull()
         when {
             c == null -> importFrom(uri)   // not a .stagebook: tries the old songs file (or says it couldn't)
             c.newer -> _messages.send(SettingsMessage.ImportNewer)
@@ -215,7 +221,7 @@ class SettingsViewModel @Inject constructor(
     fun restore(parts: Set<br.app.stagebook.data.Backup.Part>, replace: Boolean) = viewModelScope.launch {
         val p = _pendingRestore.value ?: return@launch
         _pendingRestore.value = null
-        val ok = runCatching { context.contentResolver.openInputStream(p.uri)!!.use { backup.restore(it, parts, replace) } }.getOrDefault(false)
+        val ok = runCatching { withContext(Dispatchers.IO) { context.contentResolver.openInputStream(p.uri)!!.use { backup.restore(it, parts, replace) } } }.getOrDefault(false)
         if (ok && backup.bandAgain) _bandAgain.value = true
         // settings restored (language, look): the screen opens again so they apply
         _messages.send(if (!ok) SettingsMessage.RestoreFailed else SettingsMessage.Restored(br.app.stagebook.data.Backup.Part.SETTINGS in parts, backup.skipped))

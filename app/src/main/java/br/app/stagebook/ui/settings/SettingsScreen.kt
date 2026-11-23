@@ -201,13 +201,11 @@ fun SettingsRoute(
     }
     val restorePicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri -> uri?.let(viewModel::inspectBackup) }
     // the external screen's own image (user, 22/11): copied to this device; a file that isn't an image is refused
-    val appContext = androidx.compose.ui.platform.LocalContext.current.applicationContext
-    val externalImages = remember { br.app.stagebook.data.ExternalImageStore(appContext) }
     val externalRefused = stringResource(R.string.external_image_refused)
     val appMessage = br.app.stagebook.ui.components.LocalAppMessage.current
     val externalPicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
         if (uri != null) scope.launch {
-            if (externalImages.save(uri)) viewModel.setExternalIdle(br.app.stagebook.data.model.ExternalIdle.IMAGE) else appMessage.show(externalRefused)
+            if (viewModel.saveExternalImage(uri)) viewModel.setExternalIdle(br.app.stagebook.data.model.ExternalIdle.IMAGE) else appMessage.show(externalRefused)
         }
     }
     // the history of what was played, as a spreadsheet (user, 22/11): the period picked, then where to save it
@@ -422,7 +420,7 @@ fun SettingsRoute(
                 onExternalShow = viewModel::setExternalShow,
                 onExternalIdle = { idle ->
                     if (idle == br.app.stagebook.data.model.ExternalIdle.IMAGE) externalPicker.launch("image/*")
-                    else { externalImages.forget(); viewModel.setExternalIdle(idle) }
+                    else { viewModel.forgetExternalImage(); viewModel.setExternalIdle(idle) }
                 },
                 onEssential = viewModel::setEssential,
                 onBandOn = viewModel::setBandOn,

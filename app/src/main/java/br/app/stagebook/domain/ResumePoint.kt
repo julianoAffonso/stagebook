@@ -23,13 +23,15 @@ object ResumePoint {
     /** The app was really replaced after the mark: [updatedAt] is when Android last installed this package. */
     fun replacedSince(savedAt: Long, updatedAt: Long): Boolean = updatedAt >= savedAt
 
+    private val FIELD = Regex("\\{([^}]+)\\}")
+
     /**
      * A navigation route pattern ("pkg.SetlistDetail/{setId}?x={x}") filled with its arguments, or null when one is
      * missing or null (nothing to go back to safely). [encode] escapes a value for a route.
      */
     fun fill(pattern: String, args: Map<String, String?>, encode: (String) -> String): String? {
         var missing = false
-        val out = Regex("\\{([^}]+)\\}").replace(pattern) { m ->
+        val out = FIELD.replace(pattern) { m ->
             val v = args[m.groupValues[1]]
             if (v == null) { missing = true; "" } else encode(v)
         }

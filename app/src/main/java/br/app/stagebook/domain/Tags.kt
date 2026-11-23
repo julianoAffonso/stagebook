@@ -8,11 +8,12 @@ import br.app.stagebook.data.model.Song
  * confuse).
  */
 object Tags {
-    fun clean(tag: String): String = tag.trim().replace(Regex("""\s+"""), " ")
+    private val SPACES = Regex("""\s+""")
+    fun clean(tag: String): String = tag.trim().replace(SPACES, " ")
 
     /** Every tag in use, each once, in alphabetical order. */
     fun all(songs: List<Song>): List<String> =
-        songs.flatMap { it.tags }.distinctBy { it.lowercase() }.sortedBy { TextKey.of(it) }
+        songs.flatMap { it.tags }.distinctBy { it.lowercase() }.let { TextKey.sorted(it) { t -> t } }
 
     /** The chosen filter tags still in use ([all]): a tag no song has any more (taken off everywhere) leaves the filter. */
     fun stillUsed(chosen: Set<String>, all: List<String>): Set<String> = chosen.filter { c -> all.any { it.equals(c, true) } }.toSet()

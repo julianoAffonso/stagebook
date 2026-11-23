@@ -26,9 +26,9 @@ class PdfShrinkTest {
     private val context = ApplicationProvider.getApplicationContext<android.app.Application>()
 
     // a "scan": a big photo-like picture stored without loss, as a scanner's PDF often is
-    private fun scannedPdf(side: Int): File {
+    private fun scannedPdf(side: Int, pages: Int = 1): File {
         PDFBoxResourceLoader.init(context)
-        val f = File(context.cacheDir, "scan-$side.pdf")
+        val f = File(context.cacheDir, "scan-$side-$pages.pdf")
         PDDocument().use { doc ->
             val bmp = Bitmap.createBitmap(side, (side * 1.4f).toInt(), Bitmap.Config.RGB_565)   // no alpha, as a scan (a picture with transparency is left alone)
             val rnd = java.util.Random(7)
@@ -36,10 +36,12 @@ class PdfShrinkTest {
                 val g = 200 + rnd.nextInt(56)
                 bmp.setPixel(x, y, android.graphics.Color.rgb(g, g, g))
             }
-            val page = PDPage()
-            doc.addPage(page)
-            val img = LosslessFactory.createFromImage(doc, bmp)
-            PDPageContentStream(doc, page).use { it.drawImage(img, 0f, 0f, page.mediaBox.width, page.mediaBox.height) }
+            val img = LosslessFactory.createFromImage(doc, bmp)   // one picture, on every page
+            repeat(pages) {
+                val page = PDPage()
+                doc.addPage(page)
+                PDPageContentStream(doc, page).use { it.drawImage(img, 0f, 0f, page.mediaBox.width, page.mediaBox.height) }
+            }
             doc.save(f)
         }
         return f
@@ -60,5 +62,12 @@ class PdfShrinkTest {
         val junk = File(context.cacheDir, "junk.pdf").apply { writeBytes(ByteArray((PdfShrink.MIN_BYTES + 10).toInt())) }
         assertNull(PdfShrink.shrunk(context, junk))
         assertTrue(junk.exists())
+    }
+
+    // audit 22/11: each page got its own copy of the picture, and the "smaller" file weighed four of them
+    @Test fun `a picture used on several pages is made smaller once, not once per page`() {
+        val one = PdfShrink.shrunk(context, scannedPdf(2600), minBytes = 0)!!.length()
+        val four = PdfShrink.shrunk(context, scannedPdf(2600, pages = 4), minBytes = 0)!!.length()
+        assertTrue("four pages of the same picture: $four, one page: $one", four < one * 2)
     }
 }

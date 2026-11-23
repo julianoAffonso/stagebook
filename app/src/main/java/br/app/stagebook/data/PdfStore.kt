@@ -18,10 +18,10 @@ import javax.inject.Singleton
  */
 @Singleton
 class PdfStore @Inject constructor(@ApplicationContext private val context: Context) {
-    private val dir get() = File(context.filesDir, "pdfs").apply { mkdirs() }
+    private val dir get() = dirIn(context)
 
     /** The file of a PDF by its name in the library. A name that is not a plain file name never leaves this folder: it points at nothing. */
-    fun file(name: String): File = File(dir, safeName(name) ?: UNSAFE)
+    fun file(name: String): File = fileIn(context, name)
 
     /**
      * Copies the chosen PDF and checks it with [inspector]: [PdfAttach.Saved] with the generated name, or the reason it was
@@ -123,6 +123,9 @@ class PdfStore @Inject constructor(@ApplicationContext private val context: Cont
         fun safeName(name: String): String? =
             name.takeIf { it.isNotEmpty() && '/' !in it && '\\' !in it && ".." !in it && !it.startsWith('.') && it.none { c -> c.isISOControl() } }
 
+        private fun dirIn(context: Context) = File(context.filesDir, "pdfs").apply { mkdirs() }
+        /** [file] for a screen that only needs to know where the PDF is (no store of its own). */
+        fun fileIn(context: Context, name: String): File = File(dirIn(context), safeName(name) ?: UNSAFE)
         private const val UNSAFE = "unsafe-name.none"
         private const val SEND_PREFIX = "send-"
         const val SEND_KEEP_MS = 30 * 60_000L

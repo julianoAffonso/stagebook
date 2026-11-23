@@ -239,6 +239,9 @@ class BandInternet @Inject constructor(
                 // the newest ones stay: a set has no order, and "the last 300" of it dropped any (audit 22/11)
                 putStringSet(KEY_SEEN, (seenBefore.toList() + (seen - seenBefore)).takeLast(MAX_SEEN).toSet())
                 since.forEach { (id, last) -> putString("$KEY_SINCE$id", last) }
+                // someone who left the band leaves no cursor behind (they only added up)
+                val members = trust.members.value.map { it.id }.toSet()
+                prefs.all.keys.filter { it.startsWith(KEY_SINCE) && it.removePrefix(KEY_SINCE) !in members }.forEach { remove(it) }
             }
         }
     }

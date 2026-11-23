@@ -14,6 +14,7 @@ object Tablature {
     private val endDirective = Regex("""^\s*\{\s*(end_of_tab|eot)\s*\}\s*$""", RegexOption.IGNORE_CASE)
     // string name (optional) + bar, then only dashes, digits and technique marks (h p b r / \ ~ x)
     private val BLANK_LINES = Regex("\n{3,}")
+    private val FRETS = Regex("""\d+""")   // built once: this runs for every line of every tab
     private val tabLine = Regex("""^\s*([A-Ga-g][#b]?\s*)?[|:][-0-9|hpbrxHPBRX/\\~().*\s]+$""")
 
     fun isStart(line: String) = startDirective.matches(line)
@@ -104,7 +105,7 @@ object Tablature {
     /** The frets in a tab line (1 or 2 digits after the string name), as [shiftLine] reads them. */
     private fun frets(line: String): List<Int> {
         val bar = line.indexOfFirst { it == '|' || it == ':' }.coerceAtLeast(0)
-        return Regex("""\d+""").findAll(line.substring(bar)).map { it.value }.filter { it.length <= MAX_FRET_DIGITS }.map { it.toInt() }.toList()
+        return FRETS.findAll(line.substring(bar)).map { it.value }.filter { it.length <= MAX_FRET_DIGITS }.map { it.toInt() }.toList()
     }
 
     private const val MAX_FRET_DIGITS = 2

@@ -226,7 +226,7 @@ class StagePlayer @Inject constructor(
     // where the loaded track's first sound is (user, 22/11: skip the silence before it); 0 = its very start
     @Volatile private var lead = 0L
     // the jump back to the start, after the fade (user, 22/11): coming in the middle, the start would sound under it
-    private var toStart: Job? = null
+    @Volatile private var toStart: Job? = null
 
     // until when a stop's fade is still sounding: the next song's track waits for it, or loading it cut the fade dry
     @Volatile private var fadeUntil = 0L
@@ -249,7 +249,9 @@ class StagePlayer @Inject constructor(
         val wait = br.app.stagebook.domain.TrackEnds.seekDelay(stopFade())
         toStart = scope.launch {
             if (wait > 0) delay(wait)
-            engine.withLock { Engine.seek(lead) }
+            // played again meanwhile (the end of a song and a tap come from different threads): that play already went to
+            // the start, and this seek would throw it back in the middle of the first bar (audit 22/11)
+            engine.withLock { if (!_ui.value.playing && !_ui.value.waiting) Engine.seek(lead) }
         }
     }
 
@@ -367,9 +369,18 @@ class StagePlayer @Inject constructor(
         loaded?.name?.let { name -> lib.songs.firstOrNull { it.track == name }?.mix }
 
     // the file's identity for what is measured on it: another file, even under the same name, is measured again
-    private fun fileKey(f: File): String = br.app.stagebook.domain.TrackEnds.cacheKey(
-        f.name, f.length(), f.lastModified(), runCatching { f.inputStream().use(br.app.stagebook.domain.TrackEnds::headOf) }.getOrDefault(0L),
-    )
+    // kept while the file's name, size and date are the same: a load asked for it three times, each reading the file's
+    // start again (audit 22/11)
+    private fun fileKey(f: File): String {
+        val seen = Triple(f.absolutePath, f.length(), f.lastModified())
+        keyKept?.takeIf { it.first == seen }?.let { return it.second }
+        val key = br.app.stagebook.domain.TrackEnds.cacheKey(
+            seen.first.substringAfterLast('/'), seen.second, seen.third, runCatching { f.inputStream().use(br.app.stagebook.domain.TrackEnds::headOf) }.getOrDefault(0L),
+        )
+        keyKept = seen to key
+        return key
+    }
+    @Volatile private var keyKept: Pair<Triple<String, Long, Long>, String>? = null
 
     // where the track's first sound is, read once per file and kept (only the start of the file is read)
     private fun leadOf(f: File): Long {
