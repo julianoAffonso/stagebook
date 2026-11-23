@@ -67,7 +67,7 @@ class BandAuditResilienceTest {
     private fun conducting() = conduct.role.value as Role.Conducting
     // the band off, and the link's collector has dealt with it (it is the one that would act when the band comes back)
     private fun bandOffSeen() { bandOff(); await("the link saw the band off", 20_000) { link.seenOn == false } }
-    private fun bandOff() { repo.updateLook { it.copy(bandOn = false) }; runBlocking { withTimeout(15_000) { repo.library.first { !it.look.bandOn } } } }
+    private fun bandOff() { repo.updateLook { it.copy(bandOn = false) }; runBlocking { withTimeout(TEST_WAIT_MS) { repo.library.first { !it.look.bandOn } } } }
 
     // ---- 1: "Look for the band" sends the song as it is after the (slow) call ----
     @Test fun `the search sends the song the leader is on after the call, not the one before it`() {

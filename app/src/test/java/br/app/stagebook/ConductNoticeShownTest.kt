@@ -53,9 +53,9 @@ class ConductNoticeShownTest {
 
     private val repo = runBlocking {
         LibraryRepository(context, testScope()).also { r ->
-            withTimeout(15_000) { r.loaded.first { it } }
+            withTimeout(TEST_WAIT_MS) { r.loaded.first { it } }
             r.updateLook { it.copy(bandOn = true, chords = true) }
-            withTimeout(15_000) { r.library.first { it.look.bandOn } }
+            withTimeout(TEST_WAIT_MS) { r.library.first { it.look.bandOn } }
         }
     }
     private val link = testLink(repo = repo)
@@ -67,7 +67,7 @@ class ConductNoticeShownTest {
         link.conductHandler?.invoke(voice, Conduct.decode(Conduct.encode(msg))!!)
         // the strip is on screen before anything arrives: with no strip a notice is the app's message at the bottom, by
         // design, and a slow machine (CI, 20/11) got the song in before the strip was worked out
-        compose.waitUntil(10_000) { vm.ui.value != null }
+        compose.waitUntil(TEST_WAIT_MS) { vm.ui.value != null }
     }
 
     /** The song comes from the band as the leader's loose song, with lyrics only. */
@@ -107,14 +107,14 @@ class ConductNoticeShownTest {
         compose.runOnIdle { shown = false }
         compose.waitForIdle()
         arrives()   // nobody is listening at this instant
-        runBlocking { withTimeout(10_000) { repo.library.first { l -> l.songs.any { it.title == "Segunda" } } } }
+        runBlocking { withTimeout(TEST_WAIT_MS) { repo.library.first { l -> l.songs.any { it.title == "Segunda" } } } }
         Thread.sleep(500)   // the notice has been emitted by now
         compose.runOnIdle { shown = true }
         noticeShown()
     }
 
     private fun noticeShown() {
-        compose.waitUntil(5_000) { compose.onAllNodesWithTag("conduct-notice").fetchSemanticsNodes().isNotEmpty() }
+        compose.waitUntil(TEST_WAIT_MS) { compose.onAllNodesWithTag("conduct-notice").fetchSemanticsNodes().isNotEmpty() }
         compose.onNode(hasText("Segunda chegou sem cifra", substring = true) and hasAnyAncestor(hasTestTag("conduct-notice")), useUnmergedTree = true).assertExists()
     }
 }

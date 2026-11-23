@@ -58,9 +58,9 @@ class LacksListFollowsLibraryTest {
 
     private val repo = runBlocking {
         LibraryRepository(context, testScope()).also { r ->
-            withTimeout(15_000) { r.loaded.first { it } }
+            withTimeout(TEST_WAIT_MS) { r.loaded.first { it } }
             r.updateLook { it.copy(bandOn = true, chords = false) }
-            withTimeout(15_000) { r.library.first { it.look.bandOn } }
+            withTimeout(TEST_WAIT_MS) { r.library.first { it.look.bandOn } }
         }
     }
     private val link = testLink(repo = repo)
@@ -75,7 +75,7 @@ class LacksListFollowsLibraryTest {
     private fun arrives(title: String) {
         val song = SetlistCloud.SharedSong(title, "Banda", "", "Só a letra\nSem acordes")
         link.accept(voice.id, voice.name, link.packageBytes(QrPayload.pack(SetlistCloud.looseList(listOf(song.title to song.author))), listOf(song)))
-        runBlocking { withTimeout(10_000) { repo.library.first { l -> l.songs.any { it.title == title } } } }
+        runBlocking { withTimeout(TEST_WAIT_MS) { repo.library.first { l -> l.songs.any { it.title == title } } } }
         compose.waitForIdle()
     }
 
@@ -97,13 +97,13 @@ class LacksListFollowsLibraryTest {
         screen(); following()
         compose.onNodeWithText("Voz", substring = true).performClick()
         compose.onNodeWithText("Faltam neste aparelho").assertExists()
-        compose.waitUntil(5_000) { inWindow("Primeira") > 0 && inWindow("Segunda") > 0 && inWindow("Terceira") > 0 }
+        compose.waitUntil(TEST_WAIT_MS) { inWindow("Primeira") > 0 && inWindow("Segunda") > 0 && inWindow("Terceira") > 0 }
         arrives("Primeira")
-        compose.waitUntil(5_000) { inWindow("Primeira") == 0 }
+        compose.waitUntil(TEST_WAIT_MS) { inWindow("Primeira") == 0 }
         compose.onNodeWithText("Segunda").assertExists()
         compose.onNodeWithText("Terceira").assertExists()
         arrives("Segunda"); arrives("Terceira")
-        compose.waitUntil(5_000) { inWindow("Faltam neste aparelho") == 0 }
+        compose.waitUntil(TEST_WAIT_MS) { inWindow("Faltam neste aparelho") == 0 }
     }
 
     // ---- the leader's list ----
@@ -116,7 +116,7 @@ class LacksListFollowsLibraryTest {
         leader.askedRefreshMs = 50
         leader.deliver = { _ -> mapOf("f" to Conduct.Lack("F", missing), "g" to Conduct.Lack("G", emptyList())) }
         leader.start("s1", "Show", songs, 0)
-        runBlocking { withTimeout(10_000) { while ((leader.role.value as? BandConduct.Role.Conducting)?.lackers?.keys != setOf("f")) delay(10) } }
+        runBlocking { withTimeout(TEST_WAIT_MS) { while ((leader.role.value as? BandConduct.Role.Conducting)?.lackers?.keys != setOf("f")) delay(10) } }
     }
 
     private fun lackers() = (leader.role.value as? BandConduct.Role.Conducting)?.lackers?.keys
@@ -125,7 +125,7 @@ class LacksListFollowsLibraryTest {
         lead()
         missing = emptyList()   // F has it now
         leaderLink.askedHandler!!.invoke("f", listOf(BandLink.Wanted("Primeira", "Banda")))
-        runBlocking { withTimeout(10_000) { while (lackers() != emptySet<String>()) delay(10) } }
+        runBlocking { withTimeout(TEST_WAIT_MS) { while (lackers() != emptySet<String>()) delay(10) } }
     }
 
     @Test fun `someone else's request, or a song nobody lacks, changes nothing`() {

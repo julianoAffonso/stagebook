@@ -2,6 +2,7 @@ package br.app.stagebook
 
 import android.graphics.Bitmap
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
@@ -28,6 +29,7 @@ import br.app.stagebook.ui.stage.StageScreen
 import br.app.stagebook.ui.stage.StageSong
 import br.app.stagebook.ui.stage.StageUiState
 import br.app.stagebook.ui.theme.StagebookTheme
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -67,13 +69,48 @@ class PdfStageTest {
         assertEquals("page 0 had gone: drawn again", 6, source.rendered.size)
     }
 
+    @Test fun `a page already drawn comes at once while another is being drawn, and its size is asked once`() = runBlocking {
+        val gate = java.util.concurrent.CountDownLatch(1)
+        val sizeAsked = java.util.concurrent.atomic.AtomicInteger()
+        val source = object : PdfSource {
+            override val pageCount = 5
+            override fun pageSize(page: Int): Pair<Int, Int> { sizeAsked.incrementAndGet(); return 400 to 600 }
+            override fun render(page: Int, width: Int): Bitmap {
+                if (page == 2) gate.await()   // the page ahead takes its time
+                return Bitmap.createBitmap(width, width, Bitmap.Config.ARGB_8888)
+            }
+            override fun close() {}
+        }
+        val pages = PdfPages(source)
+        val first = pages.bitmap(0, 100)
+        pages.size(0); pages.size(0)
+        assertEquals(1, sizeAsked.get())
+        val slow = launch(kotlinx.coroutines.Dispatchers.Default) { pages.bitmap(2, 100) }
+        try {
+            // with the slow page holding the renderer, the kept one doesn't wait for it
+            val again = kotlinx.coroutines.withTimeoutOrNull(2_000) { kotlinx.coroutines.delay(100); pages.bitmap(0, 100) }
+            assertTrue("the kept page waited for the one being drawn", again === first)
+        } finally {
+            gate.countDown()
+            slow.join()
+        }
+    }
+
+    @Test fun `the page before is drawn ahead too, for the turn back`() {
+        val source = FakeSource(7)
+        var count = 0
+        compose.setContent { StagebookTheme { PdfStageView(PdfOpen.Ready(PdfPages(source)), 3, invert = false, onPageCount = { count = it }) } }
+        compose.waitUntil(TEST_WAIT_MS) { count == 7 }
+        compose.waitUntil(TEST_WAIT_MS) { source.rendered.any { it.first == 2 } && source.rendered.any { it.first == 4 } }
+    }
+
     @Test fun `closing the pages closes the PDF and keeps nothing`() = runBlocking {
         val source = FakeSource(2)
         val pages = PdfPages(source)
         pages.bitmap(0, 200)
         pages.close()
         // the file closes once any page being drawn is done: off the main thread, a moment later
-        kotlinx.coroutines.withTimeout(5_000) { while (!source.closed) kotlinx.coroutines.delay(10) }
+        kotlinx.coroutines.withTimeout(TEST_WAIT_MS) { while (!source.closed) kotlinx.coroutines.delay(10) }
         assertTrue(source.closed)
         assertEquals(0, pages.keptCount)
     }
@@ -82,12 +119,40 @@ class PdfStageTest {
         val source = FakeSource(7)
         var count = 0
         compose.setContent { StagebookTheme { PdfStageView(PdfOpen.Ready(PdfPages(source)), 3, invert = false, onPageCount = { count = it }) } }
-        compose.waitUntil(5_000) { count == 7 }
-        compose.waitUntil(5_000) { compose.onAllNodesWithContentDescription("Página 4 de 7 do PDF").fetchSemanticsNodes().isNotEmpty() }
+        compose.waitUntil(TEST_WAIT_MS) { count == 7 }
+        compose.waitUntil(TEST_WAIT_MS) { compose.onAllNodesWithContentDescription("Página 4 de 7 do PDF").fetchSemanticsNodes().isNotEmpty() }
         compose.onNodeWithContentDescription("Página 4 de 7 do PDF").assertIsDisplayed()
         // the page ahead is drawn off the main thread, after the one on screen: waited for, not read at once (it failed
         // on a slow runner, 23/11)
-        compose.waitUntil(5_000) { source.rendered.any { it.first == 3 } && source.rendered.any { it.first == 4 } }
+        compose.waitUntil(TEST_WAIT_MS) { source.rendered.any { it.first == 3 } && source.rendered.any { it.first == 4 } }
+    }
+
+    @Test fun `turning the page brings the new one in while the old one leaves, and then only the new one stays`() {
+        var at by androidx.compose.runtime.mutableStateOf(0)
+        var count = 0
+        val open = PdfOpen.Ready(PdfPages(FakeSource(7)))   // one PDF for both pages, as the stage keeps it
+        compose.setContent { StagebookTheme { PdfStageView(open, at, invert = false, onPageCount = { count = it }) } }
+        fun shows(page: Int) = compose.onAllNodesWithContentDescription("Página $page de 7 do PDF").fetchSemanticsNodes().isNotEmpty()
+        compose.waitUntil(TEST_WAIT_MS) { count == 7 && shows(1) }
+        compose.waitForIdle()
+        // frame by frame: the two pages are on screen together only during the turn
+        compose.mainClock.autoAdvance = false
+        at = 1
+        var together = false
+        val until = System.currentTimeMillis() + 5_000
+        while (!together && System.currentTimeMillis() < until) {
+            compose.mainClock.advanceTimeByFrame()
+            together = shows(1) && shows(2)
+            if (!together) Thread.sleep(5)   // the new page is drawn off the main thread
+        }
+        assertTrue("the page was swapped with no turn", together)
+        // two solid sheets side by side: one over the other, fading, washed the page's edge out (user, 23/11)
+        fun left(page: Int) = compose.onNodeWithContentDescription("Página $page de 7 do PDF").fetchSemanticsNode().positionInRoot.x
+        val oldWidth = compose.onNodeWithContentDescription("Página 1 de 7 do PDF").fetchSemanticsNode().size.width
+        assertTrue("the pages overlap during the turn: ${left(1)} + $oldWidth > ${left(2)}", left(1) + oldWidth <= left(2) + 1f)
+        compose.mainClock.autoAdvance = true
+        compose.waitUntil(TEST_WAIT_MS) { !shows(1) }
+        compose.onNodeWithContentDescription("Página 2 de 7 do PDF").assertIsDisplayed()
     }
 
     @Test fun `a PDF that can't be opened says so`() {
@@ -108,9 +173,9 @@ class PdfStageTest {
     private fun showOpen(source: FakeSource) {
         var count = 0
         compose.setContent { StagebookTheme { PdfStageView(PdfOpen.Ready(PdfPages(source)), 0, invert = false, onPageCount = { count = it }) } }
-        compose.waitUntil(5_000) { count > 0 }
+        compose.waitUntil(TEST_WAIT_MS) { count > 0 }
         // the count comes before the first bitmap is drawn: wait for the page itself (a busy machine made this flaky)
-        compose.waitUntil(5_000) { compose.onAllNodesWithContentDescription("Página 1 de 7 do PDF").fetchSemanticsNodes().isNotEmpty() }
+        compose.waitUntil(TEST_WAIT_MS) { compose.onAllNodesWithContentDescription("Página 1 de 7 do PDF").fetchSemanticsNodes().isNotEmpty() }
         compose.waitForIdle()
     }
 
@@ -142,8 +207,8 @@ class PdfStageTest {
         compose.setContent {
             StagebookTheme { PdfStageView(PdfOpen.Ready(PdfPages(FakeSource(7))), 0, invert = false, onPageCount = { count = it }, onView = { kept = it }) }
         }
-        compose.waitUntil(5_000) { count > 0 }
-        compose.waitUntil(5_000) { compose.onAllNodesWithContentDescription("Página 1 de 7 do PDF").fetchSemanticsNodes().isNotEmpty() }
+        compose.waitUntil(TEST_WAIT_MS) { count > 0 }
+        compose.waitUntil(TEST_WAIT_MS) { compose.onAllNodesWithContentDescription("Página 1 de 7 do PDF").fetchSemanticsNodes().isNotEmpty() }
         pinch(out = true)
         compose.waitForIdle()
         assertTrue("the zoom was handed back: $kept", (kept?.scale ?: 1f) > 1.2f)
@@ -154,8 +219,8 @@ class PdfStageTest {
         compose.setContent {
             StagebookTheme { PdfStageView(PdfOpen.Ready(PdfPages(FakeSource(7))), 0, invert = false, onPageCount = { count = it }, view = br.app.stagebook.domain.PdfView(2f, 0f, 0f)) }
         }
-        compose.waitUntil(5_000) { count > 0 }
-        compose.waitUntil(5_000) { compose.onAllNodesWithContentDescription("Página 1 de 7 do PDF").fetchSemanticsNodes().isNotEmpty() }
+        compose.waitUntil(TEST_WAIT_MS) { count > 0 }
+        compose.waitUntil(TEST_WAIT_MS) { compose.onAllNodesWithContentDescription("Página 1 de 7 do PDF").fetchSemanticsNodes().isNotEmpty() }
         compose.waitForIdle()
         val box = compose.onRoot().getBoundsInRoot().width
         assertTrue("enlarged past the box: ${page().getBoundsInRoot().width} in $box", page().getBoundsInRoot().width > box * 1.2f)
@@ -165,8 +230,8 @@ class PdfStageTest {
         val source = FakeSource(3)
         var count = 0
         compose.setContent { StagebookTheme { PdfStageView(PdfOpen.Ready(PdfPages(source)), pageAt, invert = false, onPageCount = { count = it }, crops = crops) } }
-        compose.waitUntil(5_000) { count > 0 }
-        compose.waitUntil(5_000) { compose.onAllNodesWithContentDescription("Página ${pageAt + 1} de 3 do PDF").fetchSemanticsNodes().isNotEmpty() }
+        compose.waitUntil(TEST_WAIT_MS) { count > 0 }
+        compose.waitUntil(TEST_WAIT_MS) { compose.onAllNodesWithContentDescription("Página ${pageAt + 1} de 3 do PDF").fetchSemanticsNodes().isNotEmpty() }
         compose.waitForIdle()
         return source
     }
@@ -203,8 +268,8 @@ class PdfStageTest {
         compose.setContent {
             StagebookTheme { PdfStageView(PdfOpen.Ready(PdfPages(FakeSource(7))), 0, invert = false, onPageCount = { count = it }, onView = { kept += it }) }
         }
-        compose.waitUntil(5_000) { count > 0 }
-        compose.waitUntil(5_000) { compose.onAllNodesWithContentDescription("Página 1 de 7 do PDF").fetchSemanticsNodes().isNotEmpty() }
+        compose.waitUntil(TEST_WAIT_MS) { count > 0 }
+        compose.waitUntil(TEST_WAIT_MS) { compose.onAllNodesWithContentDescription("Página 1 de 7 do PDF").fetchSemanticsNodes().isNotEmpty() }
         compose.waitForIdle()
         page().performTouchInput { down(center); up() }   // a tap: it turns the page, it does not touch the view
         compose.waitForIdle()
@@ -266,9 +331,9 @@ class PdfStageTest {
                 )
             }
         }
-        compose.waitUntil(5_000) { count > 0 }
+        compose.waitUntil(TEST_WAIT_MS) { count > 0 }
         // the count comes before the first bitmap: wait for the page itself
-        compose.waitUntil(5_000) { compose.onAllNodesWithContentDescription("Página 1 de 7 do PDF").fetchSemanticsNodes().isNotEmpty() }
+        compose.waitUntil(TEST_WAIT_MS) { compose.onAllNodesWithContentDescription("Página 1 de 7 do PDF").fetchSemanticsNodes().isNotEmpty() }
         compose.waitForIdle()
     }
 

@@ -88,31 +88,41 @@ fun LetterIndex(letters: List<String>, shown: Boolean, onLetter: (Int) -> Unit, 
         }
     }
     val here = onScreen()
-    Column(
-        modifier.width(INDEX_WIDTH).graphicsLayer { this.alpha = alpha.value }.testTag(LETTER_INDEX_TAG).then(touch),
-        horizontalAlignment = Alignment.CenterHorizontally,
-    ) {
-        letters.forEachIndexed { i, letter ->
-            // squeezed rather than cut off when the list is too short for every letter
-            val inView = i in here
-            // the letters in view form one filled band: rounded only at its two ends
-            val shape = androidx.compose.foundation.shape.RoundedCornerShape(
-                topStart = if (i - 1 in here) 0.dp else INDEX_CORNER, topEnd = if (i - 1 in here) 0.dp else INDEX_CORNER,
-                bottomStart = if (i + 1 in here) 0.dp else INDEX_CORNER, bottomEnd = if (i + 1 in here) 0.dp else INDEX_CORNER,
-            )
-            Box(
-                Modifier.weight(1f, fill = false).height(INDEX_LETTER).fillMaxWidth()
-                    .then(if (inView) Modifier.background(MaterialTheme.colorScheme.primary, shape) else Modifier)
-                    .testTag(LETTER_INDEX_TAG + "_" + letter).semantics { onClick { pick(i); true }; if (inView) selected = true },
-                contentAlignment = Alignment.Center,
-            ) {
-                Text(
-                    letter,
-                    style = MaterialTheme.typography.labelLarge,
-                    fontWeight = if (inView) androidx.compose.ui.text.font.FontWeight.Bold else null,
-                    color = if (inView) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.primary,
-                    maxLines = 1, softWrap = false,
+    // with little height (the keyboard open, a tablet lying down) every letter no longer fits: one in every few is drawn,
+    // each standing for the ones after it, instead of all of them squeezed over each other (user, 23/11). The column
+    // keeps its height and a finger along it still reaches every letter
+    androidx.compose.foundation.layout.BoxWithConstraints(modifier) {
+        val every = if (constraints.hasBoundedHeight && letters.isNotEmpty()) kotlin.math.ceil(INDEX_LETTER_MIN.value * letters.size / maxHeight.value).toInt().coerceAtLeast(1) else 1
+        Column(
+            Modifier.width(INDEX_WIDTH).graphicsLayer { this.alpha = alpha.value }.testTag(LETTER_INDEX_TAG).then(touch),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            for (i in letters.indices step every) {
+                val last = minOf(i + every - 1, letters.lastIndex)
+                val count = last - i + 1
+                val inView = !here.isEmpty() && here.first <= last && here.last >= i
+                // the letters in view form one filled band: rounded only at its two ends
+                val before = i - 1 in here
+                val after = last + 1 in here
+                val shape = androidx.compose.foundation.shape.RoundedCornerShape(
+                    topStart = if (before) 0.dp else INDEX_CORNER, topEnd = if (before) 0.dp else INDEX_CORNER,
+                    bottomStart = if (after) 0.dp else INDEX_CORNER, bottomEnd = if (after) 0.dp else INDEX_CORNER,
                 )
+                val letter = letters[i]
+                Box(
+                    Modifier.weight(count.toFloat(), fill = false).height(INDEX_LETTER * count).fillMaxWidth()
+                        .then(if (inView) Modifier.background(MaterialTheme.colorScheme.primary, shape) else Modifier)
+                        .testTag(LETTER_INDEX_TAG + "_" + letter).semantics { onClick { pick(i); true }; if (inView) selected = true },
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text(
+                        letter,
+                        style = MaterialTheme.typography.labelLarge,
+                        fontWeight = if (inView) androidx.compose.ui.text.font.FontWeight.Bold else null,
+                        color = if (inView) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.primary,
+                        maxLines = 1, softWrap = false,
+                    )
+                }
             }
         }
     }
@@ -144,6 +154,7 @@ const val LETTER_HEADER_TAG = "letter_header_"
 /** Wider than its letters: a finger finds it. The caller lets it hang over the list's end margin. */
 val INDEX_WIDTH = Spacing.l
 private val INDEX_LETTER = 24.dp   // larger letters, easy to read while the list moves (user, 19/11)
+private val INDEX_LETTER_MIN = 20.dp   // under this a letter runs into the next one
 private val INDEX_CORNER = Spacing.s
 private const val INDEX_FADE_MS = 200
 internal const val INDEX_LINGER_MS = 3_000L   // time to read where the list stopped before the letters go (user, 19/11)

@@ -9,6 +9,8 @@ class DrawerControl(
     val pinned: Boolean = false,
     /** Opens the drawer on a setlist (its songs and order), and on its share sheet when asked. */
     val openSetlist: (setId: String, share: Boolean) -> Unit = { _, _ -> },
+    /** The drawer is open over the screen (never while pinned beside it). */
+    val isOpen: () -> Boolean = { false },
 )
 
 val LocalDrawer = staticCompositionLocalOf<DrawerControl?> { null }

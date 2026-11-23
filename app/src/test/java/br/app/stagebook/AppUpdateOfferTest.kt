@@ -52,7 +52,7 @@ class AppUpdateOfferTest {
         return AppUpdateOffer(updater, gate, with, scope, Dispatchers.IO)
     }
 
-    private fun Job?.await() = runBlocking { withTimeout(10_000) { this@await?.join() } }
+    private fun Job?.await() = runBlocking { withTimeout(TEST_WAIT_MS) { this@await?.join() } }
 
     @Test fun `newer version - offers it on open`() {
         version = """{"versionCode":999999,"versionName":"0.3.999 (abc1234)"}"""

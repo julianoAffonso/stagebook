@@ -60,7 +60,7 @@ class NormalizeFlowTest {
         repo.saveSong(Song(title = "D", text = "nada\nse\n\nrepete\naqui"))
         val vm = testSettingsVm(repo)
         vm.normalizeSections()
-        assertEquals(SettingsMessage.Normalized(1, 1), withTimeout(5_000) { vm.messages.first() })
+        assertEquals(SettingsMessage.Normalized(1, 1), withTimeout(TEST_WAIT_MS) { vm.messages.first() })
         // existing titles stay as they are (the stage shows them in the app's language)
         assertEquals("Chorus:\nlinha\n\nVerse 2\noutra", repo.findSong("A", "")!!.text)
         assertEquals("{start_of_chorus}\num\n{end_of_chorus}\n\num\n\ndois\n\num", repo.findSong("E", "")!!.text)

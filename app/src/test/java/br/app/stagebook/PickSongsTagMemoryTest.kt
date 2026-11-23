@@ -41,15 +41,15 @@ class PickSongsTagMemoryTest {
                 fun vm(set: String) = PickSongsViewModel(repo, SavedStateHandle(mapOf("setId" to set)))
                 val first = vm(a)
                 val job = CoroutineScope(Dispatchers.Main).launch { first.uiState.collect {} }
-                withTimeout(5_000) { first.uiState.first { it.rows.size == 2 } }
+                withTimeout(TEST_WAIT_MS) { first.uiState.first { it.rows.size == 2 } }
                 first.onTagsChange(setOf("Rock"))
-                withTimeout(5_000) { first.uiState.first { s -> s.rows.map { it.title } == listOf("Um") } }
+                withTimeout(TEST_WAIT_MS) { first.uiState.first { s -> s.rows.map { it.title } == listOf("Um") } }
                 job.cancel()
 
                 // the screen opens again on the same setlist: the filter is still Rock
                 val again = vm(a)
                 val job2 = CoroutineScope(Dispatchers.Main).launch { again.uiState.collect {} }
-                val s = withTimeout(5_000) { again.uiState.first { it.rows.isNotEmpty() } }
+                val s = withTimeout(TEST_WAIT_MS) { again.uiState.first { it.rows.isNotEmpty() } }
                 assertEquals(setOf("Rock"), s.chosenTags)
                 assertEquals(listOf("Um"), s.rows.map { it.title })
                 job2.cancel()
@@ -57,7 +57,7 @@ class PickSongsTagMemoryTest {
                 // another setlist starts with no filter
                 val other = vm(b)
                 val job3 = CoroutineScope(Dispatchers.Main).launch { other.uiState.collect {} }
-                val o = withTimeout(5_000) { other.uiState.first { it.rows.isNotEmpty() } }
+                val o = withTimeout(TEST_WAIT_MS) { other.uiState.first { it.rows.isNotEmpty() } }
                 assertEquals(emptySet<String>(), o.chosenTags)
                 assertEquals(2, o.rows.size)
                 job3.cancel()

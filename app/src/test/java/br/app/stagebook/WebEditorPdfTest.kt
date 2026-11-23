@@ -199,7 +199,7 @@ class WebEditorPdfTest {
             val c = android.content.res.Configuration(context.resources.configuration).apply { setLocale(java.util.Locale.forLanguageTag(lang)) }
             val texts = WebEditorServer.texts(context.createConfigurationContext(c), R.string.editor_lyrics)
             listOf("pdfLabel", "pdfNone", "pdfAttach", "pdfReplace", "pdfRemove", "pdfMissing", "pdfNote", "pdfAskLyrics", "pdfRemoveConfirm", "pdfNotPdf", "pdfTooBig", "pdfPassword", "pdfTooManyPages", "pdfUnreadable", "pdfFacts1", "pdfFactsN",
-                "pdfPreview", "pdfInvert", "pdfCrop", "cropTitle", "cropHint", "cropAll", "cropPage", "cropNone", "cropPrev", "cropNext", "cancel")
+                "pdfPreview", "pdfInvert", "pdfCrop", "cropTitle", "cropHint", "cropAll", "cropPage", "cropNone", "cropAuto", "cropPrev", "cropNext", "cancel")
                 .forEach { assertTrue("$lang $it", !texts[it].isNullOrBlank()) }
             // the card says the same sentence as the app's editor
             assertEquals(context.createConfigurationContext(c).getString(R.string.editor_pdf_note), texts["pdfNote"])

@@ -8,6 +8,13 @@ import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.test.onAllNodesWithTag
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.ui.unit.dp
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.test.onNodeWithText
@@ -44,6 +51,8 @@ import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.setMain
 import kotlinx.coroutines.withTimeout
+import androidx.compose.ui.test.getUnclippedBoundsInRoot
+import androidx.compose.ui.test.onRoot
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -71,13 +80,13 @@ class PdfEditorTest {
     private fun open(songId: String? = null, repoSongs: (LibraryRepository) -> String? = { null }): Triple<SongEditorViewModel, LibraryRepository, PdfStore> {
         val scope = testScope()
         val repo = LibraryRepository(context, scope)
-        runBlocking { withTimeout(5_000) { repo.loaded.first { it } }; repo.restore(emptyList(), emptyList()) }
+        runBlocking { withTimeout(TEST_WAIT_MS) { repo.loaded.first { it } }; repo.restore(emptyList(), emptyList()) }
         val id = repoSongs(repo)
         val pdfs = PdfStore(context)
         val args = mutableMapOf<String, Any?>("fromImport" to false)
         id?.let { args["songId"] = it }
         val vm = SongEditorViewModel(repo, SongMetadata(repo, MusicBrainz(), scope), ImportDraft(), SavedStateHandle(args), ImportQueue(repo), TrackStore(context), EditorQueue(), pdfs, PdfInspector(Pages()))
-        runBlocking { withTimeout(5_000) { while (vm.uiState.loading) kotlinx.coroutines.delay(10) } }
+        runBlocking { withTimeout(TEST_WAIT_MS) { while (vm.uiState.loading) kotlinx.coroutines.delay(10) } }
         return Triple(vm, repo, pdfs)
     }
 
@@ -256,7 +265,7 @@ class PdfEditorTest {
         try {
             val scope = testScope()
             val repo = LibraryRepository(context, scope)
-            withTimeout(5_000) { repo.loaded.first { it } }; repo.restore(emptyList(), emptyList())
+            withTimeout(TEST_WAIT_MS) { repo.loaded.first { it } }; repo.restore(emptyList(), emptyList())
             val handle = SavedStateHandle(mapOf("fromImport" to false))
             fun editor() = SongEditorViewModel(repo, SongMetadata(repo, MusicBrainz(), scope), ImportDraft(), handle, ImportQueue(repo), TrackStore(context), EditorQueue(), PdfStore(context), PdfInspector(Pages()))
             val first = editor()
@@ -295,6 +304,36 @@ class PdfEditorTest {
 
     private val saved = SongEditorUiState(loading = false, mode = EditorMode.EDIT, title = "Chart", text = "[G]letra")
 
+    @Config(qualifiers = "+w800dp-h1280dp")
+    @Test fun `on a tablet the PDF's actions sit together in the middle of the card, under the page`() {
+        screen(saved, EditorPdf("Cifra do Vento.pdf", pages = 3, bytes = 412_000))
+        fun box(text: String) = compose.onNodeWithText(text, substring = true).getUnclippedBoundsInRoot()
+        val pages = box("Páginas no palco"); val crop = box("Recortar"); val swap = box("Trocar PDF"); val remove = box("Remover PDF")
+        // together, not one in each third of the card
+        assertTrue("Trocar is ${(swap.left - crop.right).value} dp from Recortar", (swap.left - crop.right).value <= 24f)
+        assertTrue("Remover is ${(remove.left - swap.right).value} dp from Trocar", (remove.left - swap.right).value <= 24f)
+        // in the middle: as far from one side of the screen as from the other, and the pages button over the same middle
+        val middle = compose.onRoot().getUnclippedBoundsInRoot().let { (it.left + it.right).value / 2 }
+        assertEquals("the three actions are centred", middle, (crop.left + remove.right).value / 2, 2f)
+        assertEquals("the pages button is centred", middle, (pages.left + pages.right).value / 2, 2f)
+    }
+
+    @Test fun `the page in the card takes the shape of its trim - the part the stage shows, not the whole page`() {
+        val page = android.graphics.Bitmap.createBitmap(400, 600, android.graphics.Bitmap.Config.ARGB_8888).asImageBitmap()   // a page two wide by three tall
+        var crop by androidx.compose.runtime.mutableStateOf<br.app.stagebook.data.model.PdfCrop?>(br.app.stagebook.data.model.PdfCrop(0, left = 0.1f, top = 0.25f, right = 0.9f, bottom = 0.5f))
+        compose.setContent {
+            StagebookTheme { androidx.compose.foundation.layout.Box(androidx.compose.ui.Modifier.height(200.dp)) { br.app.stagebook.ui.editor.PdfPageThumb(page, crop, invert = false, androidx.compose.ui.Modifier.fillMaxHeight()) } }
+        }
+        // 80% of 400 across by 25% of 600 down: 320 x 150, wider than tall
+        val cut = compose.onNodeWithTag(br.app.stagebook.ui.editor.PDF_THUMB_TAG).getUnclippedBoundsInRoot()
+        assertEquals(320f / 150f, (cut.right - cut.left).value / (cut.bottom - cut.top).value, 0.05f)
+        // no trim: the whole page, and no cut picture
+        crop = null
+        compose.waitForIdle()
+        compose.onAllNodesWithTag(br.app.stagebook.ui.editor.PDF_THUMB_TAG).assertCountEquals(0)
+        compose.onNodeWithContentDescription("Primeira página do PDF").assertExists()
+    }
+
     @Test fun `a PDF song shows the card in place of the lyrics field - name, pages, size and the sentence`() {
         screen(saved, EditorPdf("Cifra do Vento.pdf", pages = 3, bytes = 412_000))
         compose.onNodeWithText("Cifra do Vento.pdf").assertExists()
@@ -327,7 +366,7 @@ class PdfEditorTest {
         compose.onNodeWithText("Todas as páginas").assertExists()
         compose.onNodeWithText("Só esta página").assertExists()
         compose.onNodeWithText("1 / 3").assertExists()
-        compose.onNodeWithText("Salvar").performClick()
+        compose.onNode(androidx.compose.ui.test.hasContentDescription("Salvar") and androidx.compose.ui.test.hasAnyAncestor(androidx.compose.ui.test.hasTestTag("pdf_crop_save"))).performClick()
         compose.waitForIdle()
         assertEquals(br.app.stagebook.data.model.PdfCrop.ALL, set?.page)
     }
@@ -342,13 +381,13 @@ class PdfEditorTest {
         compose.onNodeWithContentDescription("Próxima página").performClick()
         compose.waitForIdle()
         compose.onNodeWithText("2 / 3").assertExists()
-        compose.onNodeWithText("Salvar").performClick()
+        compose.onNode(androidx.compose.ui.test.hasContentDescription("Salvar") and androidx.compose.ui.test.hasAnyAncestor(androidx.compose.ui.test.hasTestTag("pdf_crop_save"))).performClick()
         compose.waitForIdle()
         assertEquals(1, set?.page)
         // again: no crop for that scope
         compose.onNodeWithText("Recortar").performClick()
         compose.waitForIdle()
-        compose.onNodeWithText("Sem recorte").performClick()
+        compose.onNode(androidx.compose.ui.test.hasContentDescription("Sem recorte") and androidx.compose.ui.test.hasAnyAncestor(androidx.compose.ui.test.hasTestTag("pdf_crop_none"))).performClick()
         compose.waitForIdle()
         assertEquals(br.app.stagebook.data.model.PdfCrop.ALL, cleared)
     }
@@ -362,7 +401,7 @@ class PdfEditorTest {
         // the left edge 30% in, then the right edge 30% in: the first must still be there after the second
         frame.performTouchInput { down(Offset(1f, height / 2f)); moveBy(Offset(width * 0.3f, 0f)); up() }
         frame.performTouchInput { down(Offset(width - 2f, height / 2f)); moveBy(Offset(-width * 0.3f, 0f)); up() }
-        compose.onNodeWithText("Salvar").performClick()
+        compose.onNode(androidx.compose.ui.test.hasContentDescription("Salvar") and androidx.compose.ui.test.hasAnyAncestor(androidx.compose.ui.test.hasTestTag("pdf_crop_save"))).performClick()
         compose.waitForIdle()
         val crop = set!!
         assertEquals("left kept: $crop", 0.3f, crop.left, 0.05f)
@@ -381,7 +420,7 @@ class PdfEditorTest {
         val frame = compose.onNodeWithTag("pdf_crop_frame")
         frame.performTouchInput { down(Offset(1f, height / 2f)); moveBy(Offset(width * 0.25f, 0f)); up() }
         frame.performTouchInput { down(Offset(width / 2f, 1f)); moveBy(Offset(0f, height * 0.2f)); up() }
-        compose.onNodeWithText("Salvar").performClick()
+        compose.onNode(androidx.compose.ui.test.hasContentDescription("Salvar") and androidx.compose.ui.test.hasAnyAncestor(androidx.compose.ui.test.hasTestTag("pdf_crop_save"))).performClick()
         compose.waitForIdle()
         val crop = set!!
         assertEquals(0, crop.page)

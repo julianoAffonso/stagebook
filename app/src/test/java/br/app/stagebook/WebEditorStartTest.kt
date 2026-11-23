@@ -27,6 +27,6 @@ class WebEditorStartTest {
         val repo = testRepo()
         repo.updateLook { it.copy(webEditorOn = true) }
         WebEditorServer(context, repo, DeviceIdentity(context), WebEditorAuth(context), { error("not used") }, { error("not used") }, { error("not used") }, { error("not used") }, { error("not used") }, { error("not used") }, { error("not used") }, { error("not used") }, { error("not used") })
-        assertEquals(false, withTimeout(5_000) { repo.library.first { !it.look.webEditorOn } }.look.webEditorOn)
+        assertEquals(false, withTimeout(TEST_WAIT_MS) { repo.library.first { !it.look.webEditorOn } }.look.webEditorOn)
     }
 }

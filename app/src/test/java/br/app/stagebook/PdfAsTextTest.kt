@@ -67,13 +67,13 @@ class PdfAsTextTest {
         PdfStore(context).file("p.pdf").apply { parentFile?.mkdirs(); writeBytes("%PDF-1.4\n".toByteArray()) }
         repo.updateSong(id) { it.copy(pdf = "p.pdf", pdfName = "Partitura.pdf", pdfText = true) }
         val vm = testStage(context, repo, SavedStateHandle(mapOf("songId" to id, "start" to 0)))
-        val shown = withTimeout(5_000) { vm.uiState.first { it.songs.isNotEmpty() && !it.loading } }.songs.single()
+        val shown = withTimeout(TEST_WAIT_MS) { vm.uiState.first { it.songs.isNotEmpty() && !it.loading } }.songs.single()
         assertEquals("", shown.pdf)
         assertEquals("[G]letra guardada", shown.text)
         // switched off, the stage opened again shows the PDF
         repo.updateSong(id) { it.copy(pdfText = false) }
         val again = testStage(context, repo, SavedStateHandle(mapOf("songId" to id, "start" to 0)))
-        assertEquals("p.pdf", withTimeout(5_000) { again.uiState.first { it.songs.isNotEmpty() && !it.loading } }.songs.single().pdf)
+        assertEquals("p.pdf", withTimeout(TEST_WAIT_MS) { again.uiState.first { it.songs.isNotEmpty() && !it.loading } }.songs.single().pdf)
         assertFalse(repo.song(id)!!.withoutPdf().pdfText)
         // the switch on and the lyrics gone: the stage shows the PDF, never nothing
         assertFalse(Song(title = "x", pdf = "p.pdf", pdfText = true, text = "{key: G}").pdfAsText)

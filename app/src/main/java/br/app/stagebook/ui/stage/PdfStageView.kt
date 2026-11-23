@@ -1,5 +1,6 @@
 package br.app.stagebook.ui.stage
 
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -96,6 +97,9 @@ fun rememberPdfPageImage(pages: PdfPages?, page: Int, width: Int): State<android
         }
     }
 
+/** A page as it is on screen: what a turn takes from one to the next. */
+private data class PdfShot(val song: Any, val page: Int, val image: ImageBitmap, val width: Int, val height: Int)
+
 /** The colours turned over: white paper becomes black, for a dark stage. */
 internal val InvertFilter = ColorFilter.colorMatrix(
     ColorMatrix(floatArrayOf(-1f, 0f, 0f, 0f, 255f, 0f, -1f, 0f, 0f, 255f, 0f, 0f, -1f, 0f, 255f, 0f, 0f, 0f, 1f, 0f)),
@@ -181,13 +185,18 @@ fun PdfStageView(
                         // (a failure here must not make the page already on screen "unreadable")
                         // (also with the zoom kept a little in: it stays from page to page now, and the turn was drawn on
                         // demand every time; beyond twice the pixels the next page waits its turn, for the memory)
-                        if (bucket <= 2 && at + 1 < pages.pageCount) try {
-                            val (nw, nh) = pages.size(at + 1)
-                            pages.bitmap(at + 1, PdfZoom.capWidth(PdfCrops.wholeWidth(nw to nh, PdfCrops.forPage(crops, at + 1), widthPx, heightPx) * bucket, nw, nh))
-                        } catch (e: kotlinx.coroutines.CancellationException) {
-                            throw e
-                        } catch (_: Exception) {
-                        } catch (_: OutOfMemoryError) {
+                        // then the page before, for the turn back (user, 23/11: going back drew the page on demand);
+                        // going forward it is still kept, and costs nothing
+                        if (bucket <= 2) for (other in intArrayOf(at + 1, at - 1)) {
+                            if (other !in 0 until pages.pageCount) continue
+                            try {
+                                val (nw, nh) = pages.size(other)
+                                pages.bitmap(other, PdfZoom.capWidth(PdfCrops.wholeWidth(nw to nh, PdfCrops.forPage(crops, other), widthPx, heightPx) * bucket, nw, nh))
+                            } catch (e: kotlinx.coroutines.CancellationException) {
+                                throw e
+                            } catch (_: Exception) {
+                            } catch (_: OutOfMemoryError) {
+                            }
                         }
                     } catch (e: kotlinx.coroutines.CancellationException) {
                         throw e
@@ -224,9 +233,6 @@ fun PdfStageView(
                 val image = drawn
                 // the page on screen is the last one drawn (the turn is shown when the new one is ready)
                 val shownAt = if (drawnAt >= 0) drawnAt else at
-                val shownCrop = PdfCrops.forPage(crops, shownAt)
-                val shownCropW = shownCrop?.let { it.right - it.left } ?: 1f
-                val shownCropH = shownCrop?.let { it.bottom - it.top } ?: 1f
                 Box(
                     Modifier
                         .fillMaxSize()
@@ -273,32 +279,47 @@ fun PdfStageView(
                 ) {
                     if (broken) Text(stringResource(R.string.stage_pdf_unreadable), style = MaterialTheme.typography.titleMedium)
                     else if (size == null || image == null) CircularProgressIndicator()
-                    else with(density) {
-                        // the page and its strokes move and grow together
-                        Box(
-                            Modifier
-                                .size(size.first.toDp(), size.second.toDp())
-                                .graphicsLayer { scaleX = scale; scaleY = scale; translationX = offset.x; translationY = offset.y },
-                        ) {
-                            val pageLabel = stringResource(R.string.stage_pdf_page, shownAt + 1, pages.pageCount)
-                            if (shownCrop == null) Image(
-                                image, contentDescription = pageLabel,
-                                modifier = Modifier.fillMaxSize().background(Color.White),
-                                colorFilter = if (invert) InvertFilter else null,
-                            ) else Canvas(Modifier.fillMaxSize().background(Color.White).semantics { contentDescription = pageLabel }) {
-                                // only the trimmed part of the whole page, stretched over the box (they share one shape)
-                                drawImage(
-                                    image,
-                                    srcOffset = androidx.compose.ui.unit.IntOffset((shownCrop.left * image.width).toInt(), (shownCrop.top * image.height).toInt()),
-                                    srcSize = androidx.compose.ui.unit.IntSize((shownCropW * image.width).toInt().coerceAtLeast(1), (shownCropH * image.height).toInt().coerceAtLeast(1)),
-                                    dstSize = androidx.compose.ui.unit.IntSize(this.size.width.toInt(), this.size.height.toInt()),
+                    // the turn comes in from the side, as the lyrics' pages do (user, 23/11); the same page drawn sharper
+                    // is no turn: it swaps in place
+                    else AnimatedContent(
+                        targetState = PdfShot(pageKey, shownAt, image, size.first, size.second),
+                        modifier = Modifier.fillMaxSize(),
+                        contentKey = { it.song to it.page },
+                        transitionSpec = { pageTurn(targetState.page >= initialState.page, sheet = true) },
+                        contentAlignment = Alignment.Center,
+                        label = "pdf page",
+                    ) { shot ->
+                        val shotCrop = PdfCrops.forPage(crops, shot.page)
+                        val shotCropW = shotCrop?.let { it.right - it.left } ?: 1f
+                        val shotCropH = shotCrop?.let { it.bottom - it.top } ?: 1f
+                        Box(Modifier.fillMaxSize(), Alignment.Center) {
+                            // the page and its strokes move and grow together
+                            Box(
+                                Modifier
+                                    .size(with(density) { shot.width.toDp() }, with(density) { shot.height.toDp() })
+                                    .graphicsLayer { scaleX = scale; scaleY = scale; translationX = offset.x; translationY = offset.y },
+                            ) {
+                                val pageLabel = stringResource(R.string.stage_pdf_page, shot.page + 1, pages.pageCount)
+                                if (shotCrop == null) Image(
+                                    shot.image, contentDescription = pageLabel,
+                                    modifier = Modifier.fillMaxSize().background(Color.White),
                                     colorFilter = if (invert) InvertFilter else null,
-                                )
+                                ) else Canvas(Modifier.fillMaxSize().background(Color.White).semantics { contentDescription = pageLabel }) {
+                                    // only the trimmed part of the whole page, stretched over the box (they share one shape)
+                                    drawImage(
+                                        shot.image,
+                                        srcOffset = androidx.compose.ui.unit.IntOffset((shotCrop.left * shot.image.width).toInt(), (shotCrop.top * shot.image.height).toInt()),
+                                        srcSize = androidx.compose.ui.unit.IntSize((shotCropW * shot.image.width).toInt().coerceAtLeast(1), (shotCropH * shot.image.height).toInt().coerceAtLeast(1)),
+                                        dstSize = androidx.compose.ui.unit.IntSize(this.size.width.toInt(), this.size.height.toInt()),
+                                        colorFilter = if (invert) InvertFilter else null,
+                                    )
+                                }
+                                // over the paper and not turned over with it: the highlighter keeps its colour on a dark stage
+                                // the strokes of this page, as paths made once and drawn on every frame of a zoom or a move
+                                val ink = remember(marks, shot.page, shotCrop) { PdfInk(marks.filter { it.page == shot.page }, shotCrop) }
+                                // the stroke under the finger belongs to the page on screen, not to the one leaving
+                                Canvas(Modifier.fillMaxSize()) { ink.draw(this, if (shot.page == shownAt) live else emptyList(), markColor) }
                             }
-                            // over the paper and not turned over with it: the highlighter keeps its colour on a dark stage
-                            // the strokes of this page, as paths made once and drawn on every frame of a zoom or a move
-                            val ink = remember(marks, shownAt, shownCrop) { PdfInk(marks.filter { it.page == shownAt }, shownCrop) }
-                            Canvas(Modifier.fillMaxSize()) { ink.draw(this, live, markColor) }
                         }
                     }
                 }

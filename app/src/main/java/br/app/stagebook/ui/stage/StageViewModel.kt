@@ -271,11 +271,18 @@ class StageViewModel @Inject constructor(
         val setId = route.setId
         val songId = (if (setId != null) repository.library.value.setlist(setId)?.items?.getOrNull(index) else route.songId) ?: return
         if (songId == markedSong) return   // shown again (the screen turned): its minute goes on counting
+        // another song on this stage: somebody went to it. The first one waits only on the stage the app opened by itself
+        acted = markedSong != null || acted == true || !route.resumed
         markedSong = songId
         if (setId != null) show.onStage(setId, songId)
-        val counts = !route.leaderBreak
         playedJob?.cancel()
-        // dies with the stage: a song left before its minute isn't played
+        if (acted == true) startMinute(setId, songId) else waiting = setId to songId
+    }
+
+    // dies with the stage: a song left before its minute isn't played
+    private fun startMinute(setId: String?, songId: String) {
+        waiting = null
+        val counts = !route.leaderBreak
         playedJob = viewModelScope.launch {
             kotlinx.coroutines.delay(br.app.stagebook.domain.SetlistShow.PLAYED_AFTER_MS)
             if (setId != null) show.played(setId, songId)
@@ -283,6 +290,19 @@ class StageViewModel @Inject constructor(
         }
     }
 
+    /**
+     * Something was done on the stage: a page or a song turned (finger, pedal), the backing track played. The song the
+     * app opened on by itself only starts its minute here (user, 23/11: the app left open on the last song wrote it in
+     * the report of what was played, with nobody playing).
+     */
+    fun stageAction() {
+        if (acted == true) return
+        acted = true
+        waiting?.let { (setId, songId) -> startMinute(setId, songId) }
+    }
+
+    private var acted: Boolean? = null   // null until the first song is marked: the route is read below this
+    private var waiting: Pair<String?, String>? = null
     private var markedSong: String? = null
     private var playedJob: kotlinx.coroutines.Job? = null
 
@@ -297,7 +317,7 @@ class StageViewModel @Inject constructor(
     val usbReady: StateFlow<Boolean> = player.usbReady.ignoringShortDrops(USB_DROP_MS)
         .stateIn(viewModelScope, kotlinx.coroutines.flow.SharingStarted.Eagerly, player.usbReady.value)
 
-    fun togglePlay() = player.toggle(repository.library.value.look.trackStops)
+    fun togglePlay() { stageAction(); player.toggle(repository.library.value.look.trackStops) }
     fun needsBatteryAsk() = player.needsBatteryAsk()
     fun batteryAsked() = player.batteryAsked()
 

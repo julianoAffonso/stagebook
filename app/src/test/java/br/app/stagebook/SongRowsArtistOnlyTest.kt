@@ -95,7 +95,7 @@ class SongRowsArtistOnlyTest {
         Dispatchers.setMain(main)
         try {
             val parts = library(extra)
-            return parts to runBlocking { withTimeout(10_000) { read(parts) } }
+            return parts to runBlocking { withTimeout(TEST_WAIT_MS) { read(parts) } }
         } finally {
             Dispatchers.resetMain()
         }
@@ -172,11 +172,13 @@ class SongRowsArtistOnlyTest {
             val searched = p.songs.uiState.first { it.query == "canção 2" }
             p.songs.onQueryChange("")
             p.songs.onTagsChange(setOf("Lenta"))
-            val tagged = p.songs.uiState.first { it.chosenTags.isNotEmpty() }
+            // (the search is taken a moment after it is typed: the tags can arrive while the old search is still the one in
+            // force, and that state is neither of the two being checked. The Check failed on it on a slow runner, 23/11)
+            val tagged = p.songs.uiState.first { it.chosenTags.isNotEmpty() && it.query.isEmpty() }
             p.songs.onTagsChange(emptySet())
             p.songs.onQueryChange("A canção")
             main.scheduler.advanceUntilIdle()
-            val few = p.songs.uiState.first { it.query == "A canção" }
+            val few = p.songs.uiState.first { it.query == "A canção" && it.chosenTags.isEmpty() }
             job.cancel()
             listOf(all, keyed, searched, tagged, few)
         }, many).let { it.second to it.first }

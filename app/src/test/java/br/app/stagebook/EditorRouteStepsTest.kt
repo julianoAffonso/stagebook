@@ -58,7 +58,7 @@ class EditorRouteStepsTest {
         val queue = EditorQueue()
         queue.open(ids, at)
         val vm = SongEditorViewModel(repo, SongMetadata(repo, MusicBrainz(), scope), ImportDraft(), SavedStateHandle(mapOf("songId" to ids[at], "fromImport" to false, "cursor" to -1)), ImportQueue(repo), TrackStore(context), queue)
-        runBlocking { withTimeout(5_000) { while (vm.uiState.loading) kotlinx.coroutines.delay(10) } }
+        runBlocking { withTimeout(TEST_WAIT_MS) { while (vm.uiState.loading) kotlinx.coroutines.delay(10) } }
         return Rig(repo, ids, queue, vm)
     }
 

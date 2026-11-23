@@ -58,7 +58,7 @@ internal open class TestBand(val repo: LibraryRepository, private val songs: Lis
     fun told(messages: Int = 1, act: () -> Unit) {
         val before = arrived.get()
         act()
-        awaitTrue(10_000) { arrived.get() >= before + messages }
+        awaitTrue(TEST_WAIT_MS) { arrived.get() >= before + messages }
     }
 
     /** Leading from song [index], and the follower already there. */

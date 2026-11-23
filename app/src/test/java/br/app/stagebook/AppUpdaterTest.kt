@@ -90,7 +90,7 @@ class AppUpdaterTest {
 
     /** Waits for the update state to reach the screen (uiState only moves with someone watching). */
     private suspend fun SettingsViewModel.waitUpdate(done: (UpdateState) -> Boolean): UpdateState =
-        withTimeout(10_000) { uiState.first { done(it.update) }.update }
+        withTimeout(TEST_WAIT_MS) { uiState.first { done(it.update) }.update }
 
     @Test fun `a server error is tried again until it answers`() = runBlocking {
         val hits = flaky(503, 500, 200)
@@ -120,8 +120,8 @@ class AppUpdaterTest {
             retryDelaysMs = longArrayOf(60_000)
         }
         val job = launch(Dispatchers.IO) { u.published(maxAgeMs = 0) }
-        withTimeout(5_000) { while (hits.get() < 1) delay(10) }
-        withTimeout(5_000) { job.cancelAndJoin() }
+        withTimeout(TEST_WAIT_MS) { while (hits.get() < 1) delay(10) }
+        withTimeout(TEST_WAIT_MS) { job.cancelAndJoin() }
         assertEquals(1, hits.get())
     }
 

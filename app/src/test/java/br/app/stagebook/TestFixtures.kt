@@ -63,7 +63,10 @@ internal fun testScope(): CoroutineScope = synchronized(liveScopes) {
 }
 
 /** How long a test waits for something the app does in the background. */
-internal const val TEST_WAIT_MS = 15_000L
+// The longest a test waits for something another thread does, everywhere (it is only a ceiling: a passing test never
+// waits it out). GitHub's runner, on a slow day, went past the 5 s many tests had each fixed for themselves: four
+// different old tests failed the Check of one PR in a row (23/11)
+internal const val TEST_WAIT_MS = 30_000L
 
 /** Waits until [what] holds, or fails with [TEST_WAIT_MS] (or [ms]) up. */
 internal fun awaitTrue(ms: Long = TEST_WAIT_MS, what: () -> Boolean) = runBlocking { withTimeout(ms) { while (!what()) delay(10) } }

@@ -56,9 +56,6 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.animation.slideInHorizontally
-import androidx.compose.animation.slideOutHorizontally
-import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
@@ -175,7 +172,6 @@ private val SPACES = Regex("[\\s\u2002]+")
 /** With the fingers still for this long, the pinch rebuilds the pages (before that, it only scales the text). */
 private const val PINCH_REFLOW_MS = 120L
 private const val PAGE_SLOTS = 7      // dots in the footer (7 × 28dp fit on phones with the clock)
-private const val PAGE_IN_MS = 220   // the new page coming in (and the dragged one going back with it)
 private const val EDIT_OFFER_MS = 4_000L   // the edit button goes away by itself
 
 /** How long a PDF page stays on screen before it is remembered as the one the song was left on. */
@@ -302,6 +298,7 @@ fun StageRoute(
             index = open,
             page = page,
             onPosition = { i, p -> index = i; page = p },
+            onAct = viewModel::stageAction,
             screen = screen,
             // 1 is no zoom: this screen goes back to automatic
             onZoom = { id, z -> viewModel.setZoom(id, screen, if (z == 1f) null else br.app.stagebook.data.model.ScreenZoom(z)) },
@@ -450,6 +447,7 @@ fun StageScreen(
     page: Int,
     onPosition: (song: Int, page: Int) -> Unit,
     modifier: Modifier = Modifier,
+    onAct: () -> Unit = {},   // a page or a song turned by the person (not a place the stage restored by itself)
     screen: String = "",   // size and position: a pinch belongs to the one it was made on
     onZoom: (songId: String, zoom: Float) -> Unit = { _, _ -> },
     onFit: (songId: String, zoom: br.app.stagebook.data.model.ScreenZoom) -> Unit = { _, _ -> },
@@ -512,7 +510,10 @@ fun StageScreen(
     var askExit by rememberSaveable { mutableStateOf(false) }
     val leave = { if (uiState.live) { askExit = true } else { onBack?.invoke() } }
     if (onBack != null) {
-        BackHandler { leave() }
+        // with the menu open over the stage, back closes the menu. The stage coming back from a Settings page registers
+        // its handler after the menu's, and back asked "Leave the stage?" under the open menu (device test 23/11)
+        val drawer = br.app.stagebook.ui.drawer.LocalDrawer.current
+        BackHandler { if (drawer != null && drawer.isOpen()) drawer.close() else leave() }
         if (askExit) {
             ConfirmDialog(
                 stringResource(R.string.stage_exit_confirm),
@@ -773,6 +774,7 @@ fun StageScreen(
         if (breakAgain >= 0 && breakAgain == index) { breakAgain = -1; onBreak(true) }
     }
     fun go(forward: Boolean) {
+        onAct()
         if (onBreakNow) { leaveBreak(forward); return }
         if (followRest) { presses.steps = 0; return }
         if (autoOn) { autoOn = false; return }
@@ -793,6 +795,7 @@ fun StageScreen(
     fun previous() = go(false)
     // pedal set to "next song"/"previous song": always at its start; with a page turn on the way, it waits
     fun goSong(forward: Boolean) {
+        onAct()
         if (onBreakNow) { leaveBreak(forward); return }
         if (followRest) return
         if (presses.from != null) return
@@ -1475,11 +1478,7 @@ fun StageScreen(
                     // turn the page: the new one comes in from the side of the movement
                     val forward = targetState.song > initialState.song ||
                         (targetState.song == initialState.song && targetState.page > initialState.page)
-                    val dir = if (forward) 1 else -1
-                    ((slideInHorizontally(tween(PAGE_IN_MS)) { it / 6 * dir } + fadeIn(tween(PAGE_IN_MS))) togetherWith
-                        (slideOutHorizontally(tween(160)) { -it / 6 * dir } + fadeOut(tween(160))))
-                        // the pages are the same size: no size to animate, and no cut at the page's own width while it slides
-                        .using(androidx.compose.animation.SizeTransform(clip = false))
+                    pageTurn(forward)
                 },
                 label = "page",
             ) { content ->

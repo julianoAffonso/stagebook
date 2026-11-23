@@ -10,6 +10,8 @@ import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.test.performClick
 import androidx.compose.foundation.layout.width
 import androidx.compose.ui.unit.dp
@@ -56,6 +58,27 @@ class DrawerFrameTest {
         assertTrue("icon on the name's line", badge.bottom > name.top)
         // the bar is one line tall: a finger, not icon over name
         assertTrue("one line tall", name.bottom.value > 800f - 56f)
+    }
+
+    // real text widths: Robolectric's own measure a letter as a pixel, and the name never pushes anything
+    @org.robolectric.annotation.GraphicsMode(org.robolectric.annotation.GraphicsMode.Mode.NATIVE)
+    @Test fun `the number on a tab keeps its round shape when the name is wide`() {
+        compose.setContent {
+            // large letters on a narrow drawer, as on a phone set to big text
+            androidx.compose.runtime.CompositionLocalProvider(
+                androidx.compose.ui.platform.LocalDensity provides androidx.compose.ui.unit.Density(3f, fontScale = 1.3f),
+            ) {
+                StagebookTheme { Box(Modifier.width(300.dp)) { DrawerFrame(HomeTab.SONGS, {}, badges = mapOf(HomeTab.SONGS to 1)) { m -> Box(m) } } }
+            }
+        }
+        val badge = compose.onNodeWithTag(br.app.stagebook.ui.drawer.TAB_BADGE_TAG, useUnmergedTree = true).getUnclippedBoundsInRoot()
+        // Material's badge is 16 dp across at least; squeezed, it came out 10 dp wide and 17 dp tall
+        val width = (badge.right - badge.left).value
+        assertTrue("the badge was squeezed to $width dp wide", width >= 16f - 0.5f)
+        // and the tab with the number is wider than the others, for its name
+        val named = compose.onNodeWithText("Músicas").getUnclippedBoundsInRoot()
+        val other = compose.onNodeWithText("Setlists").getUnclippedBoundsInRoot()
+        assertTrue("the tab with the number got no extra room", other.left.value > 300f / 3 + 5f && named.left.value < other.left.value)
     }
 
     @Test fun `tapping a tab says which one`() {

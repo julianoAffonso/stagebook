@@ -18,6 +18,10 @@ import br.app.stagebook.ui.components.SwitchRow
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.platform.testTag
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Icon
@@ -86,21 +90,28 @@ fun PdfSongCard(pdf: EditorPdf, onReplace: () -> Unit, onRemove: () -> Unit, mod
                 }
             }
             // the first page, as it will look on the stage (with the colours turned over, if they are)
-            pdf.file?.let { PdfPreview(it, pdf.invert, br.app.stagebook.domain.PdfHidden.visible(pdf.pages.coerceAtLeast(1), pdf.hidden).first()) }
+            pdf.file?.let {
+                val first = br.app.stagebook.domain.PdfHidden.visible(pdf.pages.coerceAtLeast(1), pdf.hidden).first()
+                PdfPreview(it, pdf.invert, first, crop = br.app.stagebook.domain.PdfCrops.forPage(pdf.crops, first))
+            }
             Text(stringResource(R.string.editor_pdf_note), style = MaterialTheme.typography.bodyMedium)
             // the colours of this song's PDF: white paper black, for a dark stage. Here, and not on the stage's header
             if (!pdf.lost) SwitchRow(stringResource(R.string.stage_pdf_invert), pdf.invert, onInvert, Modifier.fillMaxWidth())
             // the lyrics and chords the song kept, on the stage in place of the PDF: offered only when there are some
             if (pdf.keptLyrics) SwitchRow(stringResource(R.string.editor_pdf_as_text), pdf.asText, onAsText, Modifier.fillMaxWidth(), detail = stringResource(R.string.editor_pdf_as_text_detail))
-            // which pages show on the stage (user, 22/11): only with more than one
-            if (!pdf.lost && pdf.pages > 1) ActionButton(
-                stringResource(R.string.pdf_pages_title) + " · " + stringResource(R.string.pdf_pages_of, pdf.pages - pdf.hidden.count { it in 0 until pdf.pages }, pdf.pages),
-                onPages, Modifier.fillMaxWidth(), icon = AppIcons.Visibility, tone = ButtonTone.Tonal,
-            )
-            Row(horizontalArrangement = Arrangement.spacedBy(Spacing.s)) {
-                if (!pdf.lost) ActionButton(stringResource(R.string.editor_pdf_crop), onCrop, Modifier.weight(1f), tone = ButtonTone.Tonal)
-                ActionButton(stringResource(R.string.editor_pdf_replace), onReplace, Modifier.weight(1f), tone = ButtonTone.Tonal)
-                ActionButton(stringResource(R.string.editor_pdf_remove), onRemove, Modifier.weight(1f), tone = ButtonTone.Quiet)
+            // which pages show on the stage (user, 22/11): only with more than one. The card's actions sit in the middle,
+            // under the page shown above them (user, 23/11: pushed to the start they looked off, with the picture centred)
+            if (!pdf.lost && pdf.pages > 1) Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                ActionButton(
+                    stringResource(R.string.pdf_pages_title) + " · " + stringResource(R.string.pdf_pages_of, pdf.pages - pdf.hidden.count { it in 0 until pdf.pages }, pdf.pages),
+                    onPages, icon = AppIcons.Visibility, tone = ButtonTone.Tonal,
+                )
+            }
+            // one after the other, each with its icon; they wrap on a narrow phone
+            androidx.compose.foundation.layout.FlowRow(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(Spacing.s, Alignment.CenterHorizontally)) {
+                if (!pdf.lost) ActionButton(stringResource(R.string.editor_pdf_crop), onCrop, icon = AppIcons.Crop, tone = ButtonTone.Tonal)
+                ActionButton(stringResource(R.string.editor_pdf_replace), onReplace, icon = AppIcons.Sync, tone = ButtonTone.Tonal)
+                ActionButton(stringResource(R.string.editor_pdf_remove), onRemove, icon = AppIcons.Delete, tone = ButtonTone.Quiet)
             }
         }
     }
@@ -120,20 +131,45 @@ private fun PdfSongCardDarkPreview() = PreviewSurface(dark = true) {
 
 /** The PDF's first page, small, in the card: drawn off the main thread, closed with the card. */
 @Composable
-private fun PdfPreview(file: java.io.File, invert: Boolean, page: Int = 0, modifier: Modifier = Modifier) {
+private fun PdfPreview(file: java.io.File, invert: Boolean, page: Int = 0, modifier: Modifier = Modifier, crop: br.app.stagebook.data.model.PdfCrop? = null) {
     val open by br.app.stagebook.ui.stage.rememberPdfOpen(file)
     val ready = open as? br.app.stagebook.ui.stage.PdfOpen.Ready
     val image by br.app.stagebook.ui.stage.rememberPdfPageImage(ready?.pages, page, PREVIEW_WIDTH)
     Box(modifier.fillMaxWidth().heightIn(max = PREVIEW_MAX_HEIGHT), contentAlignment = Alignment.Center) {
         val shown = image
-        if (shown != null) {
-            Image(
-                shown, stringResource(R.string.editor_pdf_preview), Modifier.fillMaxHeight().clip(MaterialTheme.shapes.small).background(Color.White),
-                contentScale = ContentScale.Fit, colorFilter = if (invert) br.app.stagebook.ui.stage.InvertFilter else null,
-            )
-        } else if (open is br.app.stagebook.ui.stage.PdfOpen.Loading) CircularProgressIndicator()
+        if (shown != null) PdfPageThumb(shown, crop, invert, Modifier.fillMaxHeight())
+        else if (open is br.app.stagebook.ui.stage.PdfOpen.Loading) CircularProgressIndicator()
     }
 }
 
+/**
+ * A page as the stage will show it: with its trim, only the part kept (user, 23/11: the card went on showing the whole
+ * page after a crop, margins and all), and turned over when the colours are.
+ */
+@Composable
+internal fun PdfPageThumb(image: androidx.compose.ui.graphics.ImageBitmap, crop: br.app.stagebook.data.model.PdfCrop?, invert: Boolean, modifier: Modifier = Modifier) {
+    val label = stringResource(R.string.editor_pdf_preview)
+    val filter = if (invert) br.app.stagebook.ui.stage.InvertFilter else null
+    if (crop == null) {
+        Image(image, label, modifier.clip(MaterialTheme.shapes.small).background(Color.White), contentScale = ContentScale.Fit, colorFilter = filter)
+        return
+    }
+    // the part kept, in the image's pixels; the box takes its shape
+    val left = (crop.left * image.width).toInt().coerceIn(0, image.width - 1)
+    val top = (crop.top * image.height).toInt().coerceIn(0, image.height - 1)
+    val width = ((crop.right - crop.left) * image.width).toInt().coerceIn(1, image.width - left)
+    val height = ((crop.bottom - crop.top) * image.height).toInt().coerceIn(1, image.height - top)
+    androidx.compose.foundation.Canvas(
+        modifier.aspectRatio(width.toFloat() / height).clip(MaterialTheme.shapes.small).background(Color.White)
+            .testTag(PDF_THUMB_TAG).semantics { contentDescription = label },
+    ) {
+        drawImage(
+            image, srcOffset = androidx.compose.ui.unit.IntOffset(left, top), srcSize = androidx.compose.ui.unit.IntSize(width, height),
+            dstSize = androidx.compose.ui.unit.IntSize(size.width.toInt(), size.height.toInt()), colorFilter = filter,
+        )
+    }
+}
+
+internal const val PDF_THUMB_TAG = "pdf_thumb"
 private const val PREVIEW_WIDTH = 480
 private val PREVIEW_MAX_HEIGHT = 320.dp

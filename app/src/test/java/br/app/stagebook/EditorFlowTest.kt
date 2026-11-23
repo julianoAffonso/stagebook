@@ -76,12 +76,12 @@ class EditorFlowTest {
             val meta = SongMetadata(repo, MusicBrainz(), scope)
             val handle = SavedStateHandle(mapOf("songId" to id, "fromImport" to false))
             val vm = SongEditorViewModel(repo, meta, ImportDraft(), handle, br.app.stagebook.data.ImportQueue(repo), br.app.stagebook.data.TrackStore(context), br.app.stagebook.data.EditorQueue())
-            withTimeout(5_000) { while (vm.uiState.loading) kotlinx.coroutines.delay(10) }
+            withTimeout(TEST_WAIT_MS) { while (vm.uiState.loading) kotlinx.coroutines.delay(10) }
             vm.onText("letra digitada e ainda não salva")
             assertTrue(vm.uiState.unsaved)
             // process killed: only the SavedStateHandle survives (Android hands it back to the new screen)
             val again = SongEditorViewModel(repo, meta, ImportDraft(), SavedStateHandle(handle.keys().associateWith { handle.get<Any?>(it) }), br.app.stagebook.data.ImportQueue(repo), br.app.stagebook.data.TrackStore(context), br.app.stagebook.data.EditorQueue())
-            withTimeout(5_000) { while (again.uiState.loading) kotlinx.coroutines.delay(10) }
+            withTimeout(TEST_WAIT_MS) { while (again.uiState.loading) kotlinx.coroutines.delay(10) }
             assertEquals("letra digitada e ainda não salva", again.uiState.text)
             assertTrue(again.uiState.unsaved)
             assertEquals("letra antiga", repo.song(id)!!.text)
@@ -101,10 +101,10 @@ class EditorFlowTest {
             val draft = ImportDraft().apply { put(ImportDraft.Draft("Importada", "Banda", "1999", "[G]letra importada")) }
             val handle = SavedStateHandle(mapOf("fromImport" to true))
             val vm = SongEditorViewModel(repo, meta, draft, handle, br.app.stagebook.data.ImportQueue(repo), br.app.stagebook.data.TrackStore(context), br.app.stagebook.data.EditorQueue())
-            withTimeout(5_000) { while (vm.uiState.loading) kotlinx.coroutines.delay(10) }
+            withTimeout(TEST_WAIT_MS) { while (vm.uiState.loading) kotlinx.coroutines.delay(10) }
             // nothing typed: process killed, the draft (in memory) is gone; only the SavedStateHandle survives
             val again = SongEditorViewModel(repo, meta, ImportDraft(), SavedStateHandle(handle.keys().associateWith { handle.get<Any?>(it) }), br.app.stagebook.data.ImportQueue(repo), br.app.stagebook.data.TrackStore(context), br.app.stagebook.data.EditorQueue())
-            withTimeout(5_000) { while (again.uiState.loading) kotlinx.coroutines.delay(10) }
+            withTimeout(TEST_WAIT_MS) { while (again.uiState.loading) kotlinx.coroutines.delay(10) }
             assertEquals("Importada", again.uiState.title)
             assertTrue(again.uiState.text, again.uiState.text.contains("letra importada"))
             assertTrue(again.uiState.unsaved)
@@ -156,7 +156,7 @@ class EditorFlowTest {
             val repo = testRepo(scope = scope)
             val tracks = br.app.stagebook.data.TrackStore(context)
             val vm = SongEditorViewModel(repo, SongMetadata(repo, MusicBrainz(), scope), ImportDraft(), SavedStateHandle(mapOf("fromImport" to false)), br.app.stagebook.data.ImportQueue(repo), tracks, br.app.stagebook.data.EditorQueue())
-            withTimeout(5_000) { while (vm.uiState.loading) kotlinx.coroutines.delay(10) }
+            withTimeout(TEST_WAIT_MS) { while (vm.uiState.loading) kotlinx.coroutines.delay(10) }
             val audio = java.io.File(context.cacheDir, "minha-faixa.ogg").apply { writeBytes("OggS".toByteArray() + ByteArray(12)) }
             assertTrue(vm.attachTrack(android.net.Uri.fromFile(audio)))
             vm.onTitle("Música nova com faixa")
@@ -182,11 +182,11 @@ class EditorFlowTest {
             fun editor() = SongEditorViewModel(repo, SongMetadata(repo, MusicBrainz(), scope), ImportDraft(), SavedStateHandle(mapOf("fromImport" to false)), br.app.stagebook.data.ImportQueue(repo), tracks, br.app.stagebook.data.EditorQueue())
             val audio = java.io.File(context.cacheDir, "faixa-duracao.ogg").apply { writeBytes("OggS".toByteArray() + ByteArray(12)) }
             val vm = editor()
-            withTimeout(5_000) { while (vm.uiState.loading) kotlinx.coroutines.delay(10) }
+            withTimeout(TEST_WAIT_MS) { while (vm.uiState.loading) kotlinx.coroutines.delay(10) }
             assertTrue(vm.attachTrack(android.net.Uri.fromFile(audio)))
             assertEquals("4:23", vm.uiState.meta.durationText)
             val typed = editor()
-            withTimeout(5_000) { while (typed.uiState.loading) kotlinx.coroutines.delay(10) }
+            withTimeout(TEST_WAIT_MS) { while (typed.uiState.loading) kotlinx.coroutines.delay(10) }
             typed.setDuration("312")
             assertTrue(typed.attachTrack(android.net.Uri.fromFile(audio)))
             assertEquals("3:12", typed.uiState.meta.durationText)

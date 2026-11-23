@@ -52,7 +52,7 @@ class InviteSingleUseTest {
     private fun BandInternet.rememberNow(code: String, invite: Boolean) = runBlocking {
         remember(code, invite)
         val codes = BandInternet::class.java.getDeclaredMethod("myCodes").apply { isAccessible = true }
-        withTimeout(5_000) { while ((codes.invoke(this@rememberNow) as List<*>).none { it.toString().contains(code) }) delay(10) }
+        withTimeout(TEST_WAIT_MS) { while ((codes.invoke(this@rememberNow) as List<*>).none { it.toString().contains(code) }) delay(10) }
     }
 
     private val ana = Hello("ana", "Celular da Ana", "ka")

@@ -49,7 +49,7 @@ class FollowAgainTest {
     private fun band(vararg have: String): Pair<Band, Map<String, String>> = runBlocking {
         val repo = testRepo()
         repo.updateLook { it.copy(bandOn = true) }
-        withTimeout(15_000) { repo.library.first { it.look.bandOn } }
+        withTimeout(TEST_WAIT_MS) { repo.library.first { it.look.bandOn } }
         val ids = have.associateWith { title ->
             repo.saveSong(Song(title = title, author = songs.first { it.title == title }.artist, text = "{key: G}\n[G]La"))
         }
@@ -168,7 +168,7 @@ class FollowAgainTest {
         assertTrue(b.strip() is ConductUi.Left)
         assertNull(b.strip(bandOn = false))
         b.repo.updateLook { it.copy(bandOn = false) }
-        withTimeout(15_000) { b.repo.library.first { !it.look.bandOn } }
+        withTimeout(TEST_WAIT_MS) { b.repo.library.first { !it.look.bandOn } }
         b.follower.follow()
         assertTrue(b.follower.role.value is Role.Left)
         assertEquals(emptyList<String>(), b.opened.drop(1))

@@ -73,8 +73,8 @@ class PdfHiddenPagesTest {
         val source = FakeSource(4)
         var count = 0
         compose.setContent { StagebookTheme { PdfStageView(PdfOpen.Ready(PdfPages(source).only(PdfHidden.visible(4, listOf(1)))), 1, invert = false, onPageCount = { count = it }) } }
-        compose.waitUntil(5_000) { count == 3 }
-        compose.waitUntil(5_000) { compose.onAllNodesWithContentDescription("Página 2 de 3 do PDF").fetchSemanticsNodes().isNotEmpty() }
+        compose.waitUntil(TEST_WAIT_MS) { count == 3 }
+        compose.waitUntil(TEST_WAIT_MS) { compose.onAllNodesWithContentDescription("Página 2 de 3 do PDF").fetchSemanticsNodes().isNotEmpty() }
         assertEquals("stage page 2 is file page 3 (index 2); page 2 of the file is never drawn", true, 2 in source.rendered && 1 !in source.rendered)
     }
 

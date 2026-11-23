@@ -75,7 +75,7 @@ class SetlistShowTest {
 
     private fun wait(ms: Long) = main.scheduler.apply { advanceTimeBy(ms); runCurrent() }
 
-    private fun SetlistShowStore.await(what: (Map<String, Marks>) -> Boolean) = runBlocking { withTimeout(5_000) { marks.first(what) } }
+    private fun SetlistShowStore.await(what: (Map<String, Marks>) -> Boolean) = runBlocking { withTimeout(TEST_WAIT_MS) { marks.first(what) } }
 
     // ---- what each row shows ----
     @Test fun `the song on stage is now, the one after it next and the ones marked played`() {
@@ -260,7 +260,7 @@ class SetlistShowTest {
         repo.addBreak(set); repo.moveRow(set, 4, 2)   // A B | C D E
         val show = store(repo)
         show.played(set, ids[0]); show.onStage(set, ids[1])
-        val ui = withTimeout(5_000) { detail(repo, show, set).uiState.first { !it.loading && it.anyPlayed && it.items.size == 5 } }
+        val ui = withTimeout(TEST_WAIT_MS) { detail(repo, show, set).uiState.first { !it.loading && it.anyPlayed && it.items.size == 5 } }
         assertEquals(listOf(2), ui.breaks)
         assertEquals("next is the song after the break", listOf(PLAYED, NOW, NEXT, NONE, NONE), ui.items.map { it.state })
         assertEquals(listOf("G", "", "G", "G", "G"), ui.items.map { it.songKey })
@@ -275,11 +275,11 @@ class SetlistShowTest {
         val show = store(repo)
         show.onStage(set, ids[0])
         val vm = detail(repo, show, set)
-        assertFalse(withTimeout(5_000) { vm.uiState.first { !it.loading && it.items.firstOrNull()?.state == NOW } }.anyPlayed)
+        assertFalse(withTimeout(TEST_WAIT_MS) { vm.uiState.first { !it.loading && it.items.firstOrNull()?.state == NOW } }.anyPlayed)
         show.played(set, ids[0])
-        withTimeout(5_000) { vm.uiState.first { it.anyPlayed } }
+        withTimeout(TEST_WAIT_MS) { vm.uiState.first { it.anyPlayed } }
         vm.clearPlayed()
-        assertEquals(listOf(NONE, NONE, NONE, NONE, NONE), withTimeout(5_000) { vm.uiState.first { !it.anyPlayed } }.items.map { it.state })
+        assertEquals(listOf(NONE, NONE, NONE, NONE, NONE), withTimeout(TEST_WAIT_MS) { vm.uiState.first { !it.anyPlayed } }.items.map { it.state })
     }
 
     @Test fun `undo puts the removed song back in its place, with the breaks as they were`() {

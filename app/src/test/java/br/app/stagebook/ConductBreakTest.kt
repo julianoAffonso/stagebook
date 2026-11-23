@@ -47,7 +47,7 @@ class ConductBreakTest {
     private fun band(): Band = runBlocking {
         val repo = testRepo()
         repo.updateLook { it.copy(bandOn = true) }   // off, leading would end as soon as it starts
-        withTimeout(15_000) { repo.library.first { it.look.bandOn } }
+        withTimeout(TEST_WAIT_MS) { repo.library.first { it.look.bandOn } }
         Band(repo)
     }
 
@@ -192,13 +192,13 @@ class ConductBreakTest {
     @Test fun `with the band off, or not leading, a break sends nothing`() = runBlocking {
         val repo = testRepo()
         repo.updateLook { it.copy(bandOn = true) }
-        withTimeout(15_000) { repo.library.first { it.look.bandOn } }
+        withTimeout(TEST_WAIT_MS) { repo.library.first { it.look.bandOn } }
         val b = Band(repo)
         b.leader.rest("s1", 0)   // nobody is leading
         b.started()
         b.leader.rest("other setlist", 0)   // a stage of another setlist
         repo.updateLook { it.copy(bandOn = false) }
-        withTimeout(15_000) { b.leader.role.first { it == Role.None } }
+        withTimeout(TEST_WAIT_MS) { b.leader.role.first { it == Role.None } }
         delay(300)   // the end's own message leaves
         val before = b.sent.size
         b.leader.rest("s1", 0)

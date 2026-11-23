@@ -177,6 +177,11 @@
     <string name="history_month">Este mês</string>
     <string name="history_year">12 meses</string>
     <string name="history_all">Tudo</string>
+    <string name="history_open">Ver o relatório</string>
+    <string name="history_none_period">Nada tocado neste período.</string>
+    <string name="history_by_day">Por dia</string>
+    <string name="history_by_song">Por música</string>
+    <string name="history_col_times">Vezes</string>
     <string name="history_export">Exportar planilha (CSV)</string>
     <string name="history_failed">Não deu para salvar a planilha.</string>
     <string name="history_file">tocadas</string>
@@ -1433,7 +1438,8 @@
     <string name="editor_pdf_preview">Primeira página do PDF</string>
     <string name="editor_pdf_crop">Recortar</string>
     <string name="pdf_crop_title">Recortar o PDF</string>
-    <string name="pdf_crop_hint">Arraste as bordas para ficar só com a parte que você toca. O arquivo não muda.</string>
+    <string name="pdf_crop_hint">Arraste as bordas para ficar só com a parte que você toca, ou deixe o Automático tirar as margens em branco. O arquivo não muda.</string>
+    <string name="pdf_crop_auto">Automático</string>
     <string name="pdf_crop_all">Todas as páginas</string>
     <string name="pdf_crop_page">Só esta página</string>
     <string name="pdf_crop_none">Sem recorte</string>

@@ -167,6 +167,11 @@
     <string name="history_month">This month</string>
     <string name="history_year">12 months</string>
     <string name="history_all">All</string>
+    <string name="history_open">See the report</string>
+    <string name="history_none_period">Nothing played in this period.</string>
+    <string name="history_by_day">By day</string>
+    <string name="history_by_song">By song</string>
+    <string name="history_col_times">Times</string>
     <string name="history_export">Export spreadsheet (CSV)</string>
     <string name="history_failed">Couldn\'t save the spreadsheet.</string>
     <string name="history_file">played</string>
@@ -1380,7 +1385,8 @@
     <string name="editor_pdf_preview">The first page of the PDF</string>
     <string name="editor_pdf_crop">Crop</string>
     <string name="pdf_crop_title">Crop the PDF</string>
-    <string name="pdf_crop_hint">Drag the edges to keep only the part you play from. The file is not changed.</string>
+    <string name="pdf_crop_hint">Drag the edges to keep only the part you play from, or let Automatic take the blank margins off. The file is not changed.</string>
+    <string name="pdf_crop_auto">Automatic</string>
     <string name="pdf_crop_all">All pages</string>
     <string name="pdf_crop_page">This page only</string>
     <string name="pdf_crop_none">No crop</string>

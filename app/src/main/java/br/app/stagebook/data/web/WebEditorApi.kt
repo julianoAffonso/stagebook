@@ -32,6 +32,8 @@ class WebEditorApi(
     // a page of a song's PDF as an image, for the crop window (the renderer can't draw in the tests: they pass their own)
     private val pageImage: (java.io.File, Int) -> ByteArray? = { f, n -> br.app.stagebook.data.PdfPreview.jpeg(f, n) },
     private val workDir: () -> java.io.File = { java.io.File(System.getProperty("java.io.tmpdir") ?: ".") },
+    // the app's language, for the names of the days in the report of what was played
+    private val locale: () -> java.util.Locale = { java.util.Locale.getDefault() },
 ) {
     /** The band, for Import → Sync with the band / Received from the band. */
     class Band(val items: () -> List<br.app.stagebook.data.BandInbox.Item>, val sync: () -> Unit)
@@ -160,6 +162,23 @@ class WebEditorApi(
     @Serializable
     private data class Problem(val error: String)
 
+    /** What was played (user, 23/11: the report on the computer too): the period's songs day by day, and each song with its count. */
+    @Serializable
+    data class Played(val total: Int, val songs: Int, val days: List<PlayedDay>, val counts: List<PlayedCount>)
+
+    @Serializable
+    data class PlayedDay(val day: String, val name: String, val songs: List<PlayedLine>)
+
+    @Serializable
+    data class PlayedLine(val title: String, val author: String = "", val setlist: String = "")
+
+    @Serializable
+    data class PlayedCount(val title: String, val author: String = "", val times: Int)
+
+    /** The spreadsheet asked for: the columns' names as the page has them, and the separator the computer's spreadsheet reads. */
+    @Serializable
+    data class PlayedSheet(val period: String = "", val view: String = "", val separator: String = ",", val columns: List<String> = emptyList())
+
     private val json = Json { ignoreUnknownKeys = true; encodeDefaults = true }
 
     fun handle(req: HttpRequest, @Suppress("UNUSED_PARAMETER") device: WebEditorAuth.Device): HttpResponse? {
@@ -192,6 +211,8 @@ class WebEditorApi(
             }
             parts == listOf("backup", "inspect") && req.method == "POST" -> backupInspect(req)
             parts == listOf("backup", "restore") && req.method == "POST" -> backupRestore(req)
+            parts == listOf("played") && req.method == "GET" -> played(req)
+            parts == listOf("played", "csv") && req.method == "POST" -> playedCsv(req)
             parts == listOf("key-step") && req.method == "POST" -> keyStep(req)
             parts.size == 3 && parts[0] == "songs" && parts[2] == "pdf-view" && req.method == "PUT" -> pdfView(parts[1], req)
             parts.size == 3 && parts[0] == "songs" && parts[2] == "pdf-page" && req.method == "GET" -> pdfPage(parts[1], req)
@@ -540,7 +561,41 @@ class WebEditorApi(
         repository.setReceivedSetlist(id, items.map { it.takeIf { sid -> repository.song(sid) != null } }, d.breaks)
     }
 
-    private companion object { const val MAX_CROPS = 301 }
+    private companion object {
+        const val MAX_CROPS = 301
+        const val MAX_COLUMN_NAME = 60
+    }
+
+    private fun period(name: String) = when (name) {
+        "year" -> br.app.stagebook.domain.PlayHistory.Period.YEAR
+        "all" -> br.app.stagebook.domain.PlayHistory.Period.ALL
+        else -> br.app.stagebook.domain.PlayHistory.Period.MONTH
+    }
+
+    private fun played(req: HttpRequest): HttpResponse {
+        val history = repository.library.value.history
+        val lines = br.app.stagebook.domain.PlayHistory.of(history, period(req.query["period"].orEmpty()), java.time.LocalDate.now())
+        val names = java.time.format.DateTimeFormatter.ofLocalizedDate(java.time.format.FormatStyle.FULL).withLocale(locale())
+        val days = br.app.stagebook.domain.PlayHistory.byDay(lines).map { (day, songs) ->
+            // a day that isn't a date (a file made by hand) is shown as it is
+            val name = runCatching { java.time.LocalDate.parse(day).format(names).replaceFirstChar { it.titlecase(locale()) } }.getOrDefault(day)
+            PlayedDay(day, name, songs.map { PlayedLine(it.title, it.author, it.setlist) })
+        }
+        val counts = br.app.stagebook.domain.PlayHistory.bySong(lines).map { PlayedCount(it.title, it.author, it.times) }
+        return ok(json.encodeToString(Played(history.size, lines.size, days, counts)))
+    }
+
+    private fun playedCsv(req: HttpRequest): HttpResponse {
+        val d = runCatching { json.decodeFromString<PlayedSheet>(req.text()) }.getOrNull() ?: return HttpResponse.status(400)
+        // five names, in the spreadsheet's order; one that is missing leaves its column unnamed, never out of place
+        val c = (d.columns + List(5) { "" }).take(5).map { it.take(MAX_COLUMN_NAME) }
+        val view = if (d.view == "songs") br.app.stagebook.domain.PlayHistory.View.SONGS else br.app.stagebook.domain.PlayHistory.View.DAYS
+        val (csv, _) = br.app.stagebook.domain.PlayHistory.sheet(
+            repository.library.value.history, period(d.period), view, java.time.LocalDate.now(),
+            br.app.stagebook.domain.PlayHistory.Columns(c[0], c[1], c[2], c[3], c[4]), if (d.separator == ";") ';' else ',',
+        )
+        return HttpResponse(200, csv.toByteArray(), "text/csv; charset=utf-8")
+    }
 
     private fun ok(body: String) = HttpResponse.json(200, body)
 

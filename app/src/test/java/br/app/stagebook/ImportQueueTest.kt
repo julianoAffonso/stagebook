@@ -26,7 +26,7 @@ class ImportQueueTest {
     private val context = ApplicationProvider.getApplicationContext<android.app.Application>()
 
     private fun repo() = runBlocking {
-        LibraryRepository(context, testScope()).also { r -> withTimeout(5_000) { r.loaded.first { it } } }
+        LibraryRepository(context, testScope()).also { r -> withTimeout(TEST_WAIT_MS) { r.loaded.first { it } } }
     }
 
     @Test fun `imported songs take the place they had in the QR`() {

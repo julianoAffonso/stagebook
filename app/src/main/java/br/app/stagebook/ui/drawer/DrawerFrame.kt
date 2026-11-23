@@ -25,6 +25,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
@@ -76,11 +77,16 @@ fun DrawerFrame(
         Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min)) {
             HomeTab.entries.forEachIndexed { i, t ->
                 if (i > 0) Box(Modifier.width(1.dp).fillMaxHeight().background(MaterialTheme.colorScheme.outlineVariant))
-                DrawerTabButton(t, selected = tab == t, badge = badges[t] ?: 0, onClick = { onTabChange(t) }, modifier = Modifier.weight(1f))
+                // a tab with a number takes a little from the others, so its name still fits beside it (user, 23/11)
+                val count = badges[t] ?: 0
+                DrawerTabButton(t, selected = tab == t, badge = count, onClick = { onTabChange(t) }, modifier = Modifier.weight(if (count > 0) BADGED_TAB_WEIGHT else 1f))
             }
         }
     }
 }
+
+private const val BADGED_TAB_WEIGHT = 1.3f
+internal const val TAB_BADGE_TAG = "drawer tab badge"
 
 @Composable
 private fun DrawerTabButton(tab: HomeTab, selected: Boolean, badge: Int, onClick: () -> Unit, modifier: Modifier = Modifier) {
@@ -96,8 +102,13 @@ private fun DrawerTabButton(tab: HomeTab, selected: Boolean, badge: Int, onClick
         horizontalArrangement = Arrangement.spacedBy(Spacing.s, Alignment.CenterHorizontally),
     ) {
         Icon(tab.icon, contentDescription = null, tint = tint, modifier = Modifier.size(Sizes.tabIcon))
-        Text(stringResource(tab.label), style = MaterialTheme.typography.labelLarge, color = tint, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+        // the name gives way, not the number: with large letters on a phone the name took the whole tab and the badge
+        // was squeezed into a thin red strip (user, 23/11)
+        Text(
+            stringResource(tab.label), style = MaterialTheme.typography.labelLarge, color = tint, maxLines = 1,
+            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false),
+        )
         // the number of band news after the name (like new email): on the small icon it covered the drawing
-        if (badge > 0) Badge { Text(badge.toString()) }
+        if (badge > 0) Badge(Modifier.testTag(TAB_BADGE_TAG)) { Text(badge.toString()) }
     }
 }

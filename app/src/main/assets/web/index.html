@@ -79,6 +79,9 @@
   #f-text { min-height: 55vh; }
   .actions { display: flex; justify-content: space-between; align-items: center; margin-top: 16px; gap: 12px; flex-wrap: wrap; }
   .stack { display: flex; flex-direction: column; gap: 16px; }
+  #played-list h4 { margin: 20px 0 4px; font-size: 14px; color: var(--accent); }
+  #played-list .prow { display: flex; gap: 16px; align-items: center; padding: 8px 0; }
+  #played-list .prow > div:first-child { flex: 1; min-width: 0; }
   .blocks { display: flex; flex-direction: column; gap: 28px; }
   .drop { border: 2px dashed var(--line); border-radius: 16px; padding: 20px; text-align: center; }
   .drop.over { border-color: var(--accent); }
@@ -139,6 +142,7 @@
       <button role="tab" id="tab-songs" aria-selected="true" data-t="songs"></button>
       <button role="tab" id="tab-sets" aria-selected="false" data-t="setlists"></button>
       <button role="tab" id="tab-import" aria-selected="false" data-t="import"></button>
+      <button role="tab" id="tab-played" aria-selected="false" data-t="played"></button>
     </nav>
 
     <!-- songs: list on the left, the editor on the right -->
@@ -218,7 +222,7 @@
               <label class="switch"><input type="radio" name="crop-scope" value="all" checked><span data-t="cropAll"></span></label>
               <label class="switch"><input type="radio" name="crop-scope" value="page"><span data-t="cropPage"></span></label>
             </div>
-            <div class="actions"><button class="text" type="button" id="crop-none"></button><span class="grow"></span><button class="text" type="button" id="crop-cancel"></button><button type="button" id="crop-save"></button></div>
+            <div class="actions"><button class="text" type="button" id="crop-none"></button><button class="text" type="button" id="crop-auto"></button><span class="grow"></span><button class="text" type="button" id="crop-cancel"></button><button type="button" id="crop-save"></button></div>
           </dialog>
           <div id="lyrics-block"><div class="row"><label for="f-text" data-t="lyrics" class="grow"></label><button class="outline" id="highlight" type="button"></button></div><textarea id="f-text" spellcheck="false"></textarea></div>
           <div class="actions">
@@ -307,6 +311,24 @@
           </div>
           <p id="backup-status" class="muted"></p>
         </div>
+      </div>
+    </div>
+
+    <!-- what was played: the report of Settings → Library, and its spreadsheet -->
+    <div class="card" id="view-played" hidden>
+      <div class="stack">
+        <p id="played-summary" class="muted"></p>
+        <nav class="tabs" id="played-period" style="margin-bottom: 0">
+          <button data-period="month" aria-selected="true" data-t="periodMonth"></button>
+          <button data-period="year" aria-selected="false" data-t="periodYear"></button>
+          <button data-period="all" aria-selected="false" data-t="periodAll"></button>
+        </nav>
+        <nav class="tabs" id="played-view" style="margin-bottom: 0">
+          <button data-view="days" aria-selected="true" data-t="byDay"></button>
+          <button data-view="songs" aria-selected="false" data-t="bySong"></button>
+        </nav>
+        <div id="played-list"></div>
+        <div class="actions"><span id="played-status" class="muted"></span><button id="played-export" data-t="exportCsv" hidden></button></div>
       </div>
     </div>
   </section>
@@ -429,15 +451,68 @@ async function connected(session) {
 // ---- tabs ----
 function tab(name) {
   if (name !== "songs" && !leaveOk()) return;
-  for (const n of ["songs", "sets", "import"]) {
+  for (const n of ["songs", "sets", "import", "played"]) {
     $("tab-" + n).setAttribute("aria-selected", String(n === name));
     $("view-" + n).hidden = n !== name;
   }
   if (name === "import") loadBand();
+  if (name === "played") loadPlayed();
 }
 $("tab-songs").onclick = () => tab("songs");
 $("tab-sets").onclick = () => tab("sets");
 $("tab-import").onclick = () => tab("import");
+$("tab-played").onclick = () => tab("played");
+
+// ---- what was played: read only when its tab opens, and again when the period changes ----
+let playedPeriod = "month", playedView = "days", played = null;
+function playedRow(title, sub, end) {
+  const row = Object.assign(document.createElement("div"), { className: "prow" });
+  const a = document.createElement("div");
+  a.append(Object.assign(document.createElement("div"), { textContent: title }));
+  if (sub) a.append(Object.assign(document.createElement("div"), { className: "sub", textContent: sub }));
+  row.append(a);
+  if (end) row.append(Object.assign(document.createElement("div"), { className: "sub", textContent: end }));
+  return row;
+}
+function showPlayed() {
+  const list = $("played-list");
+  if (!played) return list.replaceChildren();
+  const some = played.songs > 0;
+  say("played-summary", some ? `${plural(t, "historySummary", played.songs)} ${plural(t, "historyDays", played.days.length)}` : played.total ? t.playedNone : t.playedEmpty);
+  $("played-view").hidden = !some;
+  $("played-export").hidden = !some;
+  list.replaceChildren(...(playedView === "songs"
+    ? played.counts.map((c) => playedRow(c.title, c.author, plural(t, "plays", c.times)))
+    : played.days.flatMap((d) => [Object.assign(document.createElement("h4"), { textContent: d.name }),
+        ...d.songs.map((s) => playedRow(s.title, [s.author, s.setlist].filter(Boolean).join(" · ")))])));
+}
+async function loadPlayed() {
+  const r = await api("/api/played?period=" + playedPeriod).catch(() => null);
+  if (!r || r.status !== 200) { played = null; showPlayed(); return say("played-summary", t.offline, "error"); }
+  played = await r.json();
+  say("played-status", "");
+  showPlayed();
+}
+document.querySelectorAll("#played-period button").forEach((b) => (b.onclick = () => {
+  playedPeriod = b.dataset.period;
+  document.querySelectorAll("#played-period button").forEach((o) => o.setAttribute("aria-selected", String(o === b)));
+  loadPlayed();
+}));
+document.querySelectorAll("#played-view button").forEach((b) => (b.onclick = () => {
+  playedView = b.dataset.view;
+  document.querySelectorAll("#played-view button").forEach((o) => o.setAttribute("aria-selected", String(o === b)));
+  showPlayed();
+}));
+// the spreadsheet of what is on screen, saved by the browser. ';' between columns where this computer writes 1,5
+// (its spreadsheet opened a comma file in one column)
+$("played-export").onclick = async () => {
+  const separator = (1.5).toLocaleString().includes(",") ? ";" : ",";
+  const r = await post("/api/played/csv", { period: playedPeriod, view: playedView, separator, columns: [t.colDate, t.colSong, t.colArtist, t.colSetlist, t.colTimes] });
+  if (!r || r.status !== 200) return say("played-status", t.exportFailed, "error");
+  const link = Object.assign(document.createElement("a"), { href: URL.createObjectURL(await r.blob()), download: `stagebook-${t.historyFile}-${new Date().toISOString().slice(0, 10)}.csv` });
+  document.body.append(link); link.click(); link.remove();
+  setTimeout(() => URL.revokeObjectURL(link.href), 10000);
+};
 
 // ---- songs ----
 async function loadList() {
@@ -582,7 +657,8 @@ function drawPdf() {
   // the first page as it will look on the stage (turned over if the colours are), the invert switch and the trim
   const preview = $("pdf-preview");
   preview.hidden = !has;
-  if (has) loadPdfPage(0).then((url) => { if (url) { preview.src = url; preview.alt = t.pdfPreview; } else preview.hidden = true; });
+  // (with a trim, only the part kept, as the stage will show it)
+  if (has) loadPdfPage(0).then(async (url) => { if (url) { preview.src = await croppedPage(url, cropFor(current.pdfCrops || [], 0)); preview.alt = t.pdfPreview; } else preview.hidden = true; });
   preview.style.filter = current && current.pdfInvert ? "invert(1)" : "";
   $("pdf-invert").checked = !!(current && current.pdfInvert);
   $("pdf-invert").parentElement.hidden = !has;
@@ -767,6 +843,17 @@ async function loadPdfPage(n) {
   pdfPages.set(key, url);
   return url;
 }
+// a page's picture cut to its trim (the whole picture when there is none, or when it can't be cut)
+async function croppedPage(url, crop) {
+  if (!crop || cropWhole(crop)) return url;
+  const img = new Image();
+  img.src = url;
+  try { await img.decode(); } catch (e) { return url; }
+  const part = cropPixels(cropValid(crop), img.naturalWidth, img.naturalHeight);
+  const canvas = Object.assign(document.createElement("canvas"), { width: part.width, height: part.height });
+  canvas.getContext("2d").drawImage(img, part.left, part.top, part.width, part.height, 0, 0, part.width, part.height);
+  return canvas.toDataURL("image/png");
+}
 // the colours and the trims go to the tablet at once (the file is saved already, as for the track)
 async function sendPdfView(body) {
   const r = await api(`/api/songs/${encodeURIComponent(current.id)}/pdf-view`, { method: "PUT", body: JSON.stringify(body) }).catch(() => null);
@@ -837,7 +924,7 @@ $("pdf-crop").onclick = async () => {
   cropPage = 0;
   // this page only when it has a trim of its own, as in the app
   document.querySelector(`input[name=crop-scope][value=${(current.pdfCrops || []).some((c) => c.page === 0) ? "page" : "all"}]`).checked = true;
-  $("crop-none").textContent = t.cropNone; $("crop-cancel").textContent = t.cancel; $("crop-save").textContent = t.save;
+  $("crop-none").textContent = t.cropNone; $("crop-auto").textContent = t.cropAuto; $("crop-cancel").textContent = t.cancel; $("crop-save").textContent = t.save;
   $("crop-prev").setAttribute("aria-label", t.cropPrev); $("crop-next").setAttribute("aria-label", t.cropNext);
   loadCropRect();
   $("crop-dialog").showModal();
@@ -849,6 +936,30 @@ document.querySelectorAll("input[name=crop-scope]").forEach((el) => (el.onchange
 $("crop-cancel").onclick = () => $("crop-dialog").close();
 $("crop-none").onclick = () => { sendPdfView({ crops: cropClear(current.pdfCrops || [], cropScope()) }); $("crop-dialog").close(); };
 $("crop-save").onclick = () => { sendPdfView({ crops: cropSet(current.pdfCrops || [], { ...cropRect, page: cropScope() }) }); $("crop-dialog").close(); };
+// the automatic trim, as in the app: the frame goes around what the page (or every page) has drawn; it is only placed
+async function cropInkOfPage(n) {
+  const url = await loadPdfPage(n);
+  if (!url) return null;
+  const img = new Image();
+  img.src = url;
+  try { await img.decode(); } catch (e) { return null; }
+  const w = CROP_AUTO_WIDTH, h = Math.max(1, Math.round((w * img.naturalHeight) / Math.max(1, img.naturalWidth)));
+  const canvas = Object.assign(document.createElement("canvas"), { width: w, height: h });
+  const ctx = canvas.getContext("2d", { willReadFrequently: true });
+  ctx.fillStyle = "#fff"; ctx.fillRect(0, 0, w, h); ctx.drawImage(img, 0, 0, w, h);
+  return cropInk(ctx.getImageData(0, 0, w, h).data, w, h);
+}
+$("crop-auto").onclick = async () => {
+  const scope = cropScope(), asked = cropPage, button = $("crop-auto");
+  button.disabled = true;
+  try {
+    const frames = [];
+    for (const n of scope === CROP_ALL ? cropSample(current.pdfPages || 1) : [asked]) frames.push(await cropInkOfPage(n));
+    const found = cropAround(frames);
+    // the page or the scope changed while the pages were read: that frame is not for what is on screen now
+    if (found && scope === cropScope() && asked === cropPage) { cropRect = cropValid({ ...found, page: scope }); drawCrop(); }
+  } finally { button.disabled = false; }
+};
 // the frame is dragged by the edge nearest the pointer, or by its inside (from where the pointer went down)
 (() => {
   const wrap = $("crop-wrap");
@@ -968,11 +1079,71 @@ function showSet(set) {
 // The trim of a PDF page, the app's rule (domain/PdfCrops.kt, ui/editor/PdfCropDialog.kt): fractions of the page, 0 left/top to
 // 1 right/bottom; [page] counts from 0 and -1 is the trim for every page without its own. Tested by tools/web_crop_test.mjs.
 const CROP_ALL = -1, CROP_MIN = 0.1;
+// the automatic trim (domain/PdfAutoCrop.kt): the frame around what is drawn on a page of [w] x [h] RGBA [data], with a
+// little air; null for a blank page. A scan's grey haze and a speck of dust are not content
+const CROP_AIR = 0.015, CROP_INK_BELOW = 200, CROP_INK_UNDER_PAPER = 30, CROP_BORDER_SHARE = 0.5, CROP_SPECK = 0.004, CROP_AUTO_WIDTH = 300;
+function cropInk(data, w, h) {
+  const size = w * h, light = new Uint8Array(size), seen = new Int32Array(256);
+  for (let i = 0; i < size; i++) {
+    const k = i * 4;
+    light[i] = data[k + 3] < 128 ? 255 : Math.floor((data[k] * 299 + data[k + 1] * 587 + data[k + 2] * 114) / 1000);
+    seen[light[i]]++;
+  }
+  // a scan's paper is rarely white: the paper is the most common lightness of the light half of the page
+  let paper = 255;
+  for (let v = 128; v < 256; v++) if (seen[v] > seen[paper]) paper = v;
+  const inkBelow = Math.min(CROP_INK_BELOW, paper - CROP_INK_UNDER_PAPER), ink = new Uint8Array(size);
+  for (let i = 0; i < size; i++) ink[i] = light[i] < inkBelow ? 1 : 0;
+  cropDropBand(ink, w, h);
+  const rows = new Int32Array(h), cols = new Int32Array(w);
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) if (ink[y * w + x]) { rows[y]++; cols[x]++; }
+  const rowNeeds = Math.max(1, Math.floor(w * CROP_SPECK)), colNeeds = Math.max(1, Math.floor(h * CROP_SPECK));
+  const first = (a, needs) => a.findIndex((v) => v >= needs), last = (a, needs) => a.findLastIndex((v) => v >= needs);
+  const top = first(rows, rowNeeds), left = first(cols, colNeeds);
+  if (top < 0 || left < 0) return null;
+  return { left: Math.max(0, left / w - CROP_AIR), top: Math.max(0, top / h - CROP_AIR), right: Math.min(1, (last(cols, colNeeds) + 1) / w + CROP_AIR), bottom: Math.min(1, (last(rows, rowNeeds) + 1) / h + CROP_AIR) };
+}
+// the dark band a scanner leaves around the sheet: what is dark and joined to the page's edge, when the edge is dark along
+// most of its length (a line that merely reaches the edge stays, and so does a page dark all over)
+function cropDropBand(ink, w, h) {
+  const edge = [];
+  for (let x = 0; x < w; x++) edge.push(x, (h - 1) * w + x);
+  for (let y = 1; y < h - 1; y++) edge.push(y * w, y * w + w - 1);
+  if (edge.filter((i) => ink[i]).length < edge.length * CROP_BORDER_SHARE) return;
+  const band = new Uint8Array(ink.length), queue = new Int32Array(ink.length);
+  let head = 0, tail = 0, total = 0;
+  for (let i = 0; i < ink.length; i++) total += ink[i];
+  const take = (i) => { if (ink[i] && !band[i]) { band[i] = 1; queue[tail++] = i; } };
+  for (const i of edge) take(i);
+  while (head < tail) {
+    const i = queue[head++], x = i % w;
+    if (x > 0) take(i - 1);
+    if (x < w - 1) take(i + 1);
+    if (i >= w) take(i - w);
+    if (i < ink.length - w) take(i + w);
+  }
+  if (tail === total) return;
+  for (let k = 0; k < tail; k++) ink[queue[k]] = 0;
+}
+function cropAround(frames) {
+  const some = frames.filter(Boolean);
+  if (!some.length) return null;
+  return { left: Math.min(...some.map((f) => f.left)), top: Math.min(...some.map((f) => f.top)), right: Math.max(...some.map((f) => f.right)), bottom: Math.max(...some.map((f) => f.bottom)) };
+}
+function cropSample(count, most = 24) {
+  if (count <= most) return Array.from({ length: count }, (_, i) => i);
+  return [...new Set(Array.from({ length: most }, (_, i) => Math.floor((i * (count - 1)) / (most - 1))))];
+}
 const cropWhole = (c) => c.left <= 0 && c.top <= 0 && c.right >= 1 && c.bottom >= 1;
 const cropFor = (crops, page) => (crops.find((c) => c.page === page) || crops.find((c) => c.page === CROP_ALL) || null);
 function cropValid(c) {
   const left = Math.min(Math.max(c.left, 0), 1 - CROP_MIN), top = Math.min(Math.max(c.top, 0), 1 - CROP_MIN);
   return { page: c.page, left, top, right: Math.min(Math.max(c.right, left + CROP_MIN), 1), bottom: Math.min(Math.max(c.bottom, top + CROP_MIN), 1) };
+}
+// the part of a picture of [w] x [h] pixels a trim keeps
+function cropPixels(c, w, h) {
+  const left = Math.min(Math.max(Math.floor(c.left * w), 0), Math.max(w - 1, 0)), top = Math.min(Math.max(Math.floor(c.top * h), 0), Math.max(h - 1, 0));
+  return { left, top, width: Math.min(Math.max(Math.floor((c.right - c.left) * w), 1), w - left), height: Math.min(Math.max(Math.floor((c.bottom - c.top) * h), 1), h - top) };
 }
 function cropSet(crops, c) { const rest = crops.filter((x) => x.page !== c.page), v = cropValid(c); return cropWhole(v) ? rest : [...rest, v]; }
 const cropClear = (crops, page) => crops.filter((c) => c.page !== page);

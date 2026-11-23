@@ -52,6 +52,7 @@ import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
 
 @Immutable
@@ -181,12 +182,15 @@ class SettingsViewModel @Inject constructor(
     fun enrichAgain() = enricher.start(again = true)
     fun stopEnrich() = enricher.stop()
 
-    /** The history of [period] as a spreadsheet at [uri], with the column names in the app's language (user, 22/11). */
-    fun historyTo(uri: Uri, period: br.app.stagebook.domain.PlayHistory.Period, header: List<String>, separator: Char) = viewModelScope.launch {
-        val lines = br.app.stagebook.domain.PlayHistory.of(repository.library.value.history, period, java.time.LocalDate.now())
-        val csv = br.app.stagebook.domain.PlayHistory.csv(lines, header, separator)
+    /** What was played, for the report: read from the library only while the report is on screen. */
+    val history: StateFlow<List<br.app.stagebook.data.model.PlayEntry>> = repository.library.map { it.history }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    /** The history of [period] as a spreadsheet at [uri], as [view] shows it, with the column names in the app's language (user, 22/11). */
+    fun historyTo(uri: Uri, period: br.app.stagebook.domain.PlayHistory.Period, view: br.app.stagebook.domain.PlayHistory.View, columns: br.app.stagebook.domain.PlayHistory.Columns, separator: Char) = viewModelScope.launch {
+        val (csv, rows) = br.app.stagebook.domain.PlayHistory.sheet(repository.library.value.history, period, view, java.time.LocalDate.now(), columns, separator)
         val ok = runCatching { withContext(kotlinx.coroutines.Dispatchers.IO) { context.contentResolver.openOutputStream(uri, "wt")!!.use { it.write(csv.toByteArray()) } } }.isSuccess
-        _messages.send(if (ok) SettingsMessage.HistoryDone(lines.size) else SettingsMessage.HistoryFailed)
+        _messages.send(if (ok) SettingsMessage.HistoryDone(rows) else SettingsMessage.HistoryFailed)
     }
 
     // the files are opened off the screen's thread: where they live (Drive, a USB stick) can take seconds to answer

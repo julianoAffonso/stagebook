@@ -61,15 +61,15 @@ class PdfEditorInfoTest {
     private fun open(song: Song? = null): Pair<SongEditorViewModel, LibraryRepository> {
         val scope = testScope()
         val repo = LibraryRepository(context, scope)
-        runBlocking { withTimeout(5_000) { repo.loaded.first { it } }; repo.restore(emptyList(), emptyList()) }
+        runBlocking { withTimeout(TEST_WAIT_MS) { repo.loaded.first { it } }; repo.restore(emptyList(), emptyList()) }
         val args = mutableMapOf<String, Any?>("fromImport" to false)
         song?.let { args["songId"] = repo.saveSong(it) }
         val vm = SongEditorViewModel(repo, SongMetadata(repo, MusicBrainz(), scope), ImportDraft(), SavedStateHandle(args), ImportQueue(repo), TrackStore(context), EditorQueue(), pdfs, PdfInspector(Pages()))
-        runBlocking { withTimeout(5_000) { while (vm.uiState.loading) kotlinx.coroutines.delay(10) } }
+        runBlocking { withTimeout(TEST_WAIT_MS) { while (vm.uiState.loading) kotlinx.coroutines.delay(10) } }
         return vm to repo
     }
 
-    private fun await(what: String, check: () -> Boolean) = runBlocking { withTimeout(5_000) { while (!check()) kotlinx.coroutines.delay(10) } }.let { assertTrue(what, check()) }
+    private fun await(what: String, check: () -> Boolean) = runBlocking { withTimeout(TEST_WAIT_MS) { while (!check()) kotlinx.coroutines.delay(10) } }.let { assertTrue(what, check()) }
 
     @Test fun `a saved song's card gets its file, size and pages once, and reading the card does not go to the disk again`() {
         pdfs.file("salva.pdf").writeBytes(bytes(3_000))
