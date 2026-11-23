@@ -45,6 +45,7 @@ import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.setMain
 import kotlinx.coroutines.withTimeout
 import androidx.compose.ui.test.getUnclippedBoundsInRoot
+import androidx.compose.ui.test.onRoot
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -297,17 +298,17 @@ class PdfEditorTest {
     private val saved = SongEditorUiState(loading = false, mode = EditorMode.EDIT, title = "Chart", text = "[G]letra")
 
     @Config(qualifiers = "+w800dp-h1280dp")
-    @Test fun `on a tablet the PDF's three actions sit together from the start, under the pages button`() {
+    @Test fun `on a tablet the PDF's actions sit together in the middle of the card, under the page`() {
         screen(saved, EditorPdf("Cifra do Vento.pdf", pages = 3, bytes = 412_000))
         fun box(text: String) = compose.onNodeWithText(text, substring = true).getUnclippedBoundsInRoot()
         val pages = box("Páginas no palco"); val crop = box("Recortar"); val swap = box("Trocar PDF"); val remove = box("Remover PDF")
-        assertEquals("starts where the pages button starts", pages.left.value, crop.left.value, 1f)
-        // and their icons start where the card's sentences start: the button's own inner margin (8 dp) hangs to the left
-        val note = box("Esta música é um PDF")
-        assertEquals("the icons line up with the text above", note.left.value - 8f, crop.left.value, 1f)
         // together, not one in each third of the card
         assertTrue("Trocar is ${(swap.left - crop.right).value} dp from Recortar", (swap.left - crop.right).value <= 24f)
         assertTrue("Remover is ${(remove.left - swap.right).value} dp from Trocar", (remove.left - swap.right).value <= 24f)
+        // in the middle: as far from one side of the screen as from the other, and the pages button over the same middle
+        val middle = compose.onRoot().getUnclippedBoundsInRoot().let { (it.left + it.right).value / 2 }
+        assertEquals("the three actions are centred", middle, (crop.left + remove.right).value / 2, 2f)
+        assertEquals("the pages button is centred", middle, (pages.left + pages.right).value / 2, 2f)
     }
 
     @Test fun `a PDF song shows the card in place of the lyrics field - name, pages, size and the sentence`() {

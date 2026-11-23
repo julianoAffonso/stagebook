@@ -128,8 +128,8 @@ fun PdfCropDialog(
                     listOf(Choice(true, R.string.pdf_crop_all), Choice(false, R.string.pdf_crop_page)), all, { all = it },
                 )
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(Spacing.s)) {
-                    ActionButton(stringResource(R.string.pdf_crop_none), { onClear(scope); onDismiss() }, Modifier.weight(1f), tone = ButtonTone.Quiet)
-                    ActionButton(stringResource(R.string.action_save), { onSet(PdfCrop(scope, frame.left, frame.top, frame.right, frame.bottom)); onDismiss() }, Modifier.weight(1f))
+                    ActionButton(stringResource(R.string.pdf_crop_none), { onClear(scope); onDismiss() }, Modifier.weight(1f), icon = AppIcons.Replay, tone = ButtonTone.Quiet)
+                    ActionButton(stringResource(R.string.action_save), { onSet(PdfCrop(scope, frame.left, frame.top, frame.right, frame.bottom)); onDismiss() }, Modifier.weight(1f), icon = AppIcons.Save)
                 }
             }
         }

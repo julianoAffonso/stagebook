@@ -18,7 +18,6 @@ import br.app.stagebook.ui.components.SwitchRow
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Icon
@@ -93,16 +92,16 @@ fun PdfSongCard(pdf: EditorPdf, onReplace: () -> Unit, onRemove: () -> Unit, mod
             if (!pdf.lost) SwitchRow(stringResource(R.string.stage_pdf_invert), pdf.invert, onInvert, Modifier.fillMaxWidth())
             // the lyrics and chords the song kept, on the stage in place of the PDF: offered only when there are some
             if (pdf.keptLyrics) SwitchRow(stringResource(R.string.editor_pdf_as_text), pdf.asText, onAsText, Modifier.fillMaxWidth(), detail = stringResource(R.string.editor_pdf_as_text_detail))
-            // which pages show on the stage (user, 22/11): only with more than one
-            if (!pdf.lost && pdf.pages > 1) ActionButton(
-                stringResource(R.string.pdf_pages_title) + " · " + stringResource(R.string.pdf_pages_of, pdf.pages - pdf.hidden.count { it in 0 until pdf.pages }, pdf.pages),
-                // (a plain button keeps its content a little inside its own edge: pulled back by that much, its icon starts
-                // where the card's sentences start. User, 23/11: the icons sat to the right of everything above them)
-                onPages, Modifier.fillMaxWidth().offset(x = -Spacing.s), icon = AppIcons.Visibility, tone = ButtonTone.Tonal,
-            )
-            // one after the other from the start, each with its icon like the pages button above: spread in three equal
-            // columns they looked scattered on a tablet, lined up with nothing (user, 23/11). They wrap on a narrow phone
-            androidx.compose.foundation.layout.FlowRow(Modifier.offset(x = -Spacing.s), horizontalArrangement = Arrangement.spacedBy(Spacing.s)) {
+            // which pages show on the stage (user, 22/11): only with more than one. The card's actions sit in the middle,
+            // under the page shown above them (user, 23/11: pushed to the start they looked off, with the picture centred)
+            if (!pdf.lost && pdf.pages > 1) Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                ActionButton(
+                    stringResource(R.string.pdf_pages_title) + " · " + stringResource(R.string.pdf_pages_of, pdf.pages - pdf.hidden.count { it in 0 until pdf.pages }, pdf.pages),
+                    onPages, icon = AppIcons.Visibility, tone = ButtonTone.Tonal,
+                )
+            }
+            // one after the other, each with its icon; they wrap on a narrow phone
+            androidx.compose.foundation.layout.FlowRow(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(Spacing.s, Alignment.CenterHorizontally)) {
                 if (!pdf.lost) ActionButton(stringResource(R.string.editor_pdf_crop), onCrop, icon = AppIcons.Crop, tone = ButtonTone.Tonal)
                 ActionButton(stringResource(R.string.editor_pdf_replace), onReplace, icon = AppIcons.Sync, tone = ButtonTone.Tonal)
                 ActionButton(stringResource(R.string.editor_pdf_remove), onRemove, icon = AppIcons.Delete, tone = ButtonTone.Quiet)
