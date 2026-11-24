@@ -72,6 +72,8 @@ android {
             test.maxHeapSize = "2g"
             test.systemProperty("shots.lang", project.findProperty("shotsLang")?.toString().orEmpty())
             test.systemProperty("shots.dir", project.findProperty("shotsDir")?.toString().orEmpty())
+            // a failed test says why in the CI log (it printed only the exception's class, and a test that fails only there had no clue)
+            test.testLogging { exceptionFormat = org.gradle.api.tasks.testing.logging.TestExceptionFormat.FULL; events("failed") }
         }
     }
 
