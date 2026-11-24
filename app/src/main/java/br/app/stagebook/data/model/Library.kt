@@ -134,26 +134,11 @@ data class Setlist(
     // the show's day, "yyyy-MM-dd" ("" = none: a setlist from before this existed). Local to this library: it doesn't travel
     // with the setlist (band, QR, code), a received one takes the day it arrived
     val date: String = "",
-    // a short note per song of this setlist, by song id ("enters a cappella"); it travels with the setlist. An older app
-    // version doesn't know the key and reads the setlist without it. Never read raw: see [noteFor] and [travellingNotes]
-    val notes: Map<String, String> = emptyMap(),
 ) {
-    /** The note of the song [songId] in this setlist ("" = none); only a song that is in the setlist has one. */
-    fun noteFor(songId: String): String = if (songId in items) notes[songId].orEmpty() else ""
-
-    /** The notes that go with the setlist: only its songs', clean, one line each, [MAX_NOTE] characters at most. */
-    fun travellingNotes(): Map<String, String> = items.distinct().mapNotNull { id -> Setlist.cleanNote(notes[id].orEmpty()).takeIf { it.isNotEmpty() }?.let { id to it } }.toMap()
-
     /** The same setlist with only the breaks that fit its songs (a file edited by hand, or saved by another version). */
     fun withValidBreaks(): Setlist = br.app.stagebook.domain.SetlistBreaks.normalise(breaks, items.size).let { if (it === breaks) this else copy(breaks = it) }
 
     companion object {
-        /** The longest note of a song in a setlist (user, 24/11): a phrase, short enough for the QR and one or two lines. */
-        const val MAX_NOTE = 140
-
-        /** A note as it is kept: one line (line breaks and runs of spaces become one space), trimmed, cut at [MAX_NOTE]. */
-        fun cleanNote(text: String): String = text.replace(Regex("\\s+"), " ").trim().take(MAX_NOTE).trimEnd()
-
         /** A new setlist with no name given: the date and time ("01/11/2026 21:30"). */
         /** Today as the setlist's date: "2026-11-15". */
         fun today(): String = java.time.LocalDate.now().toString()

@@ -250,17 +250,8 @@ class LibraryRepository @Inject constructor(
     fun duplicateSetlist(id: String, name: String): String? {
         val from = library.value.setlist(id) ?: return null
         val copy = newId()
-        mutate { it.copy(sets = listOf(Setlist(id = copy, name = name, items = from.items, breaks = from.breaks, date = Setlist.today(), notes = from.notes)) + it.sets) }
+        mutate { it.copy(sets = listOf(Setlist(id = copy, name = name, items = from.items, breaks = from.breaks, date = Setlist.today())) + it.sets) }
         return copy
-    }
-
-    /**
-     * The note of the song [songId] in the setlist [setId]: kept as [Setlist.cleanNote] makes it, and empty takes it out.
-     * Nothing for a song that isn't in the setlist. A song taken out keeps its note (undo and "Discard" bring it back).
-     */
-    fun setNote(setId: String, songId: String, text: String) = updateSet(setId) { s ->
-        if (songId !in s.items) s
-        else Setlist.cleanNote(text).let { n -> s.copy(notes = if (n.isEmpty()) s.notes - songId else s.notes + (songId to n)) }
     }
 
     private fun updateSet(id: String, change: (Setlist) -> Setlist) =
