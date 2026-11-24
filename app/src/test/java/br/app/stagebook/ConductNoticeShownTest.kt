@@ -68,7 +68,7 @@ class ConductNoticeShownTest {
         // the strip is on screen before anything arrives: with no strip a notice is the app's message at the bottom, by
         // design, and a slow machine (CI, 20/11) got the song in before the strip was worked out
         try {
-            compose.waitUntil(TEST_WAIT_MS) { vm.ui.value != null }
+            compose.waitUntil(TEST_WAIT_MS) { idleMain(); vm.ui.value != null }
         } catch (e: androidx.compose.ui.test.ComposeTimeoutException) {
             // says where it stopped (this only ever failed on the CI machine): the leader's message, the band switch, the strip
             throw AssertionError("strip never showed: role=${follower.role.value} bandOn=${repo.library.value.look.bandOn} ui=${vm.ui.value}", e)
@@ -118,8 +118,12 @@ class ConductNoticeShownTest {
         noticeShown()
     }
 
+    // what the strip waits on (the strip's list of missing songs) is worked out on another thread and handed back to the main
+    // one: with its queue not run while the test waits, that hand-back depended on the machine's luck (only the CI's failed)
+    private fun idleMain() = org.robolectric.shadows.ShadowLooper.idleMainLooper()
+
     private fun noticeShown() {
-        compose.waitUntil(TEST_WAIT_MS) { compose.onAllNodesWithTag("conduct-notice").fetchSemanticsNodes().isNotEmpty() }
+        compose.waitUntil(TEST_WAIT_MS) { idleMain(); compose.onAllNodesWithTag("conduct-notice").fetchSemanticsNodes().isNotEmpty() }
         compose.onNode(hasText("Segunda chegou sem cifra", substring = true) and hasAnyAncestor(hasTestTag("conduct-notice")), useUnmergedTree = true).assertExists()
     }
 }
