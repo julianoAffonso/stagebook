@@ -52,6 +52,7 @@ data class SetItemUi(
     val hasPdf: Boolean = false,
     val state: SetlistShow.State = SetlistShow.State.NONE,   // where the show is (this device only)
     val seconds: Int = 0,   // the song's length (`{duration}`), 0 = none: the blocks add them up (user, 22/11)
+    val note: String = "",   // this setlist's note for the song ("" = none); held on the row to write or change it (user, 24/11)
 )
 
 @Immutable
@@ -140,6 +141,7 @@ class SetlistDetailViewModel @Inject constructor(
                     if (n == 1) id else "$id#$n", id, song?.title.orEmpty(), song?.artistLine().orEmpty(), song == null,
                     songKey = meta.key, bpm = meta.tempo, capo = meta.capo,
                     hasTrack = song?.track?.isNotEmpty() == true, hasPdf = song?.pdf?.isNotEmpty() == true, state = states[i], seconds = meta.duration,
+                    note = set?.noteFor(id).orEmpty(),
                 )
             },
             breaks = set?.breaks.orEmpty(),
@@ -184,6 +186,9 @@ class SetlistDetailViewModel @Inject constructor(
 
     /** Several songs out in one save (the chosen ones: no "Undo", as before). */
     fun removeMany(picks: List<Pair<Int, String>>) = repository.removeItems(setId, picks)
+
+    /** The note of a song in this setlist (empty takes it out). */
+    fun setNote(songId: String, text: String) = repository.setNote(setId, songId, text)
 
     // the setlist as it was before the last song left, for the message's "Undo"
     private var removed: Pair<Int, br.app.stagebook.data.model.Setlist>? = null

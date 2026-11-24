@@ -66,6 +66,7 @@ fun SetlistSongRow(
     beforeNumber: (@Composable () -> Unit)? = null,
     dragZone: Modifier? = null,
     trailing: (@Composable () -> Unit)? = null,
+    note: String = "",   // the setlist's note for this song, a line under the title (user, 24/11)
 ) {
     Box(modifier.clip(MaterialTheme.shapes.medium).alpha(if (state == SetlistShow.State.PLAYED) PLAYED_ALPHA else 1f)) {
         SongListItem(
@@ -94,6 +95,7 @@ fun SetlistSongRow(
                 }
             },
             trailing = trailing,
+            note = note,
         )
         if (state != SetlistShow.State.NONE) StateStrip(state, Modifier.matchParentSize().wrapContentWidth(Alignment.Start))
         if (dragZone != null) SetlistDragZone(dragZone, Modifier.matchParentSize().wrapContentWidth(Alignment.Start))
