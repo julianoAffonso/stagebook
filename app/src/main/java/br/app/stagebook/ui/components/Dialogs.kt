@@ -49,7 +49,6 @@ fun TextInputDialog(
     placeholder: String,
     onConfirm: (String) -> Unit,
     onDismiss: () -> Unit,
-    maxLength: Int = Int.MAX_VALUE,   // the field takes no more than this many characters (a song's note in a setlist)
 ) {
     // the current name comes selected and focused: typing replaces it (the cursor at the start put the new name in front
     // of the old one, device test B-10)
@@ -65,7 +64,7 @@ fun TextInputDialog(
         text = {
             OutlinedTextField(
                 value = field,
-                onValueChange = { field = if (it.text.length > maxLength) it.copy(text = it.text.take(maxLength)) else it },
+                onValueChange = { field = it },
                 placeholder = { Text(placeholder) },
                 singleLine = true,
                 shape = MaterialTheme.shapes.small,

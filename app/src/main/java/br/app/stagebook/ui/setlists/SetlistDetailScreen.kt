@@ -145,7 +145,6 @@ fun SetlistDetailRoute(
         onMove = viewModel::move,
         onRemove = viewModel::remove,
         onRemoveMany = viewModel::removeMany,
-        onNote = viewModel::setNote,
         onDeleteSetlist = viewModel::delete,   // the setlist goes away and the LaunchedEffect above comes back
         onAddBreak = viewModel::addBreak,
         onRemoveBreak = viewModel::removeBreak,
@@ -200,10 +199,8 @@ fun SetlistDetailScreen(
     onRestore: (songIds: List<String>, breaks: List<Int>) -> Unit = { _, _ -> },   // "Discard": the setlist as it was when editing began
     toList: Int = 0,   // a new number = the Setlists tab tapped again: go back to the list (as Back would)
     onRemoveMany: (List<Pair<Int, String>>) -> Unit = { picks -> picks.sortedByDescending { it.first }.forEach { (i, id) -> onRemove(i, id) } },   // the chosen songs out in one save
-    onNote: (songId: String, text: String) -> Unit = { _, _ -> },   // the note of a song, written holding its row (empty takes it out)
 ) {
     val wide = wideLists()
-    var noting by rememberSaveable { mutableStateOf<String?>(null) }   // the song whose note is being written
     var renaming by rememberSaveable { mutableStateOf(false) }
     var sharing by rememberSaveable { mutableStateOf(openShare) }   // the "Share" sheet open
     // opened only to share (the list's or the stage's menu): when the sharing is over the screen goes back to where it came
@@ -395,9 +392,7 @@ fun SetlistDetailScreen(
                                                     state = if (editing) SetlistShow.State.NONE else item.state,   // where the show is: played, now, next (hidden while editing)
                                                     onClick = { if (selecting) toggle(item.key) else if (!editing) onPlayAt(mark.songsBefore) },
                                                     modifier = Modifier.shadow(elevation, MaterialTheme.shapes.medium),
-                                                    // holding: editing selects (to take several out); otherwise the note of this song
-                                                    onLongClick = if (editing) ({ toggle(item.key) }) else if (!item.missing) ({ noting = item.songId }) else null,
-                                                    note = item.note,
+                                                    onLongClick = if (editing) ({ toggle(item.key) }) else null,
                                                     // the compact row of the stage's old panel (user, 15/11): more songs on screen
                                                     titleStyle = MaterialTheme.typography.titleMedium,
                                                     dense = true,
@@ -454,18 +449,6 @@ fun SetlistDetailScreen(
     }
     if (renaming) {
         TextInputDialog(stringResource(R.string.sets_rename), uiState.name, stringResource(R.string.sets_name), onRename, { renaming = false })
-    }
-    noting?.let { songId ->
-        val item = items.firstOrNull { it.songId == songId }
-        if (item == null) noting = null
-        else TextInputDialog(
-            title = stringResource(R.string.set_note_title, item.title),
-            initial = item.note,
-            placeholder = stringResource(R.string.set_note_hint),
-            onConfirm = { onNote(songId, it) },
-            onDismiss = { noting = null },
-            maxLength = br.app.stagebook.data.model.Setlist.MAX_NOTE,
-        )
     }
     if (deleting) {
         ConfirmDialog(stringResource(R.string.sets_delete_confirm, uiState.name), stringResource(R.string.action_delete), onDeleteSetlist, { deleting = false })

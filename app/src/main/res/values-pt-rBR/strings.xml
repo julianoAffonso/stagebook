@@ -113,8 +113,6 @@
     <string name="action_undo">Desfazer</string>
     <string name="set_clear_played">Limpar tocadas</string>
     <string name="set_remove_song">Tirar deste setlist</string>
-    <string name="set_note_title">Nota de %1$s</string>
-    <string name="set_note_hint">O que lembrar neste setlist (ex.: entra a capela)</string>
     <string name="set_song_left">%1$s saiu deste setlist</string>
     <string name="set_state_played">TOCADA</string>
     <string name="set_state_now">AGORA</string>
