@@ -20,6 +20,7 @@ import javax.inject.Inject
 class HomeViewModel @Inject constructor(
     private val repository: LibraryRepository,
     private val webEditor: br.app.stagebook.data.web.WebEditorServer,
+    private val lastStage: br.app.stagebook.data.LastStage,
 ) : ViewModel() {
     /** The web editor's address while it's on ("" = off): the tabs show it's in use, with a way to close it. */
     val webAddress: StateFlow<String> = webEditor.address
@@ -31,8 +32,23 @@ class HomeViewModel @Inject constructor(
      * The tab the app opens on: Setlists, or Songs while there's no setlist yet (user, 31/10). Null until the library has
      * loaded, so the screen doesn't show one tab and jump to the other.
      */
-    val startTab: StateFlow<HomeTab?> = combine(repository.loaded, repository.library) { loaded, lib -> startOf(loaded, lib.sets.isEmpty()) }
-        .stateIn(viewModelScope, SharingStarted.Eagerly, startOf(repository.loaded.value, repository.library.value.sets.isEmpty()))
+    val startTab: StateFlow<HomeTab?> = combine(repository.loaded, repository.library) { loaded, lib -> startFor(loaded, lib) }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, startFor(repository.loaded.value, repository.library.value))
+
+    // the tab picked last, read once when the library has loaded: picking another one later doesn't move the start tab
+    private var remembered: HomeTab? = null
+    private var rememberedRead = false
+
+    private fun startFor(loaded: Boolean, lib: br.app.stagebook.data.model.Library): HomeTab? {
+        if (loaded && !rememberedRead) {
+            rememberedRead = true
+            remembered = HomeTab.entries.firstOrNull { it.name == lastStage.tab() }
+        }
+        return startOf(loaded, lib.sets.isEmpty(), remembered)
+    }
+
+    /** A tab was picked: the next launch opens the menu on it. */
+    fun rememberTab(tab: HomeTab) = lastStage.recordTab(tab.name)
 
     val essential: StateFlow<Boolean> = repository.library.map { it.look.essential }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), repository.library.value.look.essential)
@@ -66,4 +82,5 @@ class HomeViewModel @Inject constructor(
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), true)
 }
 
-internal fun startOf(loaded: Boolean, noSetlists: Boolean): HomeTab? = if (!loaded) null else if (noSetlists) HomeTab.SONGS else HomeTab.SETLISTS
+internal fun startOf(loaded: Boolean, noSetlists: Boolean, remembered: HomeTab? = null): HomeTab? =
+    if (!loaded) null else remembered ?: if (noSetlists) HomeTab.SONGS else HomeTab.SETLISTS
