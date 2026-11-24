@@ -67,7 +67,12 @@ class ConductNoticeShownTest {
         link.conductHandler?.invoke(voice, Conduct.decode(Conduct.encode(msg))!!)
         // the strip is on screen before anything arrives: with no strip a notice is the app's message at the bottom, by
         // design, and a slow machine (CI, 20/11) got the song in before the strip was worked out
-        compose.waitUntil(TEST_WAIT_MS) { vm.ui.value != null }
+        try {
+            compose.waitUntil(TEST_WAIT_MS) { vm.ui.value != null }
+        } catch (e: androidx.compose.ui.test.ComposeTimeoutException) {
+            // says where it stopped (this only ever failed on the CI machine): the leader's message, the band switch, the strip
+            throw AssertionError("strip never showed: role=${follower.role.value} bandOn=${repo.library.value.look.bandOn} ui=${vm.ui.value}", e)
+        }
     }
 
     /** The song comes from the band as the leader's loose song, with lyrics only. */

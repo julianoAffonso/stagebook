@@ -488,9 +488,13 @@ function showPlayed() {
         ...d.songs.map((s) => playedRow(s.title, [s.author, s.setlist].filter(Boolean).join(" · ")))])));
 }
 async function loadPlayed() {
-  const r = await api("/api/played?period=" + playedPeriod).catch(() => null);
+  const asked = playedPeriod;
+  const r = await api("/api/played?period=" + asked).catch(() => null);
+  if (asked !== playedPeriod) return;   // another period was picked meanwhile: this answer is not for what is on screen
   if (!r || r.status !== 200) { played = null; showPlayed(); return say("played-summary", t.offline, "error"); }
-  played = await r.json();
+  const data = await r.json();
+  if (asked !== playedPeriod) return;
+  played = data;
   say("played-status", "");
   showPlayed();
 }

@@ -69,6 +69,8 @@ fun HomeScreen(
     var picked by rememberSaveable { mutableStateOf<HomeTab?>(null) }
     val home = start ?: HomeTab.SETLISTS
     val tab = picked ?: home
+    // the tab picked is kept for the next launch (only a pick, not the default shown before any)
+    androidx.compose.runtime.LaunchedEffect(picked) { picked?.let(homeVm::rememberTab) }
     // something outside asks for a setlist: the Setlists tab shows it
     androidx.compose.runtime.LaunchedEffect(setlistRequest) { if (setlistRequest != null) picked = HomeTab.SETLISTS }
     // what the band sent: notice at the top of the tabs (the newest not dismissed yet), number on the icon and the list

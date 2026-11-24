@@ -28,7 +28,13 @@ class LastStage @Inject constructor(@ApplicationContext context: Context) {
         return if (set == null && song == null) null else Place(set, song)
     }
 
+    /** The menu's tab picked last (its name; null = none yet): the menu opens on it again (user, 24/11). */
+    fun tab(): String? = prefs.getString(TAB, null)
+
+    fun recordTab(name: String) = prefs.edit { putString(TAB, name) }
+
     private companion object {
+        const val TAB = "tab"
         const val SET = "set"
         const val SONG = "song"
     }
